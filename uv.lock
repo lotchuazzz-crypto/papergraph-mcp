@@ -476,6 +476,7 @@ dependencies = [
 dev = [
     { name = "pytest" },
     { name = "pyyaml" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
 
 [package.metadata]
@@ -488,6 +489,7 @@ requires-dist = [
 dev = [
     { name = "pytest", specifier = ">=8" },
     { name = "pyyaml", specifier = ">=6,<7" },
+    { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=2,<3" },
 ]
 
 [[package]]

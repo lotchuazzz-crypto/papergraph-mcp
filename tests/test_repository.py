@@ -1,8 +1,12 @@
-import tomllib
 import re
 from pathlib import Path
 
 import yaml
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - exercised by the Python 3.10 CI job
+    import tomli as tomllib
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,6 +52,7 @@ def test_project_metadata_is_discoverable_and_keeps_dependencies_separated():
     development = configuration["dependency-groups"]["dev"]
     assert "pytest>=8" in development
     assert "pyyaml>=6,<7" in development
+    assert "tomli>=2,<3; python_version < '3.11'" in development
     assert all("yaml" not in dependency.lower() for dependency in project["dependencies"])
 
 

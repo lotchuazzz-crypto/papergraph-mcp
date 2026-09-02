@@ -32,6 +32,7 @@ Releases = "https://github.com/lotchuazzz-crypto/papergraph-mcp/releases"
 dev = [
     "pyyaml>=6,<7",
     "pytest>=8",
+    "tomli>=2,<3; python_version < '3.11'",
 ]
 
 [build-system]

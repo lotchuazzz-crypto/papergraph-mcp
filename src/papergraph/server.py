@@ -1,4 +1,5 @@
 import argparse
+import sqlite3
 from collections.abc import Sequence
 from importlib.metadata import version as distribution_version
 from pathlib import Path
@@ -21,6 +22,15 @@ mcp = MCPServer("PaperGraph MCP")
 _current_graph: PaperGraph | None = None
 _current_path: Path | None = None
 _current_workspace: Workspace | None = None
+
+_WORKSPACE_TOOL_ERRORS = (
+    WorkspaceError,
+    sqlite3.DatabaseError,
+    OSError,
+    ValueError,
+    KeyError,
+)
+_ARXIV_WORKSPACE_TOOL_ERRORS = (ArxivImportError, *_WORKSPACE_TOOL_ERRORS)
 
 
 def _reset_server_state() -> None:
@@ -64,7 +74,7 @@ def open_workspace(path: str) -> dict:
 
     try:
         replacement = Workspace.open(path)
-    except (WorkspaceError, OSError) as exc:
+    except _WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc
 
     previous = _current_workspace
@@ -95,7 +105,7 @@ def workspace_add_local_paper(path: str, paper_id: str) -> dict:
             project,
         )
         return workspace.get_paper(result.paper_id)
-    except (WorkspaceError, OSError, ValueError, KeyError) as exc:
+    except _WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc
 
 
@@ -120,13 +130,7 @@ def workspace_add_arxiv_paper(
             project,
         )
         return workspace.get_paper(result.paper_id)
-    except (
-        ArxivImportError,
-        WorkspaceError,
-        OSError,
-        ValueError,
-        KeyError,
-    ) as exc:
+    except _ARXIV_WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc
 
 
@@ -136,7 +140,7 @@ def workspace_list_papers() -> list[dict]:
 
     try:
         return require_workspace().list_papers()
-    except WorkspaceError as exc:
+    except _WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc
 
 
@@ -146,7 +150,7 @@ def workspace_get_paper(paper_id: str) -> dict:
 
     try:
         return require_workspace().get_paper(paper_id)
-    except (WorkspaceError, ValueError, KeyError) as exc:
+    except _WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc
 
 
@@ -166,7 +170,7 @@ def workspace_search_theorems(
             kind=kind,
             limit=limit,
         )
-    except (WorkspaceError, ValueError, KeyError) as exc:
+    except _WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc
 
 
@@ -182,7 +186,7 @@ def workspace_get_dependencies(
             global_theorem_id,
             recursive=recursive,
         )
-    except (WorkspaceError, ValueError, KeyError) as exc:
+    except _WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc
 
 
@@ -200,7 +204,7 @@ def workspace_get_citations(
             direction=direction,
             include_unresolved=include_unresolved,
         )
-    except (WorkspaceError, ValueError, KeyError) as exc:
+    except _WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc
 
 

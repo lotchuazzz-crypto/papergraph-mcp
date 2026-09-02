@@ -70,6 +70,14 @@ def test_failed_workspace_open_preserves_active_workspace(tmp_path: Path):
     assert server.require_workspace().path == (tmp_path / "good.sqlite3").resolve()
 
 
+def test_open_workspace_translates_corrupt_database_error(tmp_path: Path):
+    corrupt = tmp_path / "corrupt.sqlite3"
+    corrupt.write_bytes(b"this is not a SQLite database")
+
+    with pytest.raises(ToolError, match="database"):
+        server.open_workspace(str(corrupt))
+
+
 def test_workspace_local_import_and_all_query_payloads(tmp_path: Path):
     main = make_paper(
         tmp_path,
@@ -262,4 +270,17 @@ def test_workspace_adapters_do_not_catch_programming_errors(
 
     monkeypatch.setattr(server.require_workspace(), "list_papers", fail)
     with pytest.raises(RuntimeError, match="programming bug"):
+        server.workspace_list_papers()
+
+
+def test_workspace_query_translates_operational_database_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    server.open_workspace(str(tmp_path / "workspace.sqlite3"))
+
+    def fail():
+        raise sqlite3.OperationalError("database is locked")
+
+    monkeypatch.setattr(server.require_workspace(), "list_papers", fail)
+    with pytest.raises(ToolError, match="database is locked"):
         server.workspace_list_papers()

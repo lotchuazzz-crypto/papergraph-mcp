@@ -1,0 +1,169 @@
+from pathlib import Path
+
+import pytest
+from mcp.server.mcpserver.exceptions import ToolError
+
+import papergraph.server as server
+from papergraph.arxiv import ArxivDownloadError, ArxivProject
+
+
+@pytest.fixture(autouse=True)
+def reset_server_state():
+    previous_graph = server._current_graph
+    previous_path = server._current_path
+    server._current_graph = None
+    server._current_path = None
+    try:
+        yield
+    finally:
+        server._current_graph = previous_graph
+        server._current_path = previous_path
+
+
+def make_multifile_project(tmp_path: Path) -> ArxivProject:
+    project = tmp_path / "project"
+    sections = project / "sections"
+    sections.mkdir(parents=True)
+    main = project / "main.tex"
+    main.write_text(
+        "\\documentclass{article}\n"
+        "\\newtheorem{lemma}{Lemma}\n"
+        "\\newtheorem{theorem}{Theorem}\n"
+        "\\begin{document}\n"
+        "\\input{sections/lemma}\n"
+        "\\input{sections/theorem}\n"
+        "\\end{document}\n",
+        encoding="utf-8",
+    )
+    (sections / "lemma.tex").write_text(
+        "\\begin{lemma}Base.\\label{lem:base}\\end{lemma}",
+        encoding="utf-8",
+    )
+    (sections / "theorem.tex").write_text(
+        "\\begin{theorem}By \\ref{lem:base}."
+        "\\label{thm:result}\\end{theorem}",
+        encoding="utf-8",
+    )
+    return ArxivProject("2401.12345", project, main, False)
+
+
+def test_load_arxiv_paper_activates_downloaded_multifile_graph(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    project = make_multifile_project(tmp_path)
+    monkeypatch.setattr(server, "prepare_arxiv_project", lambda *args, **kwargs: project)
+
+    result = server.load_arxiv_paper("arXiv:2401.12345")
+
+    assert result == {
+        "arxiv_id": "2401.12345",
+        "path": str(project.main_file),
+        "cached": False,
+        "nodes": 2,
+        "kinds": {"lemma": 1, "theorem": 1},
+    }
+    assert [node["id"] for node in server.list_theorems()] == [
+        "lem:base",
+        "thm:result",
+    ]
+    assert [node["id"] for node in server.get_dependencies("thm:result")] == [
+        "lem:base"
+    ]
+
+
+def test_load_arxiv_paper_passes_options_to_preparation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    project = make_multifile_project(tmp_path)
+    received: dict[str, object] = {}
+
+    def prepare(arxiv_id: str, main_file: str | None, refresh: bool):
+        received.update(
+            arxiv_id=arxiv_id,
+            main_file=main_file,
+            refresh=refresh,
+        )
+        return ArxivProject(
+            project.arxiv_id,
+            project.project_dir,
+            project.main_file,
+            True,
+        )
+
+    monkeypatch.setattr(server, "prepare_arxiv_project", prepare)
+
+    result = server.load_arxiv_paper(
+        "2401.12345",
+        main_file="main.tex",
+        refresh=True,
+    )
+
+    assert received == {
+        "arxiv_id": "2401.12345",
+        "main_file": "main.tex",
+        "refresh": True,
+    }
+    assert result["cached"] is True
+
+
+def test_arxiv_domain_error_becomes_tool_error(monkeypatch: pytest.MonkeyPatch):
+    def fail(*args, **kwargs):
+        raise ArxivDownloadError("download unavailable")
+
+    monkeypatch.setattr(server, "prepare_arxiv_project", fail)
+
+    with pytest.raises(ToolError, match="download unavailable"):
+        server.load_arxiv_paper("2401.12345")
+
+
+@pytest.mark.parametrize("failure", [OSError("cannot read"), ValueError("bad include")])
+def test_arxiv_loader_error_becomes_tool_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure: Exception,
+):
+    project = make_multifile_project(tmp_path)
+    monkeypatch.setattr(server, "prepare_arxiv_project", lambda *args, **kwargs: project)
+
+    def fail(path: Path):
+        raise failure
+
+    monkeypatch.setattr(server, "load_latex_project", fail)
+
+    with pytest.raises(ToolError, match=str(failure)):
+        server.load_arxiv_paper("2401.12345")
+
+
+def test_failed_arxiv_import_preserves_active_local_graph(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    local = tmp_path / "local.tex"
+    local.write_text(
+        "\\newtheorem{lemma}{Lemma}\n"
+        "\\begin{lemma}Local.\\label{lem:local}\\end{lemma}",
+        encoding="utf-8",
+    )
+    server.load_paper(str(local))
+
+    def fail(*args, **kwargs):
+        raise ArxivDownloadError("download unavailable")
+
+    monkeypatch.setattr(server, "prepare_arxiv_project", fail)
+
+    with pytest.raises(ToolError):
+        server.load_arxiv_paper("2401.12345")
+
+    assert [node["id"] for node in server.list_theorems()] == ["lem:local"]
+    assert server._current_path == local.resolve()
+
+
+def test_missing_graph_message_mentions_both_load_tools():
+    with pytest.raises(ToolError) as caught:
+        server.require_graph()
+
+    message = str(caught.value)
+    assert "load_paper" in message
+    assert "load_arxiv_paper" in message

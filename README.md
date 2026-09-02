@@ -19,6 +19,18 @@ Single-paper tools expose theorem-like environments, labels, and `\ref` relation
 - Traverse direct or recursive theorem dependencies and inspect incoming or outgoing citation evidence, including unresolved citations.
 - Preserve the active single-paper graph and active workspace independently.
 
+## Ask your agent to set it up
+
+Give a coding agent this request:
+
+> Clone https://github.com/lotchuazzz-crypto/papergraph-mcp and help me set up PaperGraph for my MCP client. Read the repository's onboarding instructions after cloning.
+
+Compatible agents can follow the repository-local
+[`setting-up-papergraph`](.agents/skills/setting-up-papergraph/SKILL.md)
+skill. The agent should show you a reusable PaperGraph prompt, explain why `uv`
+is needed, and ask before installing software, changing client configuration, or
+restarting the client. You can always use the manual setup below instead.
+
 ## Quick Start
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the GitHub release without cloning the repository:

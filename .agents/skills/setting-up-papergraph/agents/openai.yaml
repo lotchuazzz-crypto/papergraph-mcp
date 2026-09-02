@@ -1,0 +1,6 @@
+interface:
+  display_name: "Set Up PaperGraph"
+  short_description: "Safely configure PaperGraph for an MCP client"
+  default_prompt: "Use $setting-up-papergraph to configure this cloned PaperGraph repository for my MCP client."
+policy:
+  allow_implicit_invocation: true

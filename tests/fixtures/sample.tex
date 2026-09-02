@@ -1,0 +1,27 @@
+\documentclass{article}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+
+\begin{document}
+
+\begin{lemma}[Vanishing lemma]
+Assume that $H^1(X,\mathcal O_X)=0$.
+Then the desired vanishing holds.
+\label{lem:vanishing}
+\end{lemma}
+
+\begin{proposition}
+By Lemma~\ref{lem:vanishing}, we obtain the intermediate result.
+\label{prop:key}
+\end{proposition}
+
+\begin{theorem}[Main theorem]
+Using Proposition~\ref{prop:key}
+and Lemma~\ref{lem:vanishing},
+we obtain the main result.
+\label{thm:main}
+\end{theorem}
+
+\end{document}

@@ -1,0 +1,24 @@
+[project]
+name = "papergraph-mcp"
+version = "0.1.0"
+description = "Turn mathematical LaTeX papers into theorem dependency graphs for AI agents."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp[cli]>=2,<3",
+]
+
+[project.scripts]
+papergraph-mcp = "papergraph.server:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/papergraph"]

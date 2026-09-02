@@ -76,4 +76,4 @@ jobs:
       - name: Verify installed CLI
         run: |
           version="$(.smoke-venv/bin/papergraph-mcp --version)"
-          test "$version" = "papergraph-mcp 0.4.0"
+          test "$version" = "papergraph-mcp 0.4.1"

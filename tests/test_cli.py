@@ -17,7 +17,7 @@ def test_version_prints_distribution_version_without_starting_mcp(
         server.main(["--version"])
 
     assert caught.value.code == 0
-    assert capsys.readouterr().out == "papergraph-mcp 0.3.1\n"
+    assert capsys.readouterr().out == "papergraph-mcp 0.4.0\n"
 
 
 def test_help_describes_theorem_dependency_server_without_starting_mcp(

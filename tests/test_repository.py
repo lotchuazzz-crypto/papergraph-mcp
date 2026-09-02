@@ -21,7 +21,7 @@ def test_project_metadata_is_discoverable_and_keeps_dependencies_separated():
     configuration = read_toml("pyproject.toml")
     project = configuration["project"]
 
-    assert project["version"] == "0.3.1"
+    assert project["version"] == "0.4.0"
     assert project["dependencies"] == [
         "httpx>=0.27,<1",
         "mcp[cli]>=2,<3",
@@ -65,7 +65,7 @@ def test_lockfile_matches_project_version():
         if package["name"] == "papergraph-mcp"
     )
 
-    assert package["version"] == "0.3.1"
+    assert package["version"] == "0.4.0"
 
 
 def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
@@ -106,7 +106,7 @@ def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
         for token in ('"uv"', '"pip"', '"install"', '"--python"')
     )
     assert "papergraph-mcp --version" in build_steps
-    assert "papergraph-mcp 0.3.1" in build_steps
+    assert "papergraph-mcp 0.4.0" in build_steps
     assert 'version="$(.smoke-venv/bin/papergraph-mcp --version)"' in build_steps
 
 
@@ -214,7 +214,7 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     pinned_source = (
         "git+https://github.com/lotchuazzz-crypto/"
-        "papergraph-mcp.git@v0.3.1"
+        "papergraph-mcp.git@v0.4.0"
     )
 
     for badge in ("CI", "Python", "MIT", "Release"):
@@ -236,6 +236,18 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     ):
         assert f"`{tool_name}`" in readme
 
+    for tool_name in (
+        "open_workspace",
+        "workspace_add_local_paper",
+        "workspace_add_arxiv_paper",
+        "workspace_list_papers",
+        "workspace_get_paper",
+        "workspace_search_theorems",
+        "workspace_get_dependencies",
+        "workspace_get_citations",
+    ):
+        assert f"`{tool_name}`" in readme
+
     assert 'arxiv_id="math/0307200"' in readme
     assert '"path": "main.tex"' in readme
     assert '"cached": false' in readme
@@ -251,6 +263,18 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     assert "main_file" in readme
     assert "[Contributing](CONTRIBUTING.md)" in readme
     assert "[MIT License](LICENSE)" in readme
+
+
+def test_readme_documents_v040_cross_paper_graph():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "v0.4.0" in readme
+    assert "SQLite" in readme
+    assert "workspace_add_arxiv_paper" in readme
+    assert "workspace_search_theorems" in readme
+    assert "workspace_get_citations" in readme
+    assert "explicit" in readme.lower()
+    assert "semantic" in readme.lower()
 
 
 def test_readme_relative_links_resolve_inside_repository():

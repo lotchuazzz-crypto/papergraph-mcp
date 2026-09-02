@@ -5,36 +5,29 @@
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/lotchuazzz-crypto/papergraph-mcp)](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases)
 
-PaperGraph turns local or arXiv LaTeX papers into theorem dependency graphs that AI agents can query through MCP.
+PaperGraph turns local or arXiv LaTeX papers into theorem dependency graphs that AI agents can query through MCP. v0.4.0 adds a persistent, cross-paper workspace: retain a small literature collection in SQLite, search its theorem text, follow theorem dependencies, and inspect citation evidence without asking an agent to re-read every source paper.
 
 ## Why PaperGraph?
 
-AI agents often receive a mathematical paper as one flat block of text.
-PaperGraph identifies theorem-like environments, keeps their labels and
-references, and exposes the resulting graph through small MCP tools. An agent
-can ask for one theorem, follow its dependencies, or find every result that
-uses it without repeatedly scanning the entire paper.
+Single-paper tools expose theorem-like environments, labels, and `\ref` relationships. A workspace keeps many independently imported papers together. It is deliberately evidence-first: every citation result identifies the source paper, bibliography key, LaTeX command, source file, and resolution status. This is useful for grounded reading and review; it is not semantic theorem matching or a claim that two similarly worded results are equivalent.
 
 ## Features
 
-- Load local single-file or multi-file LaTeX projects.
-- Recursively expand standard `\input` and `\include` commands.
-- Download and cache source projects directly from an arXiv identifier.
-- Safely unpack common arXiv source formats without following archive links.
-- Query theorem text, direct or recursive dependencies, and reverse usage.
-- Preserve the active graph when a new project fails to load.
+- Load local single-file or multi-file LaTeX projects, or safely prepare arXiv source projects.
+- Keep theorem, reference, and citation records in a local SQLite workspace.
+- Search theorem titles and bodies across papers, with stable global IDs.
+- Traverse direct or recursive theorem dependencies and inspect incoming or outgoing citation evidence, including unresolved citations.
+- Preserve the active single-paper graph and active workspace independently.
 
 ## Quick Start
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then
-verify the GitHub release without cloning the repository:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the GitHub release without cloning the repository:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.3.1 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.0 papergraph-mcp --version
 ```
 
-The pinned command becomes available after the `v0.3.1` GitHub Release and
-tag are published. Pinning the tag keeps MCP client installations reproducible.
+The pinned command becomes available after the `v0.4.0` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
 
 ## MCP Configuration
 
@@ -45,85 +38,68 @@ For an MCP client that accepts JSON-style stdio server configuration, add:
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": [
-        "--from",
-        "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.3.1",
-        "papergraph-mcp"
-      ]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.0", "papergraph-mcp"]
     }
   }
 }
 ```
 
-Restart the MCP client after changing its configuration. The server uses
-stdio, so running the command without `--help` or `--version` waits quietly
-for an MCP client connection.
+Restart the MCP client after changing its configuration. The server uses stdio, so running the command without `--help` or `--version` waits quietly for an MCP client connection.
 
 ## Tools
 
-| Tool | Purpose |
+The original single-paper tools remain available: `load_paper`, `load_arxiv_paper`, `list_theorems`, `get_theorem`, `get_dependencies`, and `where_used`. Their signatures are `load_paper(path: str)`, `load_arxiv_paper(arxiv_id: str, main_file: str | None = None, refresh: bool = False)`, `list_theorems(kind: str | None = None)`, `get_theorem(theorem_id: str)`, `get_dependencies(theorem_id: str, recursive: bool = False)`, and `where_used(theorem_id: str)`.
+
+Workspace tools operate on the active database. Call `open_workspace` first: `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, and `workspace_get_citations` require that active workspace. Their exact MCP signatures and return summaries are:
+
+| Tool signature | Returns |
 | --- | --- |
-| `load_paper` | Load a local root `.tex` file and recursively expand its project. |
-| `load_arxiv_paper` | Download, safely cache, and load an arXiv source project. |
-| `list_theorems` | List theorem-like nodes, optionally filtered by environment kind. |
-| `get_theorem` | Return the full text and metadata for one labeled node. |
-| `get_dependencies` | Follow direct or recursive references from one node. |
-| `where_used` | Find nodes that reference a given theorem-like node. |
+| `open_workspace(path: str) -> dict` | Resolved SQLite path, schema version, and paper/theorem counts. Opens an existing workspace or initializes one. |
+| `workspace_add_local_paper(path: str, paper_id: str) -> dict` | Imported paper metadata, theorem/kind counts, citation count, and unresolved-citation count. Re-importing an ID replaces it transactionally. |
+| `workspace_add_arxiv_paper(arxiv_id: str, main_file: str | None = None, refresh: bool = False) -> dict` | The same import summary after safe arXiv preparation; paper ID and source version are normalized. |
+| `workspace_list_papers() -> list[dict]` | Stored-paper metadata and graph counts, in stable paper-ID order. |
+| `workspace_get_paper(paper_id: str) -> dict` | One paper's metadata, theorem/kind counts, resolved incoming/outgoing citation counts, and unresolved count. |
+| `workspace_search_theorems(query: str, paper_id: str | None = None, kind: str | None = None, limit: int = 20) -> list[dict]` | Matching global ID, paper/local IDs, kind, title, source file, and bounded content excerpt. Empty queries fail; `limit` is 1–100. |
+| `workspace_get_dependencies(global_theorem_id: str, recursive: bool = False) -> list[dict]` | Direct or cycle-safe recursive dependency records for a globally identified theorem. |
+| `workspace_get_citations(paper_id: str, direction: str = "outgoing", include_unresolved: bool = True) -> list[dict]` | Explicit incoming or outgoing citation-evidence rows. Direction is `incoming` or `outgoing`; incoming rows are resolved. |
 
-## Demo
+For a compact single-paper check, call `load_arxiv_paper(arxiv_id="math/0307200")`. PaperGraph selects `main.tex`; a representative first response has `"path": "main.tex"`, `"cached": false`, and `"nodes": 7`.
 
-Ask the MCP client to call:
+## Three-paper local walkthrough
+
+Clone this repository so the tracked synthetic fixtures are available, then use a temporary database path outside the repository (for example, `$env:TEMP/papergraph-demo.sqlite3` on Windows). In your MCP client, call these tools in order; the only values that vary by checkout are the three absolute fixture paths.
 
 ```text
-load_arxiv_paper(arxiv_id="math/0307200")
+open_workspace(path="C:/Temp/papergraph-demo.sqlite3")
+workspace_add_local_paper(path=".../papergraph-mcp/tests/fixtures/workspace/paper_a/main.tex", paper_id="local:paper-a")
+workspace_add_local_paper(path=".../papergraph-mcp/tests/fixtures/workspace/paper_b/main.tex", paper_id="local:paper-b")
+workspace_add_local_paper(path=".../papergraph-mcp/tests/fixtures/workspace/paper_c/main.tex", paper_id="local:paper-c")
+workspace_list_papers()
+workspace_search_theorems(query="fixed point", limit=10)
+workspace_get_citations(paper_id="local:paper-a", direction="outgoing", include_unresolved=true)
+workspace_get_citations(paper_id="local:paper-b", direction="incoming")
 ```
 
-With v0.3.1, PaperGraph automatically selects `main.tex` and parses seven
-theorem-like nodes. A shortened representative response is:
-
-```json
-{
-  "arxiv_id": "math/0307200",
-  "path": "main.tex",
-  "cached": false,
-  "nodes": 7,
-  "kinds": {
-    "thm": 7
-  }
-}
-```
-
-The exact kind names reflect the LaTeX environment names declared by the
-paper. A second call reuses the validated local cache unless `refresh=true`.
+The fixtures form a three-paper citation cycle. `paper_a` contains `\cite{paper-b}` and also deliberately contains `\cite{missing}` and `\cite{absent}`. The outgoing result preserves those exact citation uses, including their command and source file; resolved rows identify `local:paper-b`, while unresolved rows explain why they could not be resolved (for example, `missing_bib_entry`). This lets an agent distinguish evidence from a guessed bibliographic relationship.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    Local[Local root .tex] --> Loader[Recursive LaTeX loader]
-    Arxiv[arXiv identifier] --> Download[Bounded download]
-    Download --> Extract[Safe extraction and cache]
-    Extract --> Loader
-    Loader --> Parser[Theorem parser]
-    Parser --> Graph[PaperGraph]
-    Graph --> List[list_theorems]
-    Graph --> Get[get_theorem]
-    Graph --> Dependencies[get_dependencies]
-    Graph --> Used[where_used]
+    Local[Local LaTeX] --> Load[Structured project loading]
+    Arxiv[arXiv source] --> Load
+    Load --> Cite[Explicit citation evidence]
+    Cite --> DB[(SQLite workspace)]
+    DB --> MCP[Workspace MCP tools]
+    Load --> Graph[Single-paper theorem graph]
+    Graph --> MCP
 ```
 
-## Safety and Cache
+## Safety, privacy, and persistence
 
-PaperGraph only constructs downloads from arXiv's fixed e-print endpoint.
-Arbitrary URLs are not accepted. It limits compressed responses to **100 MiB**,
-expanded content to **500 MiB**, and archives to **10,000** members. Absolute
-paths, parent traversal, symbolic links, hard links, devices, FIFOs, and other
-special members are rejected.
+PaperGraph only constructs remote downloads from arXiv's fixed e-print endpoint; arbitrary URLs are not accepted. It limits compressed responses to **100 MiB**, expanded content to **500 MiB**, and archives to **10,000** members. Absolute paths, parent traversal, symbolic links, hard links, devices, FIFOs, and other special archive members are rejected.
 
-Sources are stored in the platform user cache. Cache entries are validated
-before reuse, and refreshes are prepared separately so a failed refresh does
-not replace a valid project. If root-file selection is ambiguous, retry
-`load_arxiv_paper` with a project-relative `main_file` value.
+A workspace is an ordinary local SQLite file. Choose a path you control, prefer a temporary directory for experiments, and do not commit its database, private manuscripts, cache data, credentials, tokens, or unsanitized logs. Back up a workspace only while it is not being written (or use your SQLite backup procedure); copying its database file gives you a portable snapshot of the imported evidence and graph data. Treat local source paths and citation content as potentially sensitive.
 
 ## Development
 
@@ -134,22 +110,18 @@ uv sync
 uv run pytest -q -p no:cacheprovider
 ```
 
-The automated suite uses synthetic archives and `httpx.MockTransport`; it does
-not depend on the live arXiv service.
+The automated suite uses synthetic archives, projects, and bibliographies; it does not depend on the live arXiv service.
 
 ## Contributing
 
-Bug reports, focused features, and compatibility fixtures are welcome. Read
-[Contributing](CONTRIBUTING.md) before opening a pull request. Never upload a
-private manuscript, credential, token, or unsanitized log.
+Bug reports, focused features, and compatibility fixtures are welcome. Read [Contributing](CONTRIBUTING.md) before opening a pull request.
 
 ## Limitations
 
 - There is no PDF fallback; PaperGraph requires LaTeX source.
-- Arbitrary URLs are not accepted; remote imports use arXiv identifiers only.
-- Unusual project layouts may require an explicit `main_file`.
-- The parser focuses on theorem-like environments and `\ref` relationships;
-  it is not a complete TeX engine or proof verifier.
+- It does not perform semantic theorem matching, proof verification, or automatic cited-paper download.
+- Citation resolution uses explicit bibliography identifiers and evidence; it does not infer a paper from similar titles, authors, or theorem wording.
+- Unusual project layouts may require an explicit `main_file`; the parser is not a complete TeX engine.
 
 ## License
 

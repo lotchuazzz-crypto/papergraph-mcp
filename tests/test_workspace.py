@@ -449,3 +449,290 @@ def test_successful_replacement_is_atomic_and_leaves_other_papers_unchanged(
     assert workspace._connection.execute(
         "SELECT COUNT(*) FROM theorem_refs"
     ).fetchone() == (0,)
+
+
+def test_lists_papers_with_metadata_and_current_graph_counts_in_id_order(
+    workspace: Workspace,
+    project_factory,
+):
+    citing = project_factory(
+        r"\begin{theorem}\label{thm:a}Compactness theorem.\end{theorem}"
+        r"\cite{known}\cite{missing}",
+        title="Paper A",
+        authors=("Ada Lovelace",),
+        bibliography="@article{known, arxiv={2401.12345}}",
+    )
+    target = project_factory(
+        r"\begin{lemma}\label{lem:b}Target lemma.\end{lemma}",
+        title="Paper B",
+    )
+
+    workspace.import_project("local:paper-a", "local", "a/main.tex", None, citing)
+    workspace.import_project(
+        "arxiv:2401.12345", "arxiv", "2401.12345", "v2", target
+    )
+
+    papers = workspace.list_papers()
+    assert [paper["paper_id"] for paper in papers] == [
+        "arxiv:2401.12345",
+        "local:paper-a",
+    ]
+    assert papers[1]["authors"] == ["Ada Lovelace"]
+    assert papers[1]["theorem_count"] == 1
+    assert papers[1]["citation_count"] == 2
+    assert papers[1]["unresolved_citation_count"] == 1
+
+    paper = workspace.get_paper(" local:paper-a ")
+    assert paper["paper_id"] == "local:paper-a"
+    assert paper["kinds"] == {"theorem": 1}
+    assert paper["outgoing_citation_count"] == 1
+    assert paper["incoming_citation_count"] == 0
+
+
+def test_paper_queries_reject_unknown_ids(workspace: Workspace):
+    with pytest.raises(KeyError, match="Unknown paper id: local:missing"):
+        workspace.get_paper("local:missing")
+    with pytest.raises(KeyError, match="Unknown paper id: local:missing"):
+        workspace.get_citations("local:missing")
+
+
+def test_resolves_citation_when_target_arrives_later_and_on_reimport(
+    workspace: Workspace,
+    project_factory,
+):
+    citing = project_factory(
+        r"\cite{target}",
+        bibliography="@article{target, arxiv={2401.12345v2}}",
+    )
+    target = project_factory(
+        r"\begin{theorem}\label{thm:target}Target.\end{theorem}"
+    )
+
+    workspace.import_project("local:paper-a", "local", "a/main.tex", None, citing)
+    before = workspace.get_citations("local:paper-a")[0]
+    assert before["target_paper_id"] is None
+    assert before["resolution_status"] == "resolved_candidate"
+
+    workspace.import_project(
+        "arxiv:2401.12345", "arxiv", "2401.12345", None, target
+    )
+    resolved = workspace.get_citations("local:paper-a")[0]
+    assert resolved["target_paper_id"] == "arxiv:2401.12345"
+    assert resolved["resolution_status"] == "resolved_candidate"
+
+    workspace.import_project(
+        "arxiv:2401.12345", "arxiv", "2401.12345", "v3", target
+    )
+    assert workspace.get_citations("local:paper-a")[0][
+        "target_paper_id"
+    ] == "arxiv:2401.12345"
+
+
+def test_citation_resolution_failure_rolls_back_paper_replacement(
+    workspace: Workspace,
+    project_factory,
+):
+    original = project_factory(
+        r"\begin{theorem}\label{thm:old}Old.\end{theorem}\cite{old}",
+        bibliography="@article{old, arxiv={2401.12345}}",
+    )
+    replacement = project_factory(
+        r"\begin{theorem}\label{thm:new}New.\end{theorem}\cite{new}",
+        bibliography="@article{new, arxiv={2401.99999}}",
+    )
+    workspace.import_project(
+        "local:paper-a", "local", "original.tex", None, original
+    )
+    workspace._connection.execute(
+        """
+        CREATE TRIGGER fail_citation_resolution
+        BEFORE UPDATE OF target_paper_id ON citation_evidence
+        WHEN NEW.source_paper_id = 'local:paper-a'
+        BEGIN
+            SELECT RAISE(ABORT, 'injected citation resolution failure');
+        END
+        """
+    )
+
+    with pytest.raises(
+        sqlite3.IntegrityError,
+        match="injected citation resolution failure",
+    ):
+        workspace.import_project(
+            "local:paper-a", "local", "replacement.tex", None, replacement
+        )
+
+    assert workspace.get_paper("local:paper-a")["source_ref"] == "original.tex"
+    citations = workspace.get_citations("local:paper-a")
+    assert [row["citation_key"] for row in citations] == ["old"]
+
+
+def test_citation_queries_preserve_evidence_rows_reasons_and_direction(
+    workspace: Workspace,
+    project_factory,
+):
+    first = project_factory(
+        r"\cite{target}\citet{target}\cite{missing}\cite{unsupported}",
+        bibliography=(
+            "@article{target, arxiv={2401.12345}}\n"
+            "@article{unsupported, doi={10.1000/example}}"
+        ),
+    )
+    second = project_factory(
+        r"\cite{target}",
+        bibliography="@article{target, arxiv={2401.12345}}",
+    )
+    target = project_factory(
+        r"\begin{theorem}\label{thm:target}Target.\end{theorem}"
+    )
+    workspace.import_project("local:z-paper", "local", "z/main.tex", None, first)
+    workspace.import_project("local:a-paper", "local", "a/main.tex", None, second)
+    workspace.import_project(
+        "arxiv:2401.12345", "arxiv", "2401.12345", None, target
+    )
+
+    outgoing = workspace.get_citations("local:z-paper")
+    assert [(row["citation_key"], row["command"]) for row in outgoing] == [
+        ("missing", "cite"),
+        ("target", "cite"),
+        ("target", "citet"),
+        ("unsupported", "cite"),
+    ]
+    assert {
+        (row["citation_key"], row["resolution_status"])
+        for row in outgoing
+    } == {
+        ("missing", "missing_bib_entry"),
+        ("target", "resolved_candidate"),
+        ("unsupported", "unsupported_identifier"),
+    }
+    resolved = workspace.get_citations(
+        "local:z-paper",
+        include_unresolved=False,
+    )
+    assert [row["citation_key"] for row in resolved] == ["target", "target"]
+
+    incoming = workspace.get_citations(
+        "arxiv:2401.12345", direction="incoming"
+    )
+    assert [row["source_paper_id"] for row in incoming] == [
+        "local:a-paper",
+        "local:z-paper",
+        "local:z-paper",
+    ]
+    assert all(row["target_paper_id"] == "arxiv:2401.12345" for row in incoming)
+
+
+@pytest.mark.parametrize("direction", ["", "sideways", "OUTGOING"])
+def test_citation_queries_reject_invalid_direction_before_sql(
+    workspace: Workspace,
+    monkeypatch,
+    direction: str,
+):
+    monkeypatch.setattr(
+        workspace,
+        "_paper_exists",
+        lambda paper_id: pytest.fail(
+            "paper lookup must not happen before direction validation"
+        ),
+    )
+    with pytest.raises(ValueError, match="direction"):
+        workspace.get_citations("local:missing", direction=direction)
+
+
+def test_searches_theorems_across_papers_with_filters_and_stable_order(
+    workspace: Workspace,
+    project_factory,
+):
+    local = project_factory(
+        r"\begin{theorem}[Compactness]\label{thm:z}Title match.\end{theorem}"
+        r"\begin{lemma}\label{lem:a}Body compactness match.\end{lemma}"
+    )
+    arxiv = project_factory(
+        r"\begin{proposition}\label{prop:b}COMPACTNESS elsewhere.\end{proposition}"
+    )
+    other = project_factory(
+        r"\begin{theorem}\label{thm:none}No match.\end{theorem}"
+    )
+    workspace.import_project("local:paper-a", "local", "a/main.tex", None, local)
+    workspace.import_project(
+        "arxiv:2401.12345", "arxiv", "2401.12345", None, arxiv
+    )
+    workspace.import_project("local:paper-c", "local", "c/main.tex", None, other)
+
+    results = workspace.search_theorems("compactness", limit=20)
+    assert [item["global_id"] for item in results] == [
+        "arxiv:2401.12345::prop:b",
+        "local:paper-a::lem:a",
+        "local:paper-a::thm:z",
+    ]
+    assert {item["paper_id"] for item in results} == {
+        "local:paper-a",
+        "arxiv:2401.12345",
+    }
+    filtered = workspace.search_theorems(
+        "compactness",
+        paper_id="local:paper-a",
+        kind="lemma",
+    )
+    assert [item["global_id"] for item in filtered] == ["local:paper-a::lem:a"]
+
+
+def test_search_excerpt_is_bounded_and_limit_is_applied_after_ordering(
+    workspace: Workspace,
+    project_factory,
+):
+    project = project_factory(
+        r"\begin{theorem}\label{thm:z}needle " + "x" * 300 + r"\end{theorem}"
+        r"\begin{lemma}\label{lem:a}needle short\end{lemma}"
+    )
+    workspace.import_project("local:paper", "local", "main.tex", None, project)
+
+    result = workspace.search_theorems("needle", limit=1)
+    assert [item["global_id"] for item in result] == ["local:paper::lem:a"]
+    all_results = workspace.search_theorems("needle", limit=20)
+    assert len(all_results[1]["excerpt"]) == 240
+
+
+@pytest.mark.parametrize("query", ["", "   ", "\t\n"])
+def test_search_rejects_empty_queries(workspace: Workspace, query: str):
+    with pytest.raises(ValueError, match="query"):
+        workspace.search_theorems(query)
+
+
+@pytest.mark.parametrize("limit", [0, 101, -1, 1.5, True])
+def test_search_rejects_invalid_limit(workspace: Workspace, limit):
+    with pytest.raises(ValueError, match="limit"):
+        workspace.search_theorems("theorem", limit=limit)
+
+
+def test_dependencies_are_deterministic_cycle_safe_and_match_graph_semantics(
+    workspace: Workspace,
+    project_factory,
+):
+    project = project_factory(
+        r"\begin{theorem}\label{thm:a}Uses \ref{thm:c} and \ref{thm:b}.\end{theorem}"
+        r"\begin{lemma}\label{thm:b}Uses \ref{thm:a}.\end{lemma}"
+        r"\begin{proposition}\label{thm:c}Leaf.\end{proposition}"
+    )
+    workspace.import_project("local:cycles", "local", "main.tex", None, project)
+
+    direct = workspace.get_dependencies("local:cycles::thm:a")
+    assert [item["global_id"] for item in direct] == [
+        "local:cycles::thm:b",
+        "local:cycles::thm:c",
+    ]
+    recursive = workspace.get_dependencies(
+        "local:cycles::thm:a",
+        recursive=True,
+    )
+    assert [item["global_id"] for item in recursive] == [
+        "local:cycles::thm:b",
+        "local:cycles::thm:a",
+        "local:cycles::thm:c",
+    ]
+
+
+def test_dependencies_reject_unknown_global_id(workspace: Workspace):
+    with pytest.raises(KeyError, match="Unknown theorem id: local:missing::thm:x"):
+        workspace.get_dependencies("local:missing::thm:x")

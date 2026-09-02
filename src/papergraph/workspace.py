@@ -9,7 +9,11 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from papergraph.citations import build_citation_records
-from papergraph.identity import global_theorem_id, normalize_paper_id
+from papergraph.identity import (
+    global_theorem_id,
+    normalize_paper_id,
+    split_global_theorem_id,
+)
 from papergraph.models import WorkspaceImportResult
 from papergraph.parser import parse_project
 from papergraph.project import LoadedProject
@@ -293,6 +297,17 @@ class Workspace:
                     for citation in citations
                 ),
             )
+            self._connection.execute(
+                """
+                UPDATE citation_evidence
+                SET target_paper_id = (
+                    SELECT papers.paper_id
+                    FROM papers
+                    WHERE papers.paper_id =
+                          'arxiv:' || citation_evidence.cited_arxiv_id
+                )
+                """
+            )
 
         return WorkspaceImportResult(
             paper_id=normalized_paper_id,
@@ -315,9 +330,293 @@ class Workspace:
         ).fetchone()[0]
         return {"papers": paper_count, "theorems": theorem_count}
 
+    def list_papers(self) -> list[dict]:
+        """Return stored papers and graph counts in stable paper-ID order."""
+
+        rows = self._connection.execute(
+            """
+            SELECT
+                papers.paper_id, papers.source_type, papers.source_ref,
+                papers.source_version, papers.title, papers.authors_json,
+                papers.main_file, papers.imported_at, papers.parser_version,
+                (SELECT COUNT(*) FROM theorems
+                 WHERE theorems.paper_id = papers.paper_id),
+                (SELECT COUNT(*) FROM citation_evidence
+                 WHERE citation_evidence.source_paper_id = papers.paper_id),
+                (SELECT COUNT(*) FROM citation_evidence
+                 WHERE citation_evidence.source_paper_id = papers.paper_id
+                   AND citation_evidence.target_paper_id IS NOT NULL),
+                (SELECT COUNT(*) FROM citation_evidence
+                 WHERE citation_evidence.target_paper_id = papers.paper_id),
+                (SELECT COUNT(*) FROM citation_evidence
+                 WHERE citation_evidence.source_paper_id = papers.paper_id
+                   AND citation_evidence.target_paper_id IS NULL)
+            FROM papers
+            ORDER BY papers.paper_id
+            """
+        ).fetchall()
+        return [_paper_from_row(row) for row in rows]
+
+    def get_paper(self, paper_id: str) -> dict:
+        """Return one stored paper with theorem-kind and citation counts."""
+
+        normalized_paper_id = normalize_paper_id(paper_id)
+        row = self._connection.execute(
+            """
+            SELECT
+                papers.paper_id, papers.source_type, papers.source_ref,
+                papers.source_version, papers.title, papers.authors_json,
+                papers.main_file, papers.imported_at, papers.parser_version,
+                (SELECT COUNT(*) FROM theorems
+                 WHERE theorems.paper_id = papers.paper_id),
+                (SELECT COUNT(*) FROM citation_evidence
+                 WHERE citation_evidence.source_paper_id = papers.paper_id),
+                (SELECT COUNT(*) FROM citation_evidence
+                 WHERE citation_evidence.source_paper_id = papers.paper_id
+                   AND citation_evidence.target_paper_id IS NOT NULL),
+                (SELECT COUNT(*) FROM citation_evidence
+                 WHERE citation_evidence.target_paper_id = papers.paper_id),
+                (SELECT COUNT(*) FROM citation_evidence
+                 WHERE citation_evidence.source_paper_id = papers.paper_id
+                   AND citation_evidence.target_paper_id IS NULL)
+            FROM papers
+            WHERE papers.paper_id = ?
+            """,
+            (normalized_paper_id,),
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"Unknown paper id: {normalized_paper_id}")
+
+        result = _paper_from_row(row)
+        result["kinds"] = {
+            kind: count
+            for kind, count in self._connection.execute(
+                """
+                SELECT kind, COUNT(*)
+                FROM theorems
+                WHERE paper_id = ?
+                GROUP BY kind
+                ORDER BY kind
+                """,
+                (normalized_paper_id,),
+            )
+        }
+        return result
+
+    def search_theorems(
+        self,
+        query: str,
+        paper_id: str | None = None,
+        kind: str | None = None,
+        limit: int = 20,
+    ) -> list[dict]:
+        """Find theorem titles and bodies by case-insensitive substring."""
+
+        if not isinstance(query, str) or not query.strip():
+            raise ValueError("Search query must not be empty")
+        if (
+            isinstance(limit, bool)
+            or not isinstance(limit, int)
+            or not 1 <= limit <= 100
+        ):
+            raise ValueError("Search limit must be an integer from 1 through 100")
+
+        conditions = [
+            "instr(lower(coalesce(title, '') || char(10) || content), "
+            "lower(?)) > 0"
+        ]
+        parameters: list[str | int] = [query.strip()]
+        if paper_id is not None:
+            conditions.append("paper_id = ?")
+            parameters.append(normalize_paper_id(paper_id))
+        if kind is not None:
+            conditions.append("kind = ?")
+            parameters.append(kind)
+        parameters.append(limit)
+
+        rows = self._connection.execute(
+            f"""
+            SELECT global_id, paper_id, local_id, kind, title,
+                   source_file, substr(content, 1, 240)
+            FROM theorems
+            WHERE {' AND '.join(conditions)}
+            ORDER BY paper_id, global_id
+            LIMIT ?
+            """,
+            parameters,
+        ).fetchall()
+        return [
+            {
+                "global_id": global_id,
+                "paper_id": stored_paper_id,
+                "local_id": local_id,
+                "kind": stored_kind,
+                "title": title,
+                "source_file": source_file,
+                "excerpt": excerpt,
+            }
+            for (
+                global_id,
+                stored_paper_id,
+                local_id,
+                stored_kind,
+                title,
+                source_file,
+                excerpt,
+            ) in rows
+        ]
+
+    def get_dependencies(
+        self,
+        global_id: str,
+        recursive: bool = False,
+    ) -> list[dict]:
+        """Return direct or recursively reachable stored theorem references."""
+
+        paper_id, local_id = split_global_theorem_id(global_id)
+        normalized_global_id = global_theorem_id(paper_id, local_id)
+        if self._connection.execute(
+            "SELECT 1 FROM theorems WHERE global_id = ?",
+            (normalized_global_id,),
+        ).fetchone() is None:
+            raise KeyError(f"Unknown theorem id: {normalized_global_id}")
+
+        adjacency: dict[str, list[str]] = {}
+        for source_global_id, target_global_id in self._connection.execute(
+            """
+            SELECT source_global_id, target_global_id
+            FROM theorem_refs
+            WHERE target_global_id IS NOT NULL
+            ORDER BY source_global_id, ref_label, target_global_id
+            """
+        ):
+            adjacency.setdefault(source_global_id, []).append(target_global_id)
+
+        if recursive:
+            dependency_ids: list[str] = []
+            visited: set[str] = set()
+
+            def visit(theorem_id: str) -> None:
+                for dependency_id in adjacency.get(theorem_id, ()):
+                    if dependency_id in visited:
+                        continue
+                    visited.add(dependency_id)
+                    dependency_ids.append(dependency_id)
+                    visit(dependency_id)
+
+            visit(normalized_global_id)
+        else:
+            dependency_ids = adjacency.get(normalized_global_id, [])
+
+        return [self._theorem_summary(item) for item in dependency_ids]
+
+    def get_citations(
+        self,
+        paper_id: str,
+        direction: str = "outgoing",
+        include_unresolved: bool = True,
+    ) -> list[dict]:
+        """Return ordered incoming or outgoing citation evidence."""
+
+        if direction not in {"incoming", "outgoing"}:
+            raise ValueError("Citation direction must be 'incoming' or 'outgoing'")
+        normalized_paper_id = normalize_paper_id(paper_id)
+        if not self._paper_exists(normalized_paper_id):
+            raise KeyError(f"Unknown paper id: {normalized_paper_id}")
+
+        if direction == "incoming":
+            condition = "target_paper_id = ?"
+        else:
+            condition = "source_paper_id = ?"
+            if not include_unresolved:
+                condition += " AND target_paper_id IS NOT NULL"
+
+        rows = self._connection.execute(
+            f"""
+            SELECT source_paper_id, citation_key, command, source_file,
+                   bib_file, bib_entry_type, cited_arxiv_id, cited_version,
+                   target_paper_id, resolution_status
+            FROM citation_evidence
+            WHERE {condition}
+            ORDER BY source_paper_id, citation_key, source_file, command, id
+            """,
+            (normalized_paper_id,),
+        ).fetchall()
+        keys = (
+            "source_paper_id",
+            "citation_key",
+            "command",
+            "source_file",
+            "bib_file",
+            "bib_entry_type",
+            "cited_arxiv_id",
+            "cited_version",
+            "target_paper_id",
+            "resolution_status",
+        )
+        return [dict(zip(keys, row)) for row in rows]
+
+    def _paper_exists(self, paper_id: str) -> bool:
+        return self._connection.execute(
+            "SELECT 1 FROM papers WHERE paper_id = ?",
+            (paper_id,),
+        ).fetchone() is not None
+
+    def _theorem_summary(self, global_id: str) -> dict:
+        row = self._connection.execute(
+            """
+            SELECT global_id, paper_id, local_id, kind, title, label, source_file
+            FROM theorems
+            WHERE global_id = ?
+            """,
+            (global_id,),
+        ).fetchone()
+        assert row is not None
+        references = [
+            ref_label
+            for (ref_label,) in self._connection.execute(
+                """
+                SELECT ref_label
+                FROM theorem_refs
+                WHERE source_global_id = ?
+                ORDER BY ref_label
+                """,
+                (global_id,),
+            )
+        ]
+        return {
+            "global_id": row[0],
+            "paper_id": row[1],
+            "local_id": row[2],
+            "kind": row[3],
+            "title": row[4],
+            "label": row[5],
+            "source_file": row[6],
+            "refs": references,
+        }
+
 
 def _parser_version() -> str:
     try:
         return version("papergraph-mcp")
     except PackageNotFoundError:
         return "unknown"
+
+
+def _paper_from_row(row: tuple) -> dict:
+    return {
+        "paper_id": row[0],
+        "source_type": row[1],
+        "source_ref": row[2],
+        "source_version": row[3],
+        "title": row[4],
+        "authors": json.loads(row[5]),
+        "main_file": row[6],
+        "imported_at": row[7],
+        "parser_version": row[8],
+        "theorem_count": row[9],
+        "citation_count": row[10],
+        "outgoing_citation_count": row[11],
+        "incoming_citation_count": row[12],
+        "unresolved_citation_count": row[13],
+    }

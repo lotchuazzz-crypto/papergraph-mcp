@@ -1,10 +1,48 @@
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 
 INCLUDE_RE = re.compile(
     r"\\(?:input|include)\s*\{(?P<path>[^}]+)\}"
 )
+
+
+@dataclass(frozen=True, slots=True)
+class SourceSpan:
+    path: Path
+    start: int
+    end: int
+
+
+@dataclass(frozen=True, slots=True)
+class _TraversalResult:
+    text: str
+    spans: tuple[SourceSpan, ...]
+
+
+class _Traversal:
+    def __init__(self) -> None:
+        self.parts: list[str] = []
+        self.spans: list[SourceSpan] = []
+        self.length = 0
+
+    def append(self, path: Path, text: str) -> None:
+        if not text:
+            return
+
+        start = self.length
+        self.parts.append(text)
+        self.length += len(text)
+        self.spans.append(
+            SourceSpan(path=path, start=start, end=self.length)
+        )
+
+    def result(self) -> _TraversalResult:
+        return _TraversalResult(
+            text="".join(self.parts),
+            spans=tuple(self.spans),
+        )
 
 
 def resolve_tex_path(
@@ -26,7 +64,16 @@ def load_latex_project(
     main_file: str | Path,
 ) -> str:
     root = Path(main_file).expanduser().resolve()
-    return _load_file(root, ())
+    return _load_latex_with_spans(root).text
+
+
+def _load_latex_with_spans(
+    main_file: str | Path,
+) -> _TraversalResult:
+    root = Path(main_file).expanduser().resolve()
+    traversal = _Traversal()
+    _load_file(root, (), traversal)
+    return traversal.result()
 
 
 def _is_commented(
@@ -58,7 +105,8 @@ def _is_commented(
 def _load_file(
     path: Path,
     stack: tuple[Path, ...],
-) -> str:
+    traversal: _Traversal,
+) -> None:
     path = path.resolve()
 
     if path in stack:
@@ -85,7 +133,6 @@ def _load_file(
         errors="replace",
     )
 
-    parts: list[str] = []
     cursor = 0
     child_stack = (*stack, path)
 
@@ -93,13 +140,12 @@ def _load_file(
         if _is_commented(text, match.start()):
             continue
 
-        parts.append(text[cursor:match.start()])
+        traversal.append(path, text[cursor:match.start()])
         included = resolve_tex_path(
             path,
             match.group("path").strip(),
         )
-        parts.append(_load_file(included, child_stack))
+        _load_file(included, child_stack, traversal)
         cursor = match.end()
 
-    parts.append(text[cursor:])
-    return "".join(parts)
+    traversal.append(path, text[cursor:])

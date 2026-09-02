@@ -16,7 +16,7 @@ class SourceSpan:
 
 
 @dataclass(frozen=True, slots=True)
-class _TraversalResult:
+class LoadedLatexText:
     text: str
     spans: tuple[SourceSpan, ...]
 
@@ -38,8 +38,8 @@ class _Traversal:
             SourceSpan(path=path, start=start, end=self.length)
         )
 
-    def result(self) -> _TraversalResult:
-        return _TraversalResult(
+    def result(self) -> LoadedLatexText:
+        return LoadedLatexText(
             text="".join(self.parts),
             spans=tuple(self.spans),
         )
@@ -64,19 +64,26 @@ def load_latex_project(
     main_file: str | Path,
 ) -> str:
     root = Path(main_file).expanduser().resolve()
-    return _load_latex_with_spans(root).text
+    return _traverse_latex_project(root).text
 
 
-def _load_latex_with_spans(
+def load_latex_project_with_spans(
     main_file: str | Path,
-) -> _TraversalResult:
+) -> LoadedLatexText:
     root = Path(main_file).expanduser().resolve()
+    return _traverse_latex_project(root, root.parent)
+
+
+def _traverse_latex_project(
+    root: Path,
+    project_root: Path | None = None,
+) -> LoadedLatexText:
     traversal = _Traversal()
-    _load_file(root, (), traversal)
+    _load_file(root, (), traversal, project_root)
     return traversal.result()
 
 
-def _is_commented(
+def is_latex_commented(
     text: str,
     position: int,
 ) -> bool:
@@ -102,10 +109,14 @@ def _is_commented(
     return False
 
 
+_is_commented = is_latex_commented
+
+
 def _load_file(
     path: Path,
     stack: tuple[Path, ...],
     traversal: _Traversal,
+    project_root: Path | None,
 ) -> None:
     path = path.resolve()
 
@@ -137,7 +148,7 @@ def _load_file(
     child_stack = (*stack, path)
 
     for match in INCLUDE_RE.finditer(text):
-        if _is_commented(text, match.start()):
+        if is_latex_commented(text, match.start()):
             continue
 
         traversal.append(path, text[cursor:match.start()])
@@ -145,7 +156,22 @@ def _load_file(
             path,
             match.group("path").strip(),
         )
-        _load_file(included, child_stack, traversal)
+
+        if project_root is not None:
+            try:
+                included.relative_to(project_root)
+            except ValueError as error:
+                raise ValueError(
+                    "LaTeX include outside project root: "
+                    f"{included}"
+                ) from error
+
+        _load_file(
+            included,
+            child_stack,
+            traversal,
+            project_root,
+        )
         cursor = match.end()
 
     traversal.append(path, text[cursor:])

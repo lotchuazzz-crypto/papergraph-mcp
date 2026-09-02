@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from papergraph.loader import load_latex_project
 from papergraph.parser import parse_project
 from papergraph.project import load_project
 
@@ -91,6 +92,24 @@ def test_load_project_ignores_commented_metadata_and_bibliographies(
     assert project.bibliography_files == (bibliography.resolve(),)
 
 
+def test_load_project_ignores_escaped_title_and_bibliography_commands(
+    tmp_path: Path,
+):
+    main = tmp_path / "main.tex"
+    bibliography = tmp_path / "real.bib"
+    main.write_text(
+        r"\\title{Fake}\\bibliography{missing}"
+        r"\title{Real}\bibliography{real}",
+        encoding="utf-8",
+    )
+    bibliography.write_text("", encoding="utf-8")
+
+    project = load_project(main)
+
+    assert project.title == "Real"
+    assert project.bibliography_files == (bibliography.resolve(),)
+
+
 def test_load_project_does_not_extend_child_comments_into_parent_source(
     tmp_path: Path,
 ):
@@ -140,6 +159,22 @@ def test_load_project_rejects_bibliography_outside_project_root(
     project_root.mkdir()
     main.write_text(r"\bibliography{../outside}", encoding="utf-8")
     outside.write_text("", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="outside project root"):
+        load_project(main)
+
+
+def test_load_project_rejects_include_outside_root_but_legacy_loader_allows_it(
+    tmp_path: Path,
+):
+    project_root = tmp_path / "paper"
+    main = project_root / "main.tex"
+    outside = tmp_path / "outside.tex"
+    project_root.mkdir()
+    main.write_text(r"\input{../outside}", encoding="utf-8")
+    outside.write_text("OUTSIDE", encoding="utf-8")
+
+    assert load_latex_project(main) == "OUTSIDE"
 
     with pytest.raises(ValueError, match="outside project root"):
         load_project(main)

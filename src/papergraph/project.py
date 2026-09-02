@@ -4,18 +4,24 @@ from pathlib import Path
 
 from papergraph.loader import (
     SourceSpan,
-    _is_commented,
-    _load_latex_with_spans,
+    is_latex_commented,
+    load_latex_project_with_spans,
 )
 
 
+COMMAND_START = r"(?<!\\)\\"
 BIBLIOGRAPHY_RE = re.compile(
-    r"\\(?P<command>bibliography|addbibresource)\s*"
+    COMMAND_START
+    + r"(?P<command>bibliography|addbibresource)\s*"
     r"\{(?P<paths>[^}]*)\}"
 )
 
-TITLE_RE = re.compile(r"\\title\s*\{(?P<value>[^}]*)\}")
-AUTHOR_RE = re.compile(r"\\author\s*\{(?P<value>[^}]*)\}")
+TITLE_RE = re.compile(
+    COMMAND_START + r"title\s*\{(?P<value>[^}]*)\}"
+)
+AUTHOR_RE = re.compile(
+    COMMAND_START + r"author\s*\{(?P<value>[^}]*)\}"
+)
 AUTHOR_SEPARATOR_RE = re.compile(r"\\and")
 
 
@@ -31,7 +37,7 @@ class LoadedProject:
 
 
 def load_project(main_file: str | Path) -> LoadedProject:
-    traversal = _load_latex_with_spans(main_file)
+    traversal = load_latex_project_with_spans(main_file)
     root_file = Path(main_file).expanduser().resolve()
     project_root = root_file.parent
 
@@ -65,7 +71,7 @@ def _discover_bibliographies(
         fragment = text[span.start:span.end]
 
         for match in BIBLIOGRAPHY_RE.finditer(fragment):
-            if _is_commented(fragment, match.start()):
+            if is_latex_commented(fragment, match.start()):
                 continue
 
             paths = match.group("paths")
@@ -124,7 +130,7 @@ def _first_command_value(
         fragment = text[span.start:span.end]
 
         for match in pattern.finditer(fragment):
-            if _is_commented(fragment, match.start()):
+            if is_latex_commented(fragment, match.start()):
                 continue
 
             value = match.group("value").strip()

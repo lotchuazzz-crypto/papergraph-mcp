@@ -181,3 +181,28 @@ def test_rejects_conflicting_duplicate_bibliography_entries(project_factory):
 
     with pytest.raises(ValueError, match="Conflicting bibliography entries.*target"):
         build_citation_records(project)
+
+
+def test_accepts_identical_duplicate_bibliography_entries_in_first_file_order(
+    project_factory,
+):
+    project = project_factory(
+        body=r"\cite{target}",
+        bib="@article{target, arxiv={2401.12345v2}}",
+        bibliography="first.bib",
+    )
+    second = project.project_root / "second.bib"
+    second.write_text(
+        "@article{target, arxiv={2401.12345v2}}",
+        encoding="utf-8",
+    )
+    main = project.root_file
+    main.write_text(
+        main.read_text(encoding="utf-8") + r"\bibliography{second}",
+        encoding="utf-8",
+    )
+
+    record = build_citation_records(load_project(main))[0]
+
+    assert record.bib_file == "first.bib"
+    assert (record.cited_arxiv_id, record.cited_version) == ("2401.12345", "v2")

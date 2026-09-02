@@ -108,3 +108,96 @@ def test_generated_build_directories_are_ignored():
 
     assert "dist/" in ignored
     assert ".smoke-venv/" in ignored
+
+
+def read_yaml(relative_path: str) -> dict:
+    return yaml.safe_load((ROOT / relative_path).read_text(encoding="utf-8"))
+
+
+def test_bug_report_form_collects_reproduction_and_protects_private_data():
+    form = read_yaml(".github/ISSUE_TEMPLATE/bug_report.yml")
+    fields = {
+        item["id"]: item
+        for item in form["body"]
+        if "id" in item
+    }
+
+    assert form["name"] == "Bug report"
+    assert form["description"]
+    assert "bug" in form["labels"]
+    assert set(fields) >= {
+        "version",
+        "operating_system",
+        "python_version",
+        "input_type",
+        "reproduction",
+        "expected",
+        "actual",
+        "logs",
+    }
+    for field_id in set(fields) - {"logs"}:
+        assert fields[field_id]["validations"]["required"] is True
+
+    visible_text = (ROOT / ".github/ISSUE_TEMPLATE/bug_report.yml").read_text(
+        encoding="utf-8"
+    ).lower()
+    assert "private paper" in visible_text
+    assert "token" in visible_text
+    assert "secret" in visible_text
+
+
+def test_feature_request_form_focuses_on_the_problem():
+    form = read_yaml(".github/ISSUE_TEMPLATE/feature_request.yml")
+    field_ids = {
+        item["id"]
+        for item in form["body"]
+        if "id" in item
+    }
+
+    assert form["name"] == "Feature request"
+    assert form["description"]
+    assert "enhancement" in form["labels"]
+    assert field_ids >= {"problem", "outcome", "alternatives", "context"}
+
+
+def test_issue_configuration_disables_blank_issues():
+    configuration = read_yaml(".github/ISSUE_TEMPLATE/config.yml")
+
+    assert configuration == {
+        "blank_issues_enabled": False,
+        "contact_links": [],
+    }
+
+
+def test_pull_request_template_requires_testing_and_sensitive_data_review():
+    template = (ROOT / ".github/pull_request_template.md").read_text(
+        encoding="utf-8"
+    )
+
+    for heading in (
+        "## Summary",
+        "## Motivation",
+        "## Testing",
+        "## Compatibility",
+        "## Documentation",
+    ):
+        assert heading in template
+    assert "sensitive data" in template.lower()
+    assert "deterministic" in template.lower()
+
+
+def test_contributing_guide_documents_reproducible_development():
+    guide = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    normalized_guide = " ".join(guide.split())
+
+    assert "uv sync" in guide
+    assert "uv run pytest -q -p no:cacheprovider" in guide
+    assert "uv run pytest tests/test_arxiv.py -q -p no:cacheprovider" in guide
+    assert "live arXiv" in guide
+    for forbidden_artifact in (
+        "manuscripts",
+        "cache data",
+        "credentials",
+        "generated distributions",
+    ):
+        assert forbidden_artifact in normalized_guide

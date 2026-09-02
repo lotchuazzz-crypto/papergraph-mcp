@@ -1,0 +1,69 @@
+name: Bug report
+description: Report reproducible incorrect behavior in PaperGraph.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Thanks for helping improve PaperGraph. Do not upload a private paper,
+        access token, credential, secret, or an unsanitized log.
+  - type: input
+    id: version
+    attributes:
+      label: PaperGraph version
+      placeholder: "0.3.1"
+    validations:
+      required: true
+  - type: input
+    id: operating_system
+    attributes:
+      label: Operating system
+      placeholder: Windows 11, macOS 15, or Ubuntu 24.04
+    validations:
+      required: true
+  - type: input
+    id: python_version
+    attributes:
+      label: Python version
+      placeholder: "3.12.5"
+    validations:
+      required: true
+  - type: dropdown
+    id: input_type
+    attributes:
+      label: Input type
+      options:
+        - Local single-file LaTeX
+        - Local multi-file LaTeX
+        - arXiv source
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Use a minimal synthetic example when paper content is needed.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs
+      description: Remove private paths, paper text, tokens, credentials, and secrets.
+      render: shell
+    validations:
+      required: false

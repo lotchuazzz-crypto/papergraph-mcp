@@ -1,3 +1,6 @@
+import argparse
+from collections.abc import Sequence
+from importlib.metadata import version as distribution_version
 from pathlib import Path
 
 from mcp.server import MCPServer
@@ -197,7 +200,17 @@ def where_used(
     ]
 
 
-def main() -> None:
+def main(argv: Sequence[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        prog="papergraph-mcp",
+        description="Expose LaTeX theorem dependency graphs through MCP.",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {distribution_version('papergraph-mcp')}",
+    )
+    parser.parse_args(argv)
     mcp.run()
 
 

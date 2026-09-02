@@ -1,4 +1,7 @@
+import asyncio
+import json
 import sqlite3
+import threading
 from pathlib import Path
 
 import pytest
@@ -22,6 +25,16 @@ def make_paper(tmp_path: Path, name: str, body: str) -> Path:
     main = root / "main.tex"
     main.write_text(body, encoding="utf-8")
     return main
+
+
+def call_mcp_tool(name: str, arguments: dict):
+    return asyncio.run(server.mcp.call_tool(name, arguments))
+
+
+def result_json(result):
+    if result.structured_content is not None:
+        return result.structured_content.get("result", result.structured_content)
+    return json.loads(result.content[0].text)
 
 
 @pytest.mark.parametrize(
@@ -50,6 +63,98 @@ def test_open_workspace_returns_exact_payload(tmp_path: Path):
         "papers": 0,
         "theorems": 0,
     }
+
+
+def test_mcp_dispatch_can_read_workspace_opened_on_another_worker(tmp_path: Path):
+    database = tmp_path / "workspace.sqlite3"
+
+    call_mcp_tool("open_workspace", {"path": str(database)})
+    result = call_mcp_tool("workspace_list_papers", {})
+
+    assert result_json(result) == []
+
+
+def test_mcp_workspace_switch_waits_for_an_in_flight_import(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    paper = make_paper(
+        tmp_path,
+        "paper",
+        r"\begin{theorem}\label{thm:x}Result.\end{theorem}",
+    )
+    first_database = tmp_path / "first.sqlite3"
+    second_database = tmp_path / "second.sqlite3"
+    call_mcp_tool("open_workspace", {"path": str(first_database)})
+
+    import_started = threading.Event()
+    allow_import = threading.Event()
+    real_load_project = server.load_project
+
+    def paused_load_project(path: Path):
+        import_started.set()
+        assert allow_import.wait(5), "timed out waiting to resume import"
+        return real_load_project(path)
+
+    monkeypatch.setattr(server, "load_project", paused_load_project)
+
+    async def import_then_switch():
+        import_task = asyncio.create_task(
+            server.mcp.call_tool(
+                "workspace_add_local_paper",
+                {"path": str(paper), "paper_id": "local:paper"},
+            )
+        )
+        assert await asyncio.to_thread(import_started.wait, 5)
+        switch_task = asyncio.create_task(
+            server.mcp.call_tool(
+                "open_workspace",
+                {"path": str(second_database)},
+            )
+        )
+        await asyncio.sleep(0.05)
+        allow_import.set()
+        return await import_task, await switch_task
+
+    imported, switched = asyncio.run(import_then_switch())
+    current = call_mcp_tool("workspace_list_papers", {})
+
+    assert result_json(imported)["paper_id"] == "local:paper"
+    assert result_json(switched)["papers"] == 0
+    assert result_json(current) == []
+    with sqlite3.connect(first_database) as connection:
+        assert connection.execute("SELECT paper_id FROM papers").fetchall() == [
+            ("local:paper",)
+        ]
+
+
+def test_mcp_dispatch_translates_malformed_bibliography_to_tool_error(
+    tmp_path: Path,
+):
+    main = make_paper(
+        tmp_path,
+        "malformed",
+        r"\cite{broken}\bibliography{refs}",
+    )
+    (main.parent / "refs.bib").write_text(
+        "@article{broken, title = {unterminated",
+        encoding="utf-8",
+    )
+    call_mcp_tool(
+        "open_workspace",
+        {"path": str(tmp_path / "workspace.sqlite3")},
+    )
+
+    with pytest.raises(
+        ToolError,
+        match=r"Could not parse bibliography: refs[.]bib",
+    ) as caught:
+        call_mcp_tool(
+            "workspace_add_local_paper",
+            {"path": str(main), "paper_id": "local:broken"},
+        )
+
+    assert type(caught.value) is ToolError
 
 
 def test_failed_workspace_open_preserves_active_workspace(tmp_path: Path):

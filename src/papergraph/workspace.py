@@ -5,8 +5,10 @@ from __future__ import annotations
 import json
 import sqlite3
 from datetime import datetime, timezone
+from functools import wraps
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from threading import RLock
 
 from papergraph.citations import build_citation_records
 from papergraph.identity import (
@@ -99,12 +101,24 @@ class DuplicateTheoremIdError(WorkspaceError):
     """Raised when one paper contains the same local theorem ID twice."""
 
 
+def _synchronized(method):
+    """Serialize access to one workspace's shared SQLite connection."""
+
+    @wraps(method)
+    def synchronized(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+
+    return synchronized
+
+
 class Workspace:
     """A single SQLite-backed PaperGraph workspace."""
 
     def __init__(self, path: Path, connection: sqlite3.Connection):
         self.path = path
         self._connection = connection
+        self._lock = RLock()
 
     @classmethod
     def open(cls, path: str | Path) -> Workspace:
@@ -117,7 +131,7 @@ class Workspace:
             )
         resolved.parent.mkdir(parents=True, exist_ok=True)
 
-        connection = sqlite3.connect(resolved)
+        connection = sqlite3.connect(resolved, check_same_thread=False)
         try:
             connection.execute("PRAGMA foreign_keys = ON")
             cls._initialize_or_validate_schema(connection)
@@ -165,11 +179,13 @@ class Workspace:
                 + ", ".join(missing_tables)
             )
 
+    @_synchronized
     def close(self) -> None:
         """Close the underlying SQLite connection."""
 
         self._connection.close()
 
+    @_synchronized
     def import_project(
         self,
         paper_id: str,
@@ -308,17 +324,24 @@ class Workspace:
                 )
                 """
             )
+            unresolved_citation_count = self._connection.execute(
+                """
+                SELECT COUNT(*)
+                FROM citation_evidence
+                WHERE source_paper_id = ?
+                  AND target_paper_id IS NULL
+                """,
+                (normalized_paper_id,),
+            ).fetchone()[0]
 
         return WorkspaceImportResult(
             paper_id=normalized_paper_id,
             theorem_count=len(nodes),
             citation_count=len(citations),
-            unresolved_citation_count=sum(
-                citation.resolution_status != "resolved_candidate"
-                for citation in citations
-            ),
+            unresolved_citation_count=unresolved_citation_count,
         )
 
+    @_synchronized
     def counts(self) -> dict[str, int]:
         """Return the total paper and theorem counts."""
 
@@ -330,6 +353,7 @@ class Workspace:
         ).fetchone()[0]
         return {"papers": paper_count, "theorems": theorem_count}
 
+    @_synchronized
     def list_papers(self) -> list[dict]:
         """Return stored papers and graph counts in stable paper-ID order."""
 
@@ -357,6 +381,7 @@ class Workspace:
         ).fetchall()
         return [_paper_from_row(row) for row in rows]
 
+    @_synchronized
     def get_paper(self, paper_id: str) -> dict:
         """Return one stored paper with theorem-kind and citation counts."""
 
@@ -403,6 +428,7 @@ class Workspace:
         }
         return result
 
+    @_synchronized
     def search_theorems(
         self,
         query: str,
@@ -466,6 +492,7 @@ class Workspace:
             ) in rows
         ]
 
+    @_synchronized
     def get_dependencies(
         self,
         global_id: str,
@@ -510,6 +537,7 @@ class Workspace:
 
         return [self._theorem_summary(item) for item in dependency_ids]
 
+    @_synchronized
     def get_citations(
         self,
         paper_id: str,
@@ -556,12 +584,14 @@ class Workspace:
         )
         return [dict(zip(keys, row)) for row in rows]
 
+    @_synchronized
     def _paper_exists(self, paper_id: str) -> bool:
         return self._connection.execute(
             "SELECT 1 FROM papers WHERE paper_id = ?",
             (paper_id,),
         ).fetchone() is not None
 
+    @_synchronized
     def _theorem_summary(self, global_id: str) -> dict:
         row = self._connection.execute(
             """

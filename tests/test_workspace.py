@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from papergraph.citations import BibliographyParseError
 from papergraph.project import load_project
 from papergraph.workspace import (
     DuplicateTheoremIdError,
@@ -302,6 +303,28 @@ def test_citation_parsing_failure_occurs_before_replacement_mutation(
     assert workspace.counts() == {"papers": 1, "theorems": 2}
 
 
+def test_malformed_bibliography_does_not_replace_existing_paper(
+    workspace: Workspace,
+    loaded_project,
+    project_factory,
+):
+    workspace.import_project(
+        "local:paper-a", "local", "original.tex", None, loaded_project
+    )
+    malformed = project_factory(
+        r"\cite{broken}",
+        bibliography="@article{broken, title = {unterminated",
+    )
+
+    with pytest.raises(BibliographyParseError):
+        workspace.import_project(
+            "local:paper-a", "local", "replacement.tex", None, malformed
+        )
+
+    assert workspace.get_paper("local:paper-a")["source_ref"] == "original.tex"
+    assert workspace.counts() == {"papers": 1, "theorems": 2}
+
+
 def test_colliding_local_labels_are_allowed_across_papers(
     workspace: Workspace,
     project_factory,
@@ -365,7 +388,7 @@ def test_import_stores_citation_evidence_and_reports_counts(
         "local:citing", "local", "main.tex", None, project
     )
 
-    assert (result.citation_count, result.unresolved_citation_count) == (2, 1)
+    assert (result.citation_count, result.unresolved_citation_count) == (2, 2)
     assert workspace._connection.execute(
         """
         SELECT citation_key, cited_arxiv_id, cited_version,
@@ -508,7 +531,10 @@ def test_resolves_citation_when_target_arrives_later_and_on_reimport(
         r"\begin{theorem}\label{thm:target}Target.\end{theorem}"
     )
 
-    workspace.import_project("local:paper-a", "local", "a/main.tex", None, citing)
+    imported = workspace.import_project(
+        "local:paper-a", "local", "a/main.tex", None, citing
+    )
+    assert imported.unresolved_citation_count == 1
     before = workspace.get_citations("local:paper-a")[0]
     assert before["target_paper_id"] is None
     assert before["resolution_status"] == "resolved_candidate"
@@ -526,6 +552,68 @@ def test_resolves_citation_when_target_arrives_later_and_on_reimport(
     assert workspace.get_citations("local:paper-a")[0][
         "target_paper_id"
     ] == "arxiv:2401.12345"
+
+
+def test_import_result_counts_only_evidence_without_a_workspace_target(
+    workspace: Workspace,
+    project_factory,
+):
+    target = project_factory(
+        r"\begin{theorem}\label{thm:target}Target.\end{theorem}"
+    )
+    workspace.import_project(
+        "arxiv:2401.12345", "arxiv", "2401.12345", None, target
+    )
+    citing = project_factory(
+        r"\cite{resolved,absent,unsupported,missing}",
+        bibliography=(
+            "@article{resolved, arxiv={2401.12345}}\n"
+            "@article{absent, arxiv={2401.99999}}\n"
+            "@article{unsupported, doi={10.1000/example}}"
+        ),
+    )
+
+    result = workspace.import_project(
+        "local:source", "local", "main.tex", None, citing
+    )
+
+    assert result.citation_count == 4
+    assert result.unresolved_citation_count == 3
+    assert {
+        row["citation_key"]: row["target_paper_id"]
+        for row in workspace.get_citations("local:source")
+    } == {
+        "absent": None,
+        "missing": None,
+        "resolved": "arxiv:2401.12345",
+        "unsupported": None,
+    }
+
+
+def test_legacy_citation_id_is_canonicalized_for_late_resolution(
+    workspace: Workspace,
+    project_factory,
+):
+    citing = project_factory(
+        r"\cite{target}",
+        bibliography="@article{target, arxiv={Math/0307200v2}}",
+    )
+    target = project_factory(
+        r"\begin{theorem}\label{thm:target}Target.\end{theorem}"
+    )
+
+    workspace.import_project("local:source", "local", "main.tex", None, citing)
+    before = workspace.get_citations("local:source")[0]
+    assert before["cited_arxiv_id"] == "math/0307200"
+    assert before["target_paper_id"] is None
+
+    workspace.import_project(
+        "arxiv:math/0307200", "arxiv", "math/0307200", None, target
+    )
+
+    assert workspace.get_citations("local:source")[0][
+        "target_paper_id"
+    ] == "arxiv:math/0307200"
 
 
 def test_citation_resolution_failure_rolls_back_paper_replacement(

@@ -1,8 +1,10 @@
 import argparse
 import sqlite3
 from collections.abc import Sequence
+from functools import wraps
 from importlib.metadata import version as distribution_version
 from pathlib import Path
+from threading import RLock
 
 from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
@@ -22,6 +24,7 @@ mcp = MCPServer("PaperGraph MCP")
 _current_graph: PaperGraph | None = None
 _current_path: Path | None = None
 _current_workspace: Workspace | None = None
+_workspace_state_lock = RLock()
 
 _WORKSPACE_TOOL_ERRORS = (
     WorkspaceError,
@@ -33,6 +36,17 @@ _WORKSPACE_TOOL_ERRORS = (
 _ARXIV_WORKSPACE_TOOL_ERRORS = (ArxivImportError, *_WORKSPACE_TOOL_ERRORS)
 
 
+def _serialized_workspace_tool(function):
+    """Keep active-workspace access and replacement in one critical section."""
+
+    @wraps(function)
+    def serialized(*args, **kwargs):
+        with _workspace_state_lock:
+            return function(*args, **kwargs)
+
+    return serialized
+
+
 def _reset_server_state() -> None:
     """Reset process state, closing any active workspace connection."""
 
@@ -40,11 +54,12 @@ def _reset_server_state() -> None:
     global _current_path
     global _current_workspace
 
-    if _current_workspace is not None:
-        _current_workspace.close()
-    _current_workspace = None
-    _current_graph = None
-    _current_path = None
+    with _workspace_state_lock:
+        if _current_workspace is not None:
+            _current_workspace.close()
+        _current_workspace = None
+        _current_graph = None
+        _current_path = None
 
 
 def require_graph() -> PaperGraph:
@@ -58,15 +73,17 @@ def require_graph() -> PaperGraph:
 
 
 def require_workspace() -> Workspace:
-    if _current_workspace is None:
-        raise ToolError(
-            "No workspace is open. Call open_workspace(path) first."
-        )
+    with _workspace_state_lock:
+        if _current_workspace is None:
+            raise ToolError(
+                "No workspace is open. Call open_workspace(path) first."
+            )
 
-    return _current_workspace
+        return _current_workspace
 
 
 @mcp.tool()
+@_serialized_workspace_tool
 def open_workspace(path: str) -> dict:
     """Open or initialize a persistent multi-paper workspace."""
 
@@ -90,6 +107,7 @@ def open_workspace(path: str) -> dict:
 
 
 @mcp.tool()
+@_serialized_workspace_tool
 def workspace_add_local_paper(path: str, paper_id: str) -> dict:
     """Add or replace a local LaTeX project in the active workspace."""
 
@@ -110,6 +128,7 @@ def workspace_add_local_paper(path: str, paper_id: str) -> dict:
 
 
 @mcp.tool()
+@_serialized_workspace_tool
 def workspace_add_arxiv_paper(
     arxiv_id: str,
     main_file: str | None = None,
@@ -135,6 +154,7 @@ def workspace_add_arxiv_paper(
 
 
 @mcp.tool()
+@_serialized_workspace_tool
 def workspace_list_papers() -> list[dict]:
     """List all papers stored in the active workspace."""
 
@@ -145,6 +165,7 @@ def workspace_list_papers() -> list[dict]:
 
 
 @mcp.tool()
+@_serialized_workspace_tool
 def workspace_get_paper(paper_id: str) -> dict:
     """Return metadata and counts for one stored paper."""
 
@@ -155,6 +176,7 @@ def workspace_get_paper(paper_id: str) -> dict:
 
 
 @mcp.tool()
+@_serialized_workspace_tool
 def workspace_search_theorems(
     query: str,
     paper_id: str | None = None,
@@ -175,6 +197,7 @@ def workspace_search_theorems(
 
 
 @mcp.tool()
+@_serialized_workspace_tool
 def workspace_get_dependencies(
     global_theorem_id: str,
     recursive: bool = False,
@@ -191,6 +214,7 @@ def workspace_get_dependencies(
 
 
 @mcp.tool()
+@_serialized_workspace_tool
 def workspace_get_citations(
     paper_id: str,
     direction: str = "outgoing",

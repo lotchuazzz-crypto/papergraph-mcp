@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from papergraph.citations import (
+    BibliographyParseError,
     build_citation_records,
     extract_citation_uses,
 )
@@ -51,6 +52,27 @@ def test_extracts_supported_commands_in_source_order(project_factory):
     ]
 
 
+def test_extracts_starred_commands_with_optional_arguments_in_key_order(
+    project_factory,
+):
+    project = project_factory(
+        body=(
+            r"\cite[p. 4]{one,two}"
+            r"\citep*[see][§2]{three,one}"
+            "\n% \\citet*[hidden]{ignored}"
+        )
+    )
+
+    uses = extract_citation_uses(project)
+
+    assert [(use.command, use.key) for use in uses] == [
+        ("cite", "one"),
+        ("cite", "two"),
+        ("citep*", "three"),
+        ("citep*", "one"),
+    ]
+
+
 def test_resolves_arxiv_evidence_and_preserves_version(project_factory):
     project = project_factory(
         body=r"\cite{target}",
@@ -87,6 +109,63 @@ def test_resolves_arxiv_evidence_from_supported_fields(
 
     assert (record.cited_arxiv_id, record.cited_version) == ("2401.12345", version)
     assert record.resolution_status == "resolved_candidate"
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_id", "version"),
+    [
+        ("https://arxiv.org/abs/2401.12345?context=math", "2401.12345", None),
+        ("https://arxiv.org/abs/2401.12345v2#details", "2401.12345", "v2"),
+        (
+            "https://arxiv.org/pdf/Math/0307200v3.pdf?download=1#page=2",
+            "math/0307200",
+            "v3",
+        ),
+    ],
+)
+def test_url_arxiv_evidence_accepts_only_supported_terminators(
+    project_factory,
+    value: str,
+    expected_id: str,
+    version: str | None,
+):
+    project = project_factory(
+        body=r"\cite{target}",
+        bib=f"@article{{target, url={{{value}}}}}",
+    )
+
+    record = build_citation_records(project)[0]
+
+    assert (record.cited_arxiv_id, record.cited_version) == (expected_id, version)
+    assert record.resolution_status == "resolved_candidate"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("url", "https://arxiv.org/abs/2401.123456"),
+        ("url", "https://arxiv.org/abs/2401.12345x"),
+        ("url", "https://arxiv.org/abs/Math/03072000"),
+        ("url", "https://arxiv.org/abs/Math/0307200x"),
+        ("note", "See arXiv:2401.123456 for details"),
+        ("note", "See arXiv:Math/0307200x for details"),
+    ],
+)
+def test_does_not_truncate_invalid_arxiv_identifier_prefixes(
+    project_factory,
+    field: str,
+    value: str,
+):
+    project = project_factory(
+        body=r"\cite{target}",
+        bib=f"@article{{target, {field}={{{value}}}}}",
+    )
+
+    record = build_citation_records(project)[0]
+
+    assert record.cited_arxiv_id is None
+    assert record.cited_version is None
+    assert record.resolution_status == "unsupported_identifier"
 
 
 def test_parses_nested_braces_and_multiline_bibtex_fields(project_factory):
@@ -206,3 +285,18 @@ def test_accepts_identical_duplicate_bibliography_entries_in_first_file_order(
 
     assert record.bib_file == "first.bib"
     assert (record.cited_arxiv_id, record.cited_version) == ("2401.12345", "v2")
+
+
+def test_malformed_bibliography_raises_safe_error_with_relative_path(
+    project_factory,
+):
+    project = project_factory(
+        body=r"\cite{broken}",
+        bib="@article{broken, title = {unterminated",
+    )
+
+    with pytest.raises(BibliographyParseError) as caught:
+        build_citation_records(project)
+
+    assert str(caught.value) == "Could not parse bibliography: refs.bib"
+    assert str(project.project_root) not in str(caught.value)

@@ -68,6 +68,20 @@ def test_lockfile_matches_project_version():
     assert package["version"] == "0.4.0"
 
 
+def test_runtime_and_issue_template_release_strings_match_project_version():
+    version = read_toml("pyproject.toml")["project"]["version"]
+    arxiv_source = (ROOT / "src/papergraph/arxiv.py").read_text(encoding="utf-8")
+    bug_report = read_yaml(".github/ISSUE_TEMPLATE/bug_report.yml")
+    version_field = next(
+        item
+        for item in bug_report["body"]
+        if item.get("id") == "version"
+    )
+
+    assert f'PaperGraph/{version} (+{REPOSITORY_URL})' in arxiv_source
+    assert version_field["attributes"]["placeholder"] == version
+
+
 def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
     workflow_path = ROOT / ".github" / "workflows" / "ci.yml"
     workflow = yaml.load(

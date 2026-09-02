@@ -7,8 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from pybtex.database import Entry, parse_file
+from pybtex.exceptions import PybtexError
 
 from papergraph.arxiv import InvalidArxivIdError, normalize_arxiv_id
+from papergraph.identity import paper_id_from_arxiv
 from papergraph.loader import _is_commented
 from papergraph.models import CitationRecord
 from papergraph.project import LoadedProject
@@ -17,7 +19,8 @@ from papergraph.project import LoadedProject
 _COMMAND_START = r"(?<!\\)\\"
 _CITATION_RE = re.compile(
     _COMMAND_START
-    + r"(?P<command>cite|citep|citet|autocite|parencite|textcite)\s*"
+    + r"(?P<command>(?:autocite|parencite|textcite|citep|citet|cite)\*?)\s*"
+    r"(?:\[[^]]*\]\s*){0,2}"
     r"\{(?P<keys>[^}]*)\}"
 )
 _ARXIV_IDENTIFIER = (
@@ -26,14 +29,22 @@ _ARXIV_IDENTIFIER = (
 )
 _ARXIV_URL_RE = re.compile(
     r"https?://(?:www\.)?arxiv\.org/(?:abs|pdf)/"
-    rf"(?P<identifier>{_ARXIV_IDENTIFIER})(?:\.pdf)?",
+    rf"(?P<identifier>{_ARXIV_IDENTIFIER})(?:\.pdf)?(?=$|[?#])",
     re.IGNORECASE,
 )
 _ARXIV_NOTE_RE = re.compile(
-    rf"\barxiv:\s*(?P<identifier>{_ARXIV_IDENTIFIER})",
+    rf"\barxiv:\s*(?P<identifier>{_ARXIV_IDENTIFIER})"
+    r"(?=$|[\s,;:)\]}]|\.(?=\s|$))",
     re.IGNORECASE,
 )
-_VERSION_RE = re.compile(r"^(?P<identifier>.+?)(?P<version>v[1-9]\d*)$")
+
+
+class CitationError(ValueError):
+    """Base class for invalid citation or bibliography input."""
+
+
+class BibliographyParseError(CitationError):
+    """Raised when a project's bibliography is malformed."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,7 +96,13 @@ def _load_bibliography_entries(
 ) -> dict[str, tuple[Entry, Path]]:
     entries: dict[str, tuple[Entry, Path]] = {}
     for bibliography_file in project.bibliography_files:
-        bibliography = parse_file(str(bibliography_file), bib_format="bibtex")
+        relative_path = _relative_path(bibliography_file, project.project_root)
+        try:
+            bibliography = parse_file(str(bibliography_file), bib_format="bibtex")
+        except PybtexError as exc:
+            raise BibliographyParseError(
+                f"Could not parse bibliography: {relative_path}"
+            ) from exc
         for key, entry in bibliography.entries.items():
             previous = entries.get(key)
             if previous is None:
@@ -158,11 +175,8 @@ def _resolve_arxiv_identifier(entry: Entry) -> str | None:
 def _normalize_identifier(identifier: str | None) -> tuple[str | None, str | None]:
     if identifier is None:
         return None, None
-    normalized = normalize_arxiv_id(identifier)
-    match = _VERSION_RE.fullmatch(normalized)
-    if match is None:
-        return normalized, None
-    return match.group("identifier"), match.group("version")
+    paper_id, version = paper_id_from_arxiv(identifier)
+    return paper_id.removeprefix("arxiv:"), version
 
 
 def _same_entry(first: Entry, second: Entry) -> bool:

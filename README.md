@@ -80,7 +80,9 @@ workspace_get_citations(paper_id="local:paper-a", direction="outgoing", include_
 workspace_get_citations(paper_id="local:paper-b", direction="incoming")
 ```
 
-The fixtures form a three-paper citation cycle. `paper_a` contains `\cite{paper-b}` and also deliberately contains `\cite{missing}` and `\cite{absent}`. The outgoing result preserves those exact citation uses, including their command and source file; resolved rows identify `local:paper-b`, while unresolved rows explain why they could not be resolved (for example, `missing_bib_entry`). This lets an agent distinguish evidence from a guessed bibliographic relationship.
+The three local papers make the cross-paper theorem search reproducible: its result IDs are `local:paper-a::thm:main`, `local:paper-b::thm:main`, and `local:paper-c::thm:main`. `paper_a` contains `\cite{paper-b}` and also deliberately contains `\cite{missing}` and `\cite{absent}`. The outgoing evidence preserves those exact uses, including their command and source file. The `paper-b` row has `cited_arxiv_id` `2401.12346`, `resolution_status` `resolved_candidate`, and `target_paper_id: null`; it does not resolve to `local:paper-b`, so `workspace_get_citations(paper_id="local:paper-b", direction="incoming")` returns an empty list. `missing` instead reports `missing_bib_entry`.
+
+A citation obtains a stored target only when its cited arXiv ID is imported through `workspace_add_arxiv_paper`; importing a local paper with a similar bibliography entry does not create that target. This lets an agent distinguish explicit evidence and unresolved target status from a guessed bibliographic relationship, without relying on live downloads in this walkthrough.
 
 ## Architecture
 

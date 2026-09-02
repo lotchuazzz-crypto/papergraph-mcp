@@ -51,3 +51,38 @@ repository-local `.uv-cache` because the default user cache was inaccessible.
 - The three-paper walkthrough intentionally uses tracked synthetic fixtures;
   callers must substitute their checkout's absolute paths and a controlled
   temporary SQLite path.
+
+## Review correction: local-fixture citation targets
+
+### RED
+
+The new execution-level test ran the README's local fixture sequence against a
+temporary SQLite database. It confirmed three local theorem IDs and showed that
+the `paper-b` citation has `cited_arxiv_id` `2401.12346`,
+`target_paper_id` `None`, and `resolution_status` `resolved_candidate`; the
+incoming query for `local:paper-b` is empty. Before the README correction, the
+test failed at its documentation assertion because the walkthrough incorrectly
+claimed a resolved `local:paper-b` target and an incoming local-cycle result.
+
+### GREEN
+
+Focused command:
+
+```powershell
+& 'C:\Users\Jonathan Lee\.local\bin\uv.exe' run pytest tests/test_readme_local_workspace_walkthrough.py tests/test_repository.py -q -p no:cacheprovider
+```
+
+Result: **13 passed** in 1.17s.
+
+Full command:
+
+```powershell
+& 'C:\Users\Jonathan Lee\.local\bin\uv.exe' run pytest -q -p no:cacheprovider
+```
+
+Result: **208 passed, 1 skipped** in 10.52s.
+
+The README now documents cross-paper theorem search plus explicit outgoing
+citation evidence for the local fixtures. It explicitly states that only a
+matching arXiv paper imported through `workspace_add_arxiv_paper` creates a
+stored citation target; it makes no live-download claim.

@@ -44,16 +44,28 @@ def test_three_paper_graph_survives_reopen(tmp_path):
     path = tmp_path / "knowledge.sqlite3"
     workspace = Workspace.open(path)
     import_fixture_papers(workspace)
-    citations = {
-        paper_id: {
-            row["citation_key"]: row
-            for row in workspace.get_citations(paper_id, "outgoing")
-        }
+    outgoing_citations = {
+        paper_id: workspace.get_citations(paper_id, "outgoing")
         for paper_id in (
             "arxiv:2401.12345",
             "arxiv:2401.12346",
             "arxiv:2401.12347",
         )
+    }
+    assert {
+        paper_id: [row["citation_key"] for row in rows]
+        for paper_id, rows in outgoing_citations.items()
+    } == {
+        "arxiv:2401.12345": ["absent", "missing", "paper-b"],
+        "arxiv:2401.12346": ["paper-c"],
+        "arxiv:2401.12347": ["paper-a"],
+    }
+    citations = {
+        paper_id: {
+            row["citation_key"]: row
+            for row in rows
+        }
+        for paper_id, rows in outgoing_citations.items()
     }
     assert (
         citations["arxiv:2401.12345"]["paper-b"]["target_paper_id"],

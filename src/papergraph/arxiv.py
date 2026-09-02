@@ -271,6 +271,8 @@ def _cache_key(arxiv_id: str) -> str:
 
 
 def _read_cached_main(entry: Path, arxiv_id: str) -> Path | None:
+    if not entry.is_dir() or entry.is_symlink():
+        return None
     manifest_path = entry / ".papergraph.json"
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))

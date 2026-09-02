@@ -72,13 +72,11 @@ def _extract_tar(
         return False
 
     with archive:
-        members = archive.getmembers()
-        if len(members) > max_members:
-            raise ArchiveLimitError("Archive contains too many members")
-
         declared_size = 0
         targets: list[tuple[tarfile.TarInfo, Path]] = []
-        for member in members:
+        for index, member in enumerate(archive, start=1):
+            if index > max_members:
+                raise ArchiveLimitError("Archive contains too many members")
             target = _member_target(destination, member.name)
             if member.isdir():
                 targets.append((member, target))

@@ -1,0 +1,390 @@
+"""Download and prepare arXiv source projects."""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import shutil
+import tempfile
+import uuid
+from dataclasses import dataclass
+from pathlib import Path, PurePosixPath
+
+import httpx
+
+from papergraph.archive import (
+    ArchiveError,
+    ArchiveLimitError,
+    UnsafeArchiveError,
+    UnsupportedArchiveError,
+    extract_source_package,
+)
+from papergraph.loader import _is_commented
+
+
+ARXIV_SOURCE_BASE = "https://export.arxiv.org/e-print"
+MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024
+_USER_AGENT = "PaperGraph/0.3 (+https://github.com/lotchuazzz-crypto/papergraph-mcp)"
+_MODERN_ID_RE = re.compile(r"\d{4}\.\d{4,5}(?:v[1-9]\d*)?")
+_LEGACY_ID_RE = re.compile(
+    r"[A-Za-z][A-Za-z0-9.-]*/\d{7}(?:v[1-9]\d*)?"
+)
+_HTTP_TIMEOUT = httpx.Timeout(connect=10.0, read=60.0, write=60.0, pool=10.0)
+_DRIVE_PREFIX_RE = re.compile(r"^[A-Za-z]:")
+_ROOT_COMMAND_READ_LIMIT = 1024 * 1024
+_DOCUMENTCLASS_RE = re.compile(r"\\documentclass\b")
+_BEGIN_DOCUMENT_RE = re.compile(r"\\begin\s*\{document\}")
+_PREFERRED_MAIN_NAMES = ("main.tex", "paper.tex", "manuscript.tex")
+
+
+class ArxivImportError(Exception):
+    """Base error for arXiv imports."""
+
+
+class InvalidArxivIdError(ArxivImportError):
+    """The caller supplied an unsupported arXiv identifier."""
+
+
+class ArxivDownloadError(ArxivImportError):
+    """The arXiv source response could not be downloaded safely."""
+
+
+class ArxivCacheError(ArxivImportError):
+    """A persistent source cache entry is invalid or unavailable."""
+
+
+class MainFileSelectionError(ArxivImportError):
+    """A root LaTeX document could not be selected."""
+
+
+class ArxivArchiveError(ArxivImportError):
+    """The downloaded source package cannot be extracted safely."""
+
+
+@dataclass(frozen=True, slots=True)
+class ArxivProject:
+    arxiv_id: str
+    project_dir: Path
+    main_file: Path
+    cached: bool
+
+
+def normalize_arxiv_id(value: str) -> str:
+    """Validate and return an arXiv identifier without its optional prefix."""
+
+    if not isinstance(value, str):
+        raise InvalidArxivIdError("arXiv identifier must be text")
+    normalized = value.strip()
+    if normalized[:6].lower() == "arxiv:":
+        normalized = normalized[6:]
+    if not (
+        _MODERN_ID_RE.fullmatch(normalized)
+        or _LEGACY_ID_RE.fullmatch(normalized)
+    ):
+        raise InvalidArxivIdError(f"Invalid arXiv identifier: {value!r}")
+    return normalized
+
+
+def _write_response(
+    response: httpx.Response,
+    destination: Path,
+    *,
+    arxiv_id: str,
+    max_bytes: int,
+) -> None:
+    if not response.is_success:
+        raise ArxivDownloadError(
+            f"arXiv source download failed for {arxiv_id} "
+            f"with HTTP {response.status_code}"
+        )
+
+    declared_length = response.headers.get("content-length")
+    if declared_length is not None:
+        try:
+            declared_bytes = int(declared_length)
+        except ValueError as exc:
+            raise ArxivDownloadError(
+                f"arXiv returned an invalid source length for {arxiv_id}"
+            ) from exc
+        if declared_bytes > max_bytes:
+            raise ArxivDownloadError(
+                f"arXiv source for {arxiv_id} exceeds the download size limit"
+            )
+
+    received = 0
+    with destination.open("wb") as output:
+        for chunk in response.iter_bytes():
+            received += len(chunk)
+            if received > max_bytes:
+                raise ArxivDownloadError(
+                    f"arXiv source for {arxiv_id} exceeds the download size limit"
+                )
+            output.write(chunk)
+    if received == 0:
+        raise ArxivDownloadError(f"arXiv returned an empty source for {arxiv_id}")
+
+
+def download_arxiv_source(
+    arxiv_id: str,
+    destination: Path,
+    *,
+    client: httpx.Client | None = None,
+    max_bytes: int = MAX_DOWNLOAD_BYTES,
+) -> None:
+    """Stream one source response from arXiv's fixed e-print endpoint."""
+
+    normalized_id = normalize_arxiv_id(arxiv_id)
+    if max_bytes < 1:
+        raise ValueError("Download size limit must be positive")
+    destination = Path(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    url = f"{ARXIV_SOURCE_BASE}/{normalized_id}"
+    owned_client = client is None
+    active_client = client or httpx.Client()
+    try:
+        with active_client.stream(
+            "GET",
+            url,
+            headers={"User-Agent": _USER_AGENT},
+            follow_redirects=True,
+            timeout=_HTTP_TIMEOUT,
+        ) as response:
+            _write_response(
+                response,
+                destination,
+                arxiv_id=normalized_id,
+                max_bytes=max_bytes,
+            )
+    except ArxivDownloadError:
+        destination.unlink(missing_ok=True)
+        raise
+    except httpx.HTTPError as exc:
+        destination.unlink(missing_ok=True)
+        raise ArxivDownloadError(
+            f"Could not download arXiv source for {normalized_id}"
+        ) from exc
+    finally:
+        if owned_client:
+            active_client.close()
+
+
+def _safe_relative_path(value: str) -> PurePosixPath:
+    normalized = value.replace("\\", "/")
+    if normalized.startswith("/") or _DRIVE_PREFIX_RE.match(normalized):
+        raise MainFileSelectionError(f"Unsafe main_file path: {value}")
+    relative = PurePosixPath(normalized)
+    if not normalized or ".." in relative.parts:
+        raise MainFileSelectionError(f"Unsafe main_file path: {value}")
+    return relative
+
+
+def _is_regular_file(path: Path) -> bool:
+    return path.is_file() and not path.is_symlink()
+
+
+def _has_uncommented_match(pattern: re.Pattern[str], text: str) -> bool:
+    return any(not _is_commented(text, match.start()) for match in pattern.finditer(text))
+
+
+def _is_root_document(path: Path) -> bool:
+    with path.open("rb") as source:
+        text = source.read(_ROOT_COMMAND_READ_LIMIT).decode(
+            "utf-8",
+            errors="replace",
+        )
+    return _has_uncommented_match(
+        _DOCUMENTCLASS_RE,
+        text,
+    ) and _has_uncommented_match(_BEGIN_DOCUMENT_RE, text)
+
+
+def _display_paths(root: Path, paths: list[Path]) -> str:
+    return ", ".join(
+        sorted(path.relative_to(root).as_posix() for path in paths)
+    )
+
+
+def select_main_file(
+    project_root: Path,
+    main_file: str | None = None,
+) -> Path:
+    """Select or validate the root LaTeX file in an extracted project."""
+
+    root = Path(project_root).resolve()
+    if not root.is_dir():
+        raise MainFileSelectionError("Extracted arXiv project is not a directory")
+
+    if main_file is not None:
+        relative = _safe_relative_path(main_file)
+        if relative.suffix.lower() != ".tex":
+            raise MainFileSelectionError("main_file must name a .tex file")
+        selected = root.joinpath(*relative.parts).resolve()
+        if not selected.is_relative_to(root) or not _is_regular_file(selected):
+            raise MainFileSelectionError(f"main_file does not exist: {main_file}")
+        return selected
+
+    tex_files: list[Path] = []
+    for path in root.rglob("*.tex"):
+        relative = path.relative_to(root)
+        if any(part.startswith(".") for part in relative.parts):
+            continue
+        resolved = path.resolve()
+        if resolved.is_relative_to(root) and _is_regular_file(path):
+            tex_files.append(resolved)
+
+    candidates = [path for path in tex_files if _is_root_document(path)]
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1:
+        for preferred in _PREFERRED_MAIN_NAMES:
+            matches = [
+                path for path in candidates if path.name.lower() == preferred
+            ]
+            if len(matches) == 1:
+                return matches[0]
+        raise MainFileSelectionError(
+            "Multiple root LaTeX files found: "
+            f"{_display_paths(root, candidates)}. "
+            "Pass main_file to choose one."
+        )
+
+    if tex_files:
+        detail = f" Discovered: {_display_paths(root, tex_files)}."
+    else:
+        detail = " No .tex files were discovered."
+    raise MainFileSelectionError(f"No root LaTeX file found.{detail}")
+
+
+def default_cache_root() -> Path:
+    """Return the platform-appropriate persistent PaperGraph cache root."""
+
+    if local_app_data := os.environ.get("LOCALAPPDATA"):
+        return Path(local_app_data) / "papergraph" / "arxiv"
+    if xdg_cache_home := os.environ.get("XDG_CACHE_HOME"):
+        return Path(xdg_cache_home) / "papergraph" / "arxiv"
+    return Path.home() / ".cache" / "papergraph" / "arxiv"
+
+
+def _cache_key(arxiv_id: str) -> str:
+    return arxiv_id.replace("/", "__")
+
+
+def _read_cached_main(entry: Path, arxiv_id: str) -> Path | None:
+    if not entry.is_dir() or entry.is_symlink():
+        return None
+    manifest_path = entry / ".papergraph.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if not isinstance(manifest, dict) or manifest.get("arxiv_id") != arxiv_id:
+            return None
+        stored_main = manifest.get("main_file")
+        if not isinstance(stored_main, str):
+            return None
+        return select_main_file(entry, stored_main)
+    except (OSError, json.JSONDecodeError, MainFileSelectionError):
+        return None
+
+
+def _translate_archive_error(arxiv_id: str, error: ArchiveError) -> ArxivArchiveError:
+    if isinstance(error, UnsafeArchiveError):
+        reason = "contains unsafe archive content"
+    elif isinstance(error, ArchiveLimitError):
+        reason = "exceeds archive safety limits"
+    elif isinstance(error, UnsupportedArchiveError):
+        reason = "uses an unsupported source format"
+    else:
+        reason = "could not be extracted"
+    return ArxivArchiveError(f"arXiv source for {arxiv_id} {reason}")
+
+
+def _remove_cache_path(path: Path) -> None:
+    if path.is_dir() and not path.is_symlink():
+        shutil.rmtree(path)
+    else:
+        path.unlink(missing_ok=True)
+
+
+def _publish_cache_entry(project: Path, entry: Path) -> None:
+    backup: Path | None = None
+    if entry.exists():
+        backup = entry.parent / f".{entry.name}.backup-{uuid.uuid4().hex}"
+        entry.rename(backup)
+    try:
+        project.rename(entry)
+    except Exception:
+        if backup is not None and backup.exists() and not entry.exists():
+            backup.rename(entry)
+        raise
+    else:
+        if backup is not None:
+            _remove_cache_path(backup)
+
+
+def prepare_arxiv_project(
+    arxiv_id: str,
+    main_file: str | None = None,
+    refresh: bool = False,
+    *,
+    cache_root: Path | None = None,
+    client: httpx.Client | None = None,
+) -> ArxivProject:
+    """Download, safely extract, select, and cache one arXiv source project."""
+
+    normalized_id = normalize_arxiv_id(arxiv_id)
+    root = Path(cache_root) if cache_root is not None else default_cache_root()
+    root = root.expanduser().resolve()
+    entry = root / _cache_key(normalized_id)
+
+    cached_main = _read_cached_main(entry, normalized_id)
+    if cached_main is not None and not refresh:
+        selected = select_main_file(entry, main_file) if main_file else cached_main
+        return ArxivProject(normalized_id, entry, selected, True)
+
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+        work = Path(
+            tempfile.mkdtemp(
+                prefix=f".{entry.name}-",
+                dir=root,
+            )
+        )
+    except OSError as exc:
+        raise ArxivCacheError(
+            f"Could not create the arXiv cache for {normalized_id}"
+        ) from exc
+
+    try:
+        source = work / "source-package"
+        project = work / "project"
+        download_arxiv_source(normalized_id, source, client=client)
+        try:
+            extract_source_package(source, project)
+        except ArchiveError as exc:
+            raise _translate_archive_error(normalized_id, exc) from exc
+
+        selected = select_main_file(project, main_file)
+        selected_relative = selected.relative_to(project).as_posix()
+        manifest = {
+            "arxiv_id": normalized_id,
+            "main_file": selected_relative,
+        }
+        (project / ".papergraph.json").write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        _publish_cache_entry(project, entry)
+        return ArxivProject(
+            normalized_id,
+            entry,
+            entry.joinpath(*PurePosixPath(selected_relative).parts),
+            False,
+        )
+    except ArxivImportError:
+        raise
+    except OSError as exc:
+        raise ArxivCacheError(
+            f"Could not update the arXiv cache for {normalized_id}"
+        ) from exc
+    finally:
+        shutil.rmtree(work, ignore_errors=True)

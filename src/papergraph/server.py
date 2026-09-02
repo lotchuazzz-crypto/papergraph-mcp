@@ -3,6 +3,7 @@ from pathlib import Path
 from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
+from papergraph.arxiv import ArxivImportError, prepare_arxiv_project
 from papergraph.graph import PaperGraph
 from papergraph.loader import load_latex_project
 from papergraph.parser import parse_latex
@@ -19,7 +20,7 @@ def require_graph() -> PaperGraph:
     if _current_graph is None:
         raise ToolError(
             "No paper is loaded. "
-            "Call load_paper(path) first."
+            "Call load_paper(path) or load_arxiv_paper(arxiv_id) first."
         )
 
     return _current_graph
@@ -68,6 +69,46 @@ def load_paper(path: str) -> dict:
 
     return {
         "path": str(paper_path),
+        "nodes": len(nodes),
+        "kinds": kinds,
+    }
+
+
+@mcp.tool()
+def load_arxiv_paper(
+    arxiv_id: str,
+    main_file: str | None = None,
+    refresh: bool = False,
+) -> dict:
+    """Download an arXiv source project and build its theorem graph."""
+
+    global _current_graph
+    global _current_path
+
+    try:
+        project = prepare_arxiv_project(
+            arxiv_id,
+            main_file,
+            refresh,
+        )
+        text = load_latex_project(project.main_file)
+    except (ArxivImportError, OSError, ValueError) as exc:
+        raise ToolError(str(exc)) from exc
+
+    nodes = parse_latex(text)
+    graph = PaperGraph(nodes)
+
+    kinds: dict[str, int] = {}
+    for node in nodes:
+        kinds[node.kind] = kinds.get(node.kind, 0) + 1
+
+    _current_graph = graph
+    _current_path = project.main_file
+
+    return {
+        "arxiv_id": project.arxiv_id,
+        "path": str(project.main_file),
+        "cached": project.cached,
         "nodes": len(nodes),
         "kinds": kinds,
     }

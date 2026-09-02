@@ -244,6 +244,24 @@ def test_skill_resolves_an_ambiguous_client_before_showing_generic_json():
         "requests the generic route"
     ) in generic
 
+    design = read(
+        ROOT
+        / "docs"
+        / "superpowers"
+        / "specs"
+        / "2026-09-03-agent-guided-onboarding-design.md"
+    )
+    assert (
+        "If the client remains ambiguous, ask for its name before showing "
+        "configuration"
+    ) in design
+    assert (
+        "If the identified client is unsupported or the user explicitly chooses a "
+        "generic route, provide the generic JSON server entry"
+    ) in design
+    assert "For an unknown client, the skill must provide" not in design
+    assert "Unsupported or ambiguous client: provide" not in design
+
 
 def test_client_reference_contains_verified_native_routes():
     text = read(SKILL / "references" / "client-configuration.md")

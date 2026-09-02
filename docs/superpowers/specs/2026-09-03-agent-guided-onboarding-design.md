@@ -49,7 +49,7 @@ The repository uses `.agents/skills`, the repository-local Agent Skills location
 
 The project must not claim that the phrase “clone this repository” can activate a skill before the repository exists locally, or that every agent product supports repository-local skills. The guaranteed behavior is narrower: once a compatible agent has cloned and opened the repository, it can discover or be directed to the onboarding workflow.
 
-Codex is the first-class client because the repository-local skill and bootstrap can be tested directly in this environment. The reference also documents current configuration routes for common stdio-capable clients where official documentation supplies a stable route. For an unknown client, the skill must provide the generic JSON server entry and ask the user to place it using that client's documentation; it must not guess a configuration path.
+Codex is the first-class client because the repository-local skill and bootstrap can be tested directly in this environment. The reference also documents current configuration routes for common stdio-capable clients where official documentation supplies a stable route. If the client remains ambiguous, ask for its name before showing configuration. If the identified client is unsupported or the user explicitly chooses a generic route, provide the generic JSON server entry and ask the user to place it using that client's documentation; do not guess a configuration path.
 
 ## Reusable usage prompt
 
@@ -117,7 +117,7 @@ The agent must not report successful installation from file presence alone. Succ
 
 - No installation permission: leave the system unchanged, retain the reusable prompt in the response, and provide the official manual installation link.
 - `uv` installation failure: report the failing check and do not attempt client configuration.
-- Unsupported or ambiguous client: provide the generic JSON entry and ask for the client's name or documentation; do not guess.
+- Ambiguous client: ask for its name before showing configuration and do not show generic JSON yet. Identified unsupported client or explicitly chosen generic route: provide the generic JSON entry and ask for the client's documentation; do not guess a path.
 - Configuration already correct: do not rewrite it; validate the launch command and proceed to the restart instruction.
 - Existing `papergraph` entry differs: show the difference and ask before replacing only that entry.
 - Launch smoke test failure: keep any valid configuration, explain that setup is incomplete, and do not claim the client is ready.

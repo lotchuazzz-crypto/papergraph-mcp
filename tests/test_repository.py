@@ -25,6 +25,7 @@ def test_project_metadata_is_discoverable_and_keeps_dependencies_separated():
     assert project["dependencies"] == [
         "httpx>=0.27,<1",
         "mcp[cli]>=2,<3",
+        "pybtex>=0.25,<0.27",
     ]
     assert set(project["keywords"]) == {
         "mcp",

@@ -17,6 +17,7 @@ classifiers = [
 dependencies = [
     "httpx>=0.27,<1",
     "mcp[cli]>=2,<3",
+    "pybtex>=0.25,<0.27",
 ]
 
 [project.scripts]

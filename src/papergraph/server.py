@@ -4,7 +4,8 @@ from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
 from papergraph.graph import PaperGraph
-from papergraph.parser import parse_file
+from papergraph.loader import load_latex_project
+from papergraph.parser import parse_latex
 
 
 mcp = MCPServer("PaperGraph MCP")
@@ -45,10 +46,15 @@ def load_paper(path: str) -> dict:
 
     if paper_path.suffix.lower() != ".tex":
         raise ToolError(
-            "PaperGraph v0.1 only supports .tex files."
+            "PaperGraph only accepts a .tex root file."
         )
 
-    nodes = parse_file(paper_path)
+    try:
+        text = load_latex_project(paper_path)
+    except (OSError, ValueError) as exc:
+        raise ToolError(str(exc)) from exc
+
+    nodes = parse_latex(text)
 
     _current_graph = PaperGraph(nodes)
     _current_path = paper_path

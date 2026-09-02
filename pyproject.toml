@@ -1,9 +1,19 @@
 [project]
 name = "papergraph-mcp"
-version = "0.3.0"
+version = "0.3.1"
 description = "Turn mathematical LaTeX papers into theorem dependency graphs for AI agents."
 readme = "README.md"
 requires-python = ">=3.10"
+keywords = ["mcp", "arxiv", "latex", "mathematics", "theorem-graph", "ai-agents"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+]
 dependencies = [
     "httpx>=0.27,<1",
     "mcp[cli]>=2,<3",
@@ -12,9 +22,17 @@ dependencies = [
 [project.scripts]
 papergraph-mcp = "papergraph.server:main"
 
+[project.urls]
+Homepage = "https://github.com/lotchuazzz-crypto/papergraph-mcp"
+Repository = "https://github.com/lotchuazzz-crypto/papergraph-mcp"
+Issues = "https://github.com/lotchuazzz-crypto/papergraph-mcp/issues"
+Releases = "https://github.com/lotchuazzz-crypto/papergraph-mcp/releases"
+
 [dependency-groups]
 dev = [
+    "pyyaml>=6,<7",
     "pytest>=8",
+    "tomli>=2,<3; python_version < '3.11'",
 ]
 
 [build-system]

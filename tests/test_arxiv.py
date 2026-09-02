@@ -1,14 +1,20 @@
+import io
+import json
+import tarfile
 from pathlib import Path
 
 import httpx
 import pytest
 
 from papergraph.arxiv import (
+    ArxivImportError,
     ArxivDownloadError,
     InvalidArxivIdError,
     MainFileSelectionError,
+    default_cache_root,
     download_arxiv_source,
     normalize_arxiv_id,
+    prepare_arxiv_project,
     select_main_file,
 )
 
@@ -267,3 +273,241 @@ def test_rejects_invalid_explicit_main_file(tmp_path: Path, override: str):
 
     with pytest.raises(MainFileSelectionError):
         select_main_file(root, override)
+
+
+def source_tar(files: dict[str, str]) -> bytes:
+    payload = io.BytesIO()
+    with tarfile.open(fileobj=payload, mode="w") as archive:
+        for name, content in files.items():
+            encoded = content.encode("utf-8")
+            info = tarfile.TarInfo(name)
+            info.size = len(encoded)
+            archive.addfile(info, io.BytesIO(encoded))
+    return payload.getvalue()
+
+
+def test_default_cache_root_precedence(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    local = tmp_path / "local"
+    xdg = tmp_path / "xdg"
+    monkeypatch.setenv("LOCALAPPDATA", str(local))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(xdg))
+    assert default_cache_root() == local / "papergraph" / "arxiv"
+
+    monkeypatch.delenv("LOCALAPPDATA")
+    assert default_cache_root() == xdg / "papergraph" / "arxiv"
+
+    monkeypatch.delenv("XDG_CACHE_HOME")
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path / "home"))
+    assert default_cache_root() == tmp_path / "home" / ".cache" / "papergraph" / "arxiv"
+
+
+def test_prepares_and_manifests_arxiv_project(tmp_path: Path):
+    payload = source_tar(
+        {
+            "main.tex": document_text("\\input{sections/proof}"),
+            "sections/proof.tex": "Proof",
+        }
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=payload)
+
+    cache_root = tmp_path / "cache"
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        project = prepare_arxiv_project(
+            "arXiv:2401.12345",
+            cache_root=cache_root,
+            client=client,
+        )
+
+    assert project.arxiv_id == "2401.12345"
+    assert project.project_dir == cache_root / "2401.12345"
+    assert project.main_file == project.project_dir / "main.tex"
+    assert project.cached is False
+    assert (project.project_dir / "sections" / "proof.tex").read_text() == "Proof"
+    assert json.loads((project.project_dir / ".papergraph.json").read_text()) == {
+        "arxiv_id": "2401.12345",
+        "main_file": "main.tex",
+    }
+
+
+def test_cache_hit_avoids_second_download(tmp_path: Path):
+    calls = 0
+    payload = source_tar({"main.tex": document_text()})
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls > 1:
+            raise AssertionError("cache hit attempted a network request")
+        return httpx.Response(200, content=payload)
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        first = prepare_arxiv_project("2401.12345", cache_root=tmp_path, client=client)
+        second = prepare_arxiv_project("2401.12345", cache_root=tmp_path, client=client)
+
+    assert first.cached is False
+    assert second.cached is True
+    assert second.main_file == first.main_file
+    assert calls == 1
+
+
+def test_legacy_id_uses_filesystem_safe_cache_name(tmp_path: Path):
+    payload = source_tar({"main.tex": document_text()})
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=payload)
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        project = prepare_arxiv_project(
+            "math/0307200",
+            cache_root=tmp_path,
+            client=client,
+        )
+
+    assert project.project_dir.name == "math__0307200"
+
+
+def test_successful_refresh_replaces_cache(tmp_path: Path):
+    payloads = iter(
+        [
+            source_tar({"main.tex": document_text("OLD")}),
+            source_tar({"main.tex": document_text("NEW")}),
+        ]
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=next(payloads))
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        prepare_arxiv_project("2401.12345", cache_root=tmp_path, client=client)
+        refreshed = prepare_arxiv_project(
+            "2401.12345",
+            refresh=True,
+            cache_root=tmp_path,
+            client=client,
+        )
+
+    assert refreshed.cached is False
+    assert "NEW" in refreshed.main_file.read_text()
+    assert "OLD" not in refreshed.main_file.read_text()
+
+
+def test_failed_refresh_preserves_valid_cache_and_cleans_temporary_data(
+    tmp_path: Path,
+):
+    calls = 0
+    original = source_tar({"main.tex": document_text("ORIGINAL")})
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx.Response(200, content=original)
+        return httpx.Response(503, text="failure")
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        project = prepare_arxiv_project("2401.12345", cache_root=tmp_path, client=client)
+        before = project.main_file.read_bytes()
+        with pytest.raises(ArxivDownloadError):
+            prepare_arxiv_project(
+                "2401.12345",
+                refresh=True,
+                cache_root=tmp_path,
+                client=client,
+            )
+
+    assert project.main_file.read_bytes() == before
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["2401.12345"]
+
+
+@pytest.mark.parametrize(
+    "manifest",
+    [
+        "not json",
+        json.dumps({"arxiv_id": "9999.99999", "main_file": "main.tex"}),
+        json.dumps({"arxiv_id": "2401.12345", "main_file": "../escape.tex"}),
+        json.dumps({"arxiv_id": "2401.12345", "main_file": "missing.tex"}),
+    ],
+)
+def test_invalid_manifest_is_rebuilt(tmp_path: Path, manifest: str):
+    entry = tmp_path / "2401.12345"
+    entry.mkdir()
+    (entry / "main.tex").write_text(document_text("STALE"))
+    (entry / ".papergraph.json").write_text(manifest)
+    payload = source_tar({"main.tex": document_text("FRESH")})
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(200, content=payload)
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        project = prepare_arxiv_project("2401.12345", cache_root=tmp_path, client=client)
+
+    assert calls == 1
+    assert project.cached is False
+    assert "FRESH" in project.main_file.read_text()
+
+
+def test_non_directory_cache_entry_is_rebuilt(tmp_path: Path):
+    (tmp_path / "2401.12345").write_text("invalid entry")
+    payload = source_tar({"main.tex": document_text("FRESH")})
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=payload)
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        project = prepare_arxiv_project("2401.12345", cache_root=tmp_path, client=client)
+
+    assert project.project_dir.is_dir()
+    assert "FRESH" in project.main_file.read_text()
+
+
+def test_main_file_override_can_change_on_cache_hit(tmp_path: Path):
+    payload = source_tar(
+        {
+            "first.tex": document_text("FIRST"),
+            "nested/second.tex": document_text("SECOND"),
+        }
+    )
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(200, content=payload)
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        first = prepare_arxiv_project(
+            "2401.12345",
+            main_file="first.tex",
+            cache_root=tmp_path,
+            client=client,
+        )
+        second = prepare_arxiv_project(
+            "2401.12345",
+            main_file="nested/second.tex",
+            cache_root=tmp_path,
+            client=client,
+        )
+
+    assert first.main_file.name == "first.tex"
+    assert second.main_file.name == "second.tex"
+    assert second.cached is True
+    assert calls == 1
+
+
+def test_unsafe_archive_is_translated_and_not_published(tmp_path: Path):
+    payload = source_tar({"../escape.tex": "BAD"})
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=payload)
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(ArxivImportError, match="unsafe"):
+            prepare_arxiv_project("2401.12345", cache_root=tmp_path, client=client)
+
+    assert not (tmp_path / "2401.12345").exists()
+    assert not (tmp_path.parent / "escape.tex").exists()

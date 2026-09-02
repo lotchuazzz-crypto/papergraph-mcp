@@ -2,11 +2,24 @@
 
 from __future__ import annotations
 
+import json
+import os
 import re
+import shutil
+import tempfile
+import uuid
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 import httpx
 
+from papergraph.archive import (
+    ArchiveError,
+    ArchiveLimitError,
+    UnsafeArchiveError,
+    UnsupportedArchiveError,
+    extract_source_package,
+)
 from papergraph.loader import _is_commented
 
 
@@ -43,6 +56,18 @@ class ArxivCacheError(ArxivImportError):
 
 class MainFileSelectionError(ArxivImportError):
     """A root LaTeX document could not be selected."""
+
+
+class ArxivArchiveError(ArxivImportError):
+    """The downloaded source package cannot be extracted safely."""
+
+
+@dataclass(frozen=True, slots=True)
+class ArxivProject:
+    arxiv_id: str
+    project_dir: Path
+    main_file: Path
+    cached: bool
 
 
 def normalize_arxiv_id(value: str) -> str:
@@ -229,3 +254,135 @@ def select_main_file(
     else:
         detail = " No .tex files were discovered."
     raise MainFileSelectionError(f"No root LaTeX file found.{detail}")
+
+
+def default_cache_root() -> Path:
+    """Return the platform-appropriate persistent PaperGraph cache root."""
+
+    if local_app_data := os.environ.get("LOCALAPPDATA"):
+        return Path(local_app_data) / "papergraph" / "arxiv"
+    if xdg_cache_home := os.environ.get("XDG_CACHE_HOME"):
+        return Path(xdg_cache_home) / "papergraph" / "arxiv"
+    return Path.home() / ".cache" / "papergraph" / "arxiv"
+
+
+def _cache_key(arxiv_id: str) -> str:
+    return arxiv_id.replace("/", "__")
+
+
+def _read_cached_main(entry: Path, arxiv_id: str) -> Path | None:
+    manifest_path = entry / ".papergraph.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if not isinstance(manifest, dict) or manifest.get("arxiv_id") != arxiv_id:
+            return None
+        stored_main = manifest.get("main_file")
+        if not isinstance(stored_main, str):
+            return None
+        return select_main_file(entry, stored_main)
+    except (OSError, json.JSONDecodeError, MainFileSelectionError):
+        return None
+
+
+def _translate_archive_error(arxiv_id: str, error: ArchiveError) -> ArxivArchiveError:
+    if isinstance(error, UnsafeArchiveError):
+        reason = "contains unsafe archive content"
+    elif isinstance(error, ArchiveLimitError):
+        reason = "exceeds archive safety limits"
+    elif isinstance(error, UnsupportedArchiveError):
+        reason = "uses an unsupported source format"
+    else:
+        reason = "could not be extracted"
+    return ArxivArchiveError(f"arXiv source for {arxiv_id} {reason}")
+
+
+def _remove_cache_path(path: Path) -> None:
+    if path.is_dir() and not path.is_symlink():
+        shutil.rmtree(path)
+    else:
+        path.unlink(missing_ok=True)
+
+
+def _publish_cache_entry(project: Path, entry: Path) -> None:
+    backup: Path | None = None
+    if entry.exists():
+        backup = entry.parent / f".{entry.name}.backup-{uuid.uuid4().hex}"
+        entry.rename(backup)
+    try:
+        project.rename(entry)
+    except Exception:
+        if backup is not None and backup.exists() and not entry.exists():
+            backup.rename(entry)
+        raise
+    else:
+        if backup is not None:
+            _remove_cache_path(backup)
+
+
+def prepare_arxiv_project(
+    arxiv_id: str,
+    main_file: str | None = None,
+    refresh: bool = False,
+    *,
+    cache_root: Path | None = None,
+    client: httpx.Client | None = None,
+) -> ArxivProject:
+    """Download, safely extract, select, and cache one arXiv source project."""
+
+    normalized_id = normalize_arxiv_id(arxiv_id)
+    root = Path(cache_root) if cache_root is not None else default_cache_root()
+    root = root.expanduser().resolve()
+    entry = root / _cache_key(normalized_id)
+
+    cached_main = _read_cached_main(entry, normalized_id)
+    if cached_main is not None and not refresh:
+        selected = select_main_file(entry, main_file) if main_file else cached_main
+        return ArxivProject(normalized_id, entry, selected, True)
+
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+        work = Path(
+            tempfile.mkdtemp(
+                prefix=f".{entry.name}-",
+                dir=root,
+            )
+        )
+    except OSError as exc:
+        raise ArxivCacheError(
+            f"Could not create the arXiv cache for {normalized_id}"
+        ) from exc
+
+    try:
+        source = work / "source-package"
+        project = work / "project"
+        download_arxiv_source(normalized_id, source, client=client)
+        try:
+            extract_source_package(source, project)
+        except ArchiveError as exc:
+            raise _translate_archive_error(normalized_id, exc) from exc
+
+        selected = select_main_file(project, main_file)
+        selected_relative = selected.relative_to(project).as_posix()
+        manifest = {
+            "arxiv_id": normalized_id,
+            "main_file": selected_relative,
+        }
+        (project / ".papergraph.json").write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        _publish_cache_entry(project, entry)
+        return ArxivProject(
+            normalized_id,
+            entry,
+            entry.joinpath(*PurePosixPath(selected_relative).parts),
+            False,
+        )
+    except ArxivImportError:
+        raise
+    except OSError as exc:
+        raise ArxivCacheError(
+            f"Could not update the arXiv cache for {normalized_id}"
+        ) from exc
+    finally:
+        shutil.rmtree(work, ignore_errors=True)

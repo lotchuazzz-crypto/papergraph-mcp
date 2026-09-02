@@ -6,8 +6,10 @@ import pytest
 from papergraph.arxiv import (
     ArxivDownloadError,
     InvalidArxivIdError,
+    MainFileSelectionError,
     download_arxiv_source,
     normalize_arxiv_id,
+    select_main_file,
 )
 
 
@@ -146,3 +148,122 @@ def test_download_translates_network_failures(
     assert "private network detail" not in message
     assert str(destination) not in message
     assert not destination.exists()
+
+
+def write_tex(path: Path, content: str) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def document_text(body: str = "") -> str:
+    return f"\\documentclass{{article}}\n\\begin{{document}}\n{body}"
+
+
+def test_selects_only_root_document(tmp_path: Path):
+    root = tmp_path / "project"
+    expected = write_tex(root / "article.tex", document_text())
+    write_tex(root / "section.tex", "Section only")
+
+    assert select_main_file(root) == expected.resolve()
+
+
+@pytest.mark.parametrize(
+    ("names", "expected"),
+    [
+        (["draft.tex", "main.tex", "paper.tex"], "main.tex"),
+        (["draft.tex", "paper.tex", "manuscript.tex"], "paper.tex"),
+        (["draft.tex", "manuscript.tex"], "manuscript.tex"),
+    ],
+)
+def test_prefers_conventional_unique_basename(
+    tmp_path: Path,
+    names: list[str],
+    expected: str,
+):
+    root = tmp_path / "project"
+    for name in names:
+        write_tex(root / name, document_text(name))
+
+    assert select_main_file(root) == (root / expected).resolve()
+
+
+def test_reports_sorted_ambiguous_candidates(tmp_path: Path):
+    root = tmp_path / "project"
+    write_tex(root / "zeta.tex", document_text())
+    write_tex(root / "parts" / "alpha.tex", document_text())
+
+    with pytest.raises(MainFileSelectionError) as caught:
+        select_main_file(root)
+
+    message = str(caught.value)
+    assert "parts/alpha.tex" in message
+    assert "zeta.tex" in message
+    assert message.index("parts/alpha.tex") < message.index("zeta.tex")
+
+
+def test_reports_discovered_tex_files_when_no_candidate(tmp_path: Path):
+    root = tmp_path / "project"
+    write_tex(root / "sections" / "body.tex", "Body")
+
+    with pytest.raises(MainFileSelectionError, match="sections/body.tex"):
+        select_main_file(root)
+
+
+def test_ignores_hidden_tex_candidates(tmp_path: Path):
+    root = tmp_path / "project"
+    expected = write_tex(root / "visible.tex", document_text())
+    write_tex(root / ".hidden" / "main.tex", document_text())
+
+    assert select_main_file(root) == expected.resolve()
+
+
+def test_ignores_commented_root_commands(tmp_path: Path):
+    root = tmp_path / "project"
+    write_tex(
+        root / "commented.tex",
+        "% \\documentclass{article}\n% \\begin{document}\n",
+    )
+
+    with pytest.raises(MainFileSelectionError):
+        select_main_file(root)
+
+
+def test_escaped_percent_does_not_hide_root_commands(tmp_path: Path):
+    root = tmp_path / "project"
+    expected = write_tex(
+        root / "main.tex",
+        "\\% literal \\documentclass{article}\n\\begin{document}",
+    )
+
+    assert select_main_file(root) == expected.resolve()
+
+
+@pytest.mark.parametrize("override", ["sections/root.tex", "sections\\root.tex"])
+def test_accepts_safe_explicit_main_file(tmp_path: Path, override: str):
+    root = tmp_path / "project"
+    expected = write_tex(root / "sections" / "root.tex", "custom root")
+
+    assert select_main_file(root, override) == expected.resolve()
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        "missing.tex",
+        "notes.txt",
+        "../outside.tex",
+        "nested/../../outside.tex",
+        "/absolute.tex",
+        "C:/absolute.tex",
+        "C:\\absolute.tex",
+    ],
+)
+def test_rejects_invalid_explicit_main_file(tmp_path: Path, override: str):
+    root = tmp_path / "project"
+    root.mkdir()
+    write_tex(tmp_path / "outside.tex", document_text())
+    write_tex(root / "notes.txt", "notes")
+
+    with pytest.raises(MainFileSelectionError):
+        select_main_file(root, override)

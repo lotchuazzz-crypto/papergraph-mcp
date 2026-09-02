@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import httpx
+
+from papergraph.loader import _is_commented
 
 
 ARXIV_SOURCE_BASE = "https://export.arxiv.org/e-print"
@@ -16,6 +18,11 @@ _LEGACY_ID_RE = re.compile(
     r"[A-Za-z][A-Za-z0-9.-]*/\d{7}(?:v[1-9]\d*)?"
 )
 _HTTP_TIMEOUT = httpx.Timeout(connect=10.0, read=60.0, write=60.0, pool=10.0)
+_DRIVE_PREFIX_RE = re.compile(r"^[A-Za-z]:")
+_ROOT_COMMAND_READ_LIMIT = 1024 * 1024
+_DOCUMENTCLASS_RE = re.compile(r"\\documentclass\b")
+_BEGIN_DOCUMENT_RE = re.compile(r"\\begin\s*\{document\}")
+_PREFERRED_MAIN_NAMES = ("main.tex", "paper.tex", "manuscript.tex")
 
 
 class ArxivImportError(Exception):
@@ -135,3 +142,90 @@ def download_arxiv_source(
     finally:
         if owned_client:
             active_client.close()
+
+
+def _safe_relative_path(value: str) -> PurePosixPath:
+    normalized = value.replace("\\", "/")
+    if normalized.startswith("/") or _DRIVE_PREFIX_RE.match(normalized):
+        raise MainFileSelectionError(f"Unsafe main_file path: {value}")
+    relative = PurePosixPath(normalized)
+    if not normalized or ".." in relative.parts:
+        raise MainFileSelectionError(f"Unsafe main_file path: {value}")
+    return relative
+
+
+def _is_regular_file(path: Path) -> bool:
+    return path.is_file() and not path.is_symlink()
+
+
+def _has_uncommented_match(pattern: re.Pattern[str], text: str) -> bool:
+    return any(not _is_commented(text, match.start()) for match in pattern.finditer(text))
+
+
+def _is_root_document(path: Path) -> bool:
+    with path.open("rb") as source:
+        text = source.read(_ROOT_COMMAND_READ_LIMIT).decode(
+            "utf-8",
+            errors="replace",
+        )
+    return _has_uncommented_match(
+        _DOCUMENTCLASS_RE,
+        text,
+    ) and _has_uncommented_match(_BEGIN_DOCUMENT_RE, text)
+
+
+def _display_paths(root: Path, paths: list[Path]) -> str:
+    return ", ".join(
+        sorted(path.relative_to(root).as_posix() for path in paths)
+    )
+
+
+def select_main_file(
+    project_root: Path,
+    main_file: str | None = None,
+) -> Path:
+    """Select or validate the root LaTeX file in an extracted project."""
+
+    root = Path(project_root).resolve()
+    if not root.is_dir():
+        raise MainFileSelectionError("Extracted arXiv project is not a directory")
+
+    if main_file is not None:
+        relative = _safe_relative_path(main_file)
+        if relative.suffix.lower() != ".tex":
+            raise MainFileSelectionError("main_file must name a .tex file")
+        selected = root.joinpath(*relative.parts).resolve()
+        if not selected.is_relative_to(root) or not _is_regular_file(selected):
+            raise MainFileSelectionError(f"main_file does not exist: {main_file}")
+        return selected
+
+    tex_files: list[Path] = []
+    for path in root.rglob("*.tex"):
+        relative = path.relative_to(root)
+        if any(part.startswith(".") for part in relative.parts):
+            continue
+        resolved = path.resolve()
+        if resolved.is_relative_to(root) and _is_regular_file(path):
+            tex_files.append(resolved)
+
+    candidates = [path for path in tex_files if _is_root_document(path)]
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1:
+        for preferred in _PREFERRED_MAIN_NAMES:
+            matches = [
+                path for path in candidates if path.name.lower() == preferred
+            ]
+            if len(matches) == 1:
+                return matches[0]
+        raise MainFileSelectionError(
+            "Multiple root LaTeX files found: "
+            f"{_display_paths(root, candidates)}. "
+            "Pass main_file to choose one."
+        )
+
+    if tex_files:
+        detail = f" Discovered: {_display_paths(root, tex_files)}."
+    else:
+        detail = " No .tex files were discovered."
+    raise MainFileSelectionError(f"No root LaTeX file found.{detail}")

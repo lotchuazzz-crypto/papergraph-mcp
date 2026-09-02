@@ -1,6 +1,6 @@
 [project]
 name = "papergraph-mcp"
-version = "0.3.1"
+version = "0.4.0"
 description = "Turn mathematical LaTeX papers into theorem dependency graphs for AI agents."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -17,6 +17,7 @@ classifiers = [
 dependencies = [
     "httpx>=0.27,<1",
     "mcp[cli]>=2,<3",
+    "pybtex>=0.25,<0.27",
 ]
 
 [project.scripts]

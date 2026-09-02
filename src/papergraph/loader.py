@@ -1,10 +1,48 @@
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 
 INCLUDE_RE = re.compile(
     r"\\(?:input|include)\s*\{(?P<path>[^}]+)\}"
 )
+
+
+@dataclass(frozen=True, slots=True)
+class SourceSpan:
+    path: Path
+    start: int
+    end: int
+
+
+@dataclass(frozen=True, slots=True)
+class LoadedLatexText:
+    text: str
+    spans: tuple[SourceSpan, ...]
+
+
+class _Traversal:
+    def __init__(self) -> None:
+        self.parts: list[str] = []
+        self.spans: list[SourceSpan] = []
+        self.length = 0
+
+    def append(self, path: Path, text: str) -> None:
+        if not text:
+            return
+
+        start = self.length
+        self.parts.append(text)
+        self.length += len(text)
+        self.spans.append(
+            SourceSpan(path=path, start=start, end=self.length)
+        )
+
+    def result(self) -> LoadedLatexText:
+        return LoadedLatexText(
+            text="".join(self.parts),
+            spans=tuple(self.spans),
+        )
 
 
 def resolve_tex_path(
@@ -26,10 +64,26 @@ def load_latex_project(
     main_file: str | Path,
 ) -> str:
     root = Path(main_file).expanduser().resolve()
-    return _load_file(root, ())
+    return _traverse_latex_project(root).text
 
 
-def _is_commented(
+def load_latex_project_with_spans(
+    main_file: str | Path,
+) -> LoadedLatexText:
+    root = Path(main_file).expanduser().resolve()
+    return _traverse_latex_project(root, root.parent)
+
+
+def _traverse_latex_project(
+    root: Path,
+    project_root: Path | None = None,
+) -> LoadedLatexText:
+    traversal = _Traversal()
+    _load_file(root, (), traversal, project_root)
+    return traversal.result()
+
+
+def is_latex_commented(
     text: str,
     position: int,
 ) -> bool:
@@ -55,10 +109,15 @@ def _is_commented(
     return False
 
 
+_is_commented = is_latex_commented
+
+
 def _load_file(
     path: Path,
     stack: tuple[Path, ...],
-) -> str:
+    traversal: _Traversal,
+    project_root: Path | None,
+) -> None:
     path = path.resolve()
 
     if path in stack:
@@ -85,21 +144,34 @@ def _load_file(
         errors="replace",
     )
 
-    parts: list[str] = []
     cursor = 0
     child_stack = (*stack, path)
 
     for match in INCLUDE_RE.finditer(text):
-        if _is_commented(text, match.start()):
+        if is_latex_commented(text, match.start()):
             continue
 
-        parts.append(text[cursor:match.start()])
+        traversal.append(path, text[cursor:match.start()])
         included = resolve_tex_path(
             path,
             match.group("path").strip(),
         )
-        parts.append(_load_file(included, child_stack))
+
+        if project_root is not None:
+            try:
+                included.relative_to(project_root)
+            except ValueError as error:
+                raise ValueError(
+                    "LaTeX include outside project root: "
+                    f"{included}"
+                ) from error
+
+        _load_file(
+            included,
+            child_stack,
+            traversal,
+            project_root,
+        )
         cursor = match.end()
 
-    parts.append(text[cursor:])
-    return "".join(parts)
+    traversal.append(path, text[cursor:])

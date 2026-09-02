@@ -9,15 +9,9 @@ from papergraph.arxiv import ArxivDownloadError, ArxivProject
 
 @pytest.fixture(autouse=True)
 def reset_server_state():
-    previous_graph = server._current_graph
-    previous_path = server._current_path
-    server._current_graph = None
-    server._current_path = None
-    try:
-        yield
-    finally:
-        server._current_graph = previous_graph
-        server._current_path = previous_path
+    server._reset_server_state()
+    yield
+    server._reset_server_state()
 
 
 def make_multifile_project(tmp_path: Path) -> ArxivProject:

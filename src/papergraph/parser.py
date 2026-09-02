@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 
 from papergraph.models import TheoremNode
+from papergraph.project import LoadedProject
 
 
 DEFAULT_ENVIRONMENTS = {
@@ -113,6 +114,27 @@ def parse_latex(text: str) -> list[TheoremNode]:
                 position=position,
             )
         )
+
+    return nodes
+
+
+def parse_project(project: LoadedProject) -> list[TheoremNode]:
+    nodes = parse_latex(project.text)
+
+    for node in nodes:
+        span = next(
+            (
+                item
+                for item in project.spans
+                if item.start <= node.position < item.end
+            ),
+            None,
+        )
+
+        if span is not None:
+            node.source_file = span.path.relative_to(
+                project.project_root
+            ).as_posix()
 
     return nodes
 

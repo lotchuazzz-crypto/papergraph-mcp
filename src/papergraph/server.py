@@ -8,8 +8,11 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 from papergraph.arxiv import ArxivImportError, prepare_arxiv_project
 from papergraph.graph import PaperGraph
+from papergraph.identity import paper_id_from_arxiv
 from papergraph.loader import load_latex_project
 from papergraph.parser import parse_latex
+from papergraph.project import load_project
+from papergraph.workspace import SCHEMA_VERSION, Workspace, WorkspaceError
 
 
 mcp = MCPServer("PaperGraph MCP")
@@ -17,6 +20,21 @@ mcp = MCPServer("PaperGraph MCP")
 
 _current_graph: PaperGraph | None = None
 _current_path: Path | None = None
+_current_workspace: Workspace | None = None
+
+
+def _reset_server_state() -> None:
+    """Reset process state, closing any active workspace connection."""
+
+    global _current_graph
+    global _current_path
+    global _current_workspace
+
+    if _current_workspace is not None:
+        _current_workspace.close()
+    _current_workspace = None
+    _current_graph = None
+    _current_path = None
 
 
 def require_graph() -> PaperGraph:
@@ -27,6 +45,163 @@ def require_graph() -> PaperGraph:
         )
 
     return _current_graph
+
+
+def require_workspace() -> Workspace:
+    if _current_workspace is None:
+        raise ToolError(
+            "No workspace is open. Call open_workspace(path) first."
+        )
+
+    return _current_workspace
+
+
+@mcp.tool()
+def open_workspace(path: str) -> dict:
+    """Open or initialize a persistent multi-paper workspace."""
+
+    global _current_workspace
+
+    try:
+        replacement = Workspace.open(path)
+    except (WorkspaceError, OSError) as exc:
+        raise ToolError(str(exc)) from exc
+
+    previous = _current_workspace
+    _current_workspace = replacement
+    if previous is not None:
+        previous.close()
+
+    return {
+        "path": str(replacement.path),
+        "schema_version": SCHEMA_VERSION,
+        **replacement.counts(),
+    }
+
+
+@mcp.tool()
+def workspace_add_local_paper(path: str, paper_id: str) -> dict:
+    """Add or replace a local LaTeX project in the active workspace."""
+
+    workspace = require_workspace()
+    paper_path = Path(path).expanduser().resolve()
+    try:
+        project = load_project(paper_path)
+        result = workspace.import_project(
+            paper_id,
+            "local",
+            str(paper_path),
+            None,
+            project,
+        )
+        return workspace.get_paper(result.paper_id)
+    except (WorkspaceError, OSError, ValueError, KeyError) as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+def workspace_add_arxiv_paper(
+    arxiv_id: str,
+    main_file: str | None = None,
+    refresh: bool = False,
+) -> dict:
+    """Add or replace an arXiv LaTeX project in the active workspace."""
+
+    workspace = require_workspace()
+    try:
+        prepared = prepare_arxiv_project(arxiv_id, main_file, refresh)
+        paper_id, source_version = paper_id_from_arxiv(prepared.arxiv_id)
+        project = load_project(prepared.main_file)
+        result = workspace.import_project(
+            paper_id,
+            "arxiv",
+            paper_id.removeprefix("arxiv:"),
+            source_version,
+            project,
+        )
+        return workspace.get_paper(result.paper_id)
+    except (
+        ArxivImportError,
+        WorkspaceError,
+        OSError,
+        ValueError,
+        KeyError,
+    ) as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+def workspace_list_papers() -> list[dict]:
+    """List all papers stored in the active workspace."""
+
+    try:
+        return require_workspace().list_papers()
+    except WorkspaceError as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+def workspace_get_paper(paper_id: str) -> dict:
+    """Return metadata and counts for one stored paper."""
+
+    try:
+        return require_workspace().get_paper(paper_id)
+    except (WorkspaceError, ValueError, KeyError) as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+def workspace_search_theorems(
+    query: str,
+    paper_id: str | None = None,
+    kind: str | None = None,
+    limit: int = 20,
+) -> list[dict]:
+    """Search theorem titles and bodies across the active workspace."""
+
+    try:
+        return require_workspace().search_theorems(
+            query,
+            paper_id=paper_id,
+            kind=kind,
+            limit=limit,
+        )
+    except (WorkspaceError, ValueError, KeyError) as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+def workspace_get_dependencies(
+    global_theorem_id: str,
+    recursive: bool = False,
+) -> list[dict]:
+    """Return dependencies of a globally identified stored theorem."""
+
+    try:
+        return require_workspace().get_dependencies(
+            global_theorem_id,
+            recursive=recursive,
+        )
+    except (WorkspaceError, ValueError, KeyError) as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+def workspace_get_citations(
+    paper_id: str,
+    direction: str = "outgoing",
+    include_unresolved: bool = True,
+) -> list[dict]:
+    """Return incoming or outgoing citation evidence for a stored paper."""
+
+    try:
+        return require_workspace().get_citations(
+            paper_id,
+            direction=direction,
+            include_unresolved=include_unresolved,
+        )
+    except (WorkspaceError, ValueError, KeyError) as exc:
+        raise ToolError(str(exc)) from exc
 
 
 @mcp.tool()

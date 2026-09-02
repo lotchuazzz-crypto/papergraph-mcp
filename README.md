@@ -1,56 +1,156 @@
 # PaperGraph MCP
 
-PaperGraph turns theorem-like environments in local or arXiv LaTeX papers
-into a dependency graph exposed through MCP.
+[![CI](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/lotchuazzz-crypto/papergraph-mcp)](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases)
+
+PaperGraph turns local or arXiv LaTeX papers into theorem dependency graphs that AI agents can query through MCP.
+
+## Why PaperGraph?
+
+AI agents often receive a mathematical paper as one flat block of text.
+PaperGraph identifies theorem-like environments, keeps their labels and
+references, and exposes the resulting graph through small MCP tools. An agent
+can ask for one theorem, follow its dependencies, or find every result that
+uses it without repeatedly scanning the entire paper.
+
+## Features
+
+- Load local single-file or multi-file LaTeX projects.
+- Recursively expand standard `\input` and `\include` commands.
+- Download and cache source projects directly from an arXiv identifier.
+- Safely unpack common arXiv source formats without following archive links.
+- Query theorem text, direct or recursive dependencies, and reverse usage.
+- Preserve the active graph when a new project fails to load.
+
+## Quick Start
+
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then
+verify the GitHub release without cloning the repository:
+
+```powershell
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.3.1 papergraph-mcp --version
+```
+
+The pinned command becomes available after the `v0.3.1` GitHub Release and
+tag are published. Pinning the tag keeps MCP client installations reproducible.
+
+## MCP Configuration
+
+For an MCP client that accepts JSON-style stdio server configuration, add:
+
+```json
+{
+  "mcpServers": {
+    "papergraph": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.3.1",
+        "papergraph-mcp"
+      ]
+    }
+  }
+}
+```
+
+Restart the MCP client after changing its configuration. The server uses
+stdio, so running the command without `--help` or `--version` waits quietly
+for an MCP client connection.
+
+## Tools
+
+| Tool | Purpose |
+| --- | --- |
+| `load_paper` | Load a local root `.tex` file and recursively expand its project. |
+| `load_arxiv_paper` | Download, safely cache, and load an arXiv source project. |
+| `list_theorems` | List theorem-like nodes, optionally filtered by environment kind. |
+| `get_theorem` | Return the full text and metadata for one labeled node. |
+| `get_dependencies` | Follow direct or recursive references from one node. |
+| `where_used` | Find nodes that reference a given theorem-like node. |
+
+## Demo
+
+Ask the MCP client to call:
+
+```text
+load_arxiv_paper(arxiv_id="math/0307200")
+```
+
+With v0.3.1, PaperGraph automatically selects `main.tex` and parses seven
+theorem-like nodes. A shortened representative response is:
+
+```json
+{
+  "arxiv_id": "math/0307200",
+  "path": "main.tex",
+  "cached": false,
+  "nodes": 7,
+  "kinds": {
+    "thm": 7
+  }
+}
+```
+
+The exact kind names reflect the LaTeX environment names declared by the
+paper. A second call reuses the validated local cache unless `refresh=true`.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Local[Local root .tex] --> Loader[Recursive LaTeX loader]
+    Arxiv[arXiv identifier] --> Download[Bounded download]
+    Download --> Extract[Safe extraction and cache]
+    Extract --> Loader
+    Loader --> Parser[Theorem parser]
+    Parser --> Graph[PaperGraph]
+    Graph --> List[list_theorems]
+    Graph --> Get[get_theorem]
+    Graph --> Dependencies[get_dependencies]
+    Graph --> Used[where_used]
+```
+
+## Safety and Cache
+
+PaperGraph only constructs downloads from arXiv's fixed e-print endpoint.
+Arbitrary URLs are not accepted. It limits compressed responses to **100 MiB**,
+expanded content to **500 MiB**, and archives to **10,000** members. Absolute
+paths, parent traversal, symbolic links, hard links, devices, FIFOs, and other
+special members are rejected.
+
+Sources are stored in the platform user cache. Cache entries are validated
+before reuse, and refreshes are prepared separately so a failed refresh does
+not replace a valid project. If root-file selection is ambiguous, retry
+`load_arxiv_paper` with a project-relative `main_file` value.
 
 ## Development
+
+Clone the repository and run:
 
 ```powershell
 uv sync
 uv run pytest -q -p no:cacheprovider
 ```
 
-## Load a local paper
+The automated suite uses synthetic archives and `httpx.MockTransport`; it does
+not depend on the live arXiv service.
 
-Call the MCP `load_paper` tool with the root `.tex` file. PaperGraph v0.2
-recursively follows standard `\input{...}` and `\include{...}` commands.
-Included paths are resolved relative to the file containing each command,
-and `.tex` is optional in those commands.
+## Contributing
 
-The `list_theorems`, `get_theorem`, `get_dependencies`, and `where_used`
-tools operate on the resulting combined graph.
+Bug reports, focused features, and compatibility fixtures are welcome. Read
+[Contributing](CONTRIBUTING.md) before opening a pull request. Never upload a
+private manuscript, credential, token, or unsanitized log.
 
-## Load an arXiv paper
+## Limitations
 
-PaperGraph v0.3 adds a dedicated `load_arxiv_paper` MCP tool:
+- There is no PDF fallback; PaperGraph requires LaTeX source.
+- Arbitrary URLs are not accepted; remote imports use arXiv identifiers only.
+- Unusual project layouts may require an explicit `main_file`.
+- The parser focuses on theorem-like environments and `\ref` relationships;
+  it is not a complete TeX engine or proof verifier.
 
-```text
-load_arxiv_paper(
-    arxiv_id="2401.12345",
-    main_file=None,
-    refresh=False,
-)
-```
+## License
 
-It accepts modern identifiers (`2401.12345`, `2401.12345v2`), legacy
-identifiers (`math/0307200`, `hep-th/9901001v3`), and an optional `arXiv:`
-prefix. URLs are not accepted. The tool downloads only from arXiv's fixed
-`https://export.arxiv.org/e-print/{id}` source endpoint, so network access is
-required for a paper that is not already cached.
-
-Downloaded sources are stored in the user's platform cache. A later call for
-the same identifier reuses the validated cache without another request. Pass
-`refresh=True` to fetch a replacement; a failed refresh leaves the existing
-valid cache intact.
-
-PaperGraph normally finds the root file by looking for uncommented
-`\documentclass` and `\begin{document}` commands, preferring `main.tex`,
-`paper.tex`, and `manuscript.tex` when needed. If multiple candidates remain,
-the error lists them. Retry with a project-relative path such as
-`main_file="src/article.tex"` to choose one explicitly.
-
-For safety, PaperGraph streams downloads and extraction, limits a compressed
-response to 100 MiB, limits extracted content to 500 MiB and 10,000 members,
-and rejects path traversal, links, devices, FIFOs, and other special archive
-members. Tar archives, compressed tar archives, gzip-compressed single TeX
-files, and plain single-file TeX responses are supported.
+PaperGraph is available under the [MIT License](LICENSE).

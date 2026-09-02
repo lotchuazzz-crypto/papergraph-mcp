@@ -1,4 +1,5 @@
 import tomllib
+import re
 from pathlib import Path
 
 import yaml
@@ -201,3 +202,59 @@ def test_contributing_guide_documents_reproducible_development():
         "generated distributions",
     ):
         assert forbidden_artifact in normalized_guide
+
+
+def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    pinned_source = (
+        "git+https://github.com/lotchuazzz-crypto/"
+        "papergraph-mcp.git@v0.3.1"
+    )
+
+    for badge in ("CI", "Python", "MIT", "Release"):
+        assert f"![{badge}]" in readme
+    assert (
+        f"uvx --from {pinned_source} papergraph-mcp --version"
+        in readme
+    )
+    assert '"command": "uvx"' in readme
+    assert pinned_source in readme
+
+    for tool_name in (
+        "load_paper",
+        "load_arxiv_paper",
+        "list_theorems",
+        "get_theorem",
+        "get_dependencies",
+        "where_used",
+    ):
+        assert f"`{tool_name}`" in readme
+
+    assert 'arxiv_id="math/0307200"' in readme
+    assert '"path": "main.tex"' in readme
+    assert '"cached": false' in readme
+    assert '"nodes": 7' in readme
+    assert "```mermaid" in readme
+    assert "100 MiB" in readme
+    assert "500 MiB" in readme
+    assert "10,000" in readme
+
+    lowered = readme.lower()
+    assert "no pdf fallback" in lowered
+    assert "arbitrary urls are not accepted" in lowered
+    assert "main_file" in readme
+    assert "[Contributing](CONTRIBUTING.md)" in readme
+    assert "[MIT License](LICENSE)" in readme
+
+
+def test_readme_relative_links_resolve_inside_repository():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    relative_targets = re.findall(
+        r"(?<!!)\[[^]]+\]\((?!https?://|#)([^)]+)\)",
+        readme,
+    )
+
+    assert relative_targets
+    for target in relative_targets:
+        path_text = target.split("#", 1)[0]
+        assert (ROOT / path_text).exists(), target

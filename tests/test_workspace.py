@@ -32,7 +32,8 @@ def project_factory(tmp_path: Path):
         if title is not None:
             metadata += rf"\title{{{title}}}"
         if authors:
-            metadata += rf"\author{{{' \\and '.join(authors)}}}"
+            joined_authors = r" \and ".join(authors)
+            metadata += rf"\author{{{joined_authors}}}"
         if bibliography is not None:
             (root / "refs.bib").write_text(bibliography, encoding="utf-8")
             body += r"\bibliography{refs}"

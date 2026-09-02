@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from papergraph.loader import load_latex_project, resolve_tex_path
 
 
@@ -38,3 +40,68 @@ def test_load_latex_project_expands_nested_commands_in_order(
     assert text.index("SECOND") < text.index("END")
     assert "\\input{" not in text
     assert "\\include{" not in text
+
+
+def test_commented_include_is_not_expanded(tmp_path: Path):
+    main = tmp_path / "main.tex"
+    main.write_text(
+        "% \\input{missing}\nVISIBLE",
+        encoding="utf-8",
+    )
+
+    text = load_latex_project(main)
+
+    assert "VISIBLE" in text
+    assert "\\input{missing}" in text
+
+
+def test_escaped_percent_does_not_comment_out_include(
+    tmp_path: Path,
+):
+    main = tmp_path / "main.tex"
+    included = tmp_path / "included.tex"
+    main.write_text(
+        "\\% literal percent \\input{included}",
+        encoding="utf-8",
+    )
+    included.write_text("EXPANDED", encoding="utf-8")
+
+    assert "EXPANDED" in load_latex_project(main)
+
+
+def test_repeated_non_cyclic_include_is_expanded_twice(
+    tmp_path: Path,
+):
+    main = tmp_path / "main.tex"
+    shared = tmp_path / "shared.tex"
+    main.write_text(
+        "\\input{shared}\n\\input{shared}",
+        encoding="utf-8",
+    )
+    shared.write_text("SHARED", encoding="utf-8")
+
+    assert load_latex_project(main).count("SHARED") == 2
+
+
+def test_missing_include_reports_resolved_path(tmp_path: Path):
+    main = tmp_path / "main.tex"
+    main.write_text("\\input{missing}", encoding="utf-8")
+
+    with pytest.raises(
+        FileNotFoundError,
+        match="missing[.]tex",
+    ):
+        load_latex_project(main)
+
+
+def test_circular_include_reports_chain(tmp_path: Path):
+    first = tmp_path / "first.tex"
+    second = tmp_path / "second.tex"
+    first.write_text("\\input{second}", encoding="utf-8")
+    second.write_text("\\include{first}", encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match="Circular LaTeX include",
+    ):
+        load_latex_project(first)

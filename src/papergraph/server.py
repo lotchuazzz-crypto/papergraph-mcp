@@ -529,6 +529,18 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     validate_parser.add_argument("--id", dest="text_id")
     validate_parser.add_argument("--url")
+    validate_request_parser = subparsers.add_parser(
+        "validate-arxiv-request",
+        help="Validate a raw arXiv request before loading a paper.",
+    )
+    validate_request_parser.add_argument("input")
+    load_request_parser = subparsers.add_parser(
+        "load-arxiv-request",
+        help="Validate and load a raw arXiv request as JSON.",
+    )
+    load_request_parser.add_argument("input")
+    load_request_parser.add_argument("--main-file")
+    load_request_parser.add_argument("--refresh", action="store_true")
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -541,6 +553,34 @@ def main(argv: Sequence[str] | None = None) -> None:
                 url=args.url,
             )
         )
+        return
+    if args.command == "validate-arxiv-request":
+        _print_json(validate_arxiv_request_result(args.input))
+        return
+    if args.command == "load-arxiv-request":
+        validation = validate_arxiv_request_result(args.input)
+        if validation["action"] != "safe_to_load" or validation["selected_id"] is None:
+            _print_json(validation)
+            raise SystemExit(1)
+        try:
+            _print_json(
+                load_arxiv_request(
+                    args.input,
+                    main_file=args.main_file,
+                    refresh=args.refresh,
+                )
+            )
+        except ToolError as exc:
+            _print_json(
+                {
+                    "status": "error",
+                    "action": "inspect_error",
+                    "selected_id": validation["selected_id"],
+                    "message": str(exc),
+                    "validation": validation,
+                }
+            )
+            raise SystemExit(1) from exc
         return
     mcp.run()
 

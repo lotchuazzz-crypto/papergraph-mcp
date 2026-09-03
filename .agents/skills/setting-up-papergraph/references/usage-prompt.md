@@ -7,7 +7,9 @@ Present this prompt before asking for installation permission:
 
 工作区数据库保存在临时目录，不要放进 Git 仓库。依次导入我提供的论文，然后：
 
-如果我同时给出 arXiv ID and arXiv URL，请先比较二者是否指向同一篇论文；如果不一致，先问我要分析哪一个，不要自行选择。
+开始分析前，请先调用 `get_environment_diagnostics` 或运行 `papergraph-mcp doctor`，并在回答里说明 PaperGraph 版本。
+
+如果我同时给出 arXiv ID and arXiv URL，请先调用 `validate_arxiv_input` 或 `papergraph-mcp validate-arxiv`。只有当结果是 `action: safe_to_load` 时才调用 `load_arxiv_paper`；如果结果是 `action: ask_user_to_choose`，请先问我要分析哪一篇，不要继续加载。
 
 1. 列出成功导入的论文；
 2. 搜索与“fixed point”相关的定理；

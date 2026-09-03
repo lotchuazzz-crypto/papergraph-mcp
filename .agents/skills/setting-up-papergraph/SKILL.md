@@ -17,7 +17,13 @@ Keep these four phases short and in this order. Do not show later phases as comp
 
 Briefly explain that PaperGraph lets an MCP client analyze LaTeX papers, build a multi-paper workspace, search theorem-like content, and inspect explicit citation evidence. Give the reusable prompt in a copyable block. Translate it only under the preservation rule in its reference.
 
-If a user provides both an arXiv ID and an arXiv URL, compare their normalized identifiers with `validate_arxiv_input` before loading a paper. If they differ, ask which one to analyze; do not silently prefer either value.
+Before loading arXiv papers:
+
+1. If a repository directory already exists, run `git fetch --tags origin` before trusting local `origin/main`.
+2. Verify `papergraph-mcp --version` and run `papergraph-mcp doctor` or call `get_environment_diagnostics`.
+3. If a user provides both an arXiv ID and an arXiv URL, call `validate_arxiv_input` first.
+4. Call `load_arxiv_paper` only when `validate_arxiv_input` returns `action: safe_to_load`.
+5. If validation returns `action: ask_user_to_choose`, stop and ask which one to analyze. detecting a conflict and then continuing is a failure.
 
 ### What is missing
 

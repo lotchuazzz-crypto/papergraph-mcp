@@ -325,6 +325,22 @@ def test_client_reference_discloses_launch_validation_side_effects():
     assert "populate the `uv` cache" in text
 
 
+def test_onboarding_requires_refresh_diagnostics_and_conflict_stop():
+    skill = read(SKILL / "SKILL.md")
+    prompt = read(SKILL / "references" / "usage-prompt.md")
+    client_reference = read(SKILL / "references" / "client-configuration.md")
+
+    assert "git fetch --tags origin" in skill
+    assert "papergraph-mcp doctor" in skill
+    assert "validate_arxiv_input" in skill
+    assert "Call `load_arxiv_paper` only when" in skill
+    assert "detecting a conflict and then continuing is a failure" in skill
+    assert "get_environment_diagnostics" in prompt
+    assert "validate_arxiv_input" in prompt
+    assert "ask_user_to_choose" in prompt
+    assert "papergraph-mcp doctor" in client_reference
+
+
 def test_readme_exposes_agent_guided_setup():
     text = read(ROOT / "README.md")
     assert "Ask your agent to set it up" in text

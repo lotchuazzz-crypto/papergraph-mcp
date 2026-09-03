@@ -271,6 +271,13 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     assert "display_kind" in readme
     assert "normalized_kind" in readme
     assert "If a prompt contains both an arXiv ID and an arXiv URL" in readme
+    assert "papergraph-mcp doctor" in readme
+    assert "validate-arxiv" in readme
+    assert "`get_environment_diagnostics`" in readme
+    assert "`validate_arxiv_input`" in readme
+    assert "git fetch --tags origin" in readme
+    assert "Call `load_arxiv_paper` only when" in readme
+    assert "detecting a conflict and then continuing is a failure" in readme
 
     assert 'arxiv_id="math/0307200"' in readme
     assert '"path": "main.tex"' in readme

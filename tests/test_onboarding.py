@@ -332,11 +332,13 @@ def test_onboarding_requires_refresh_diagnostics_and_conflict_stop():
 
     assert "git fetch --tags origin" in skill
     assert "papergraph-mcp doctor" in skill
-    assert "validate_arxiv_input" in skill
-    assert "Call `load_arxiv_paper` only when" in skill
+    assert "validate_arxiv_request" in skill
+    assert "load_arxiv_request" in skill
+    assert "Use `load_arxiv_paper` only after" in skill
     assert "detecting a conflict and then continuing is a failure" in skill
     assert "get_environment_diagnostics" in prompt
-    assert "validate_arxiv_input" in prompt
+    assert "validate_arxiv_request" in prompt
+    assert "load_arxiv_request" in prompt
     assert "ask_user_to_choose" in prompt
     assert "papergraph-mcp doctor" in client_reference
 

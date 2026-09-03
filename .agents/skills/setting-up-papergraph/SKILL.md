@@ -21,9 +21,10 @@ Before loading arXiv papers:
 
 1. If a repository directory already exists, run `git fetch --tags origin` before trusting local `origin/main`.
 2. Verify `papergraph-mcp --version` and run `papergraph-mcp doctor` or call `get_environment_diagnostics`.
-3. If a user provides both an arXiv ID and an arXiv URL, call `validate_arxiv_input` first.
-4. Call `load_arxiv_paper` only when `validate_arxiv_input` returns `action: safe_to_load`.
-5. If validation returns `action: ask_user_to_choose`, stop and ask which one to analyze. detecting a conflict and then continuing is a failure.
+3. For raw user wording, Markdown links, URLs, or prose, call `validate_arxiv_request` or `load_arxiv_request`.
+4. If a user provides both an arXiv ID and an arXiv URL, `load_arxiv_request` must stop before loading unless they identify the same paper.
+5. Use `load_arxiv_paper` only after the user has provided one already-disambiguated arXiv ID.
+6. If validation returns `action: ask_user_to_choose`, stop and ask which one to analyze. detecting a conflict and then continuing is a failure.
 
 ### What is missing
 

@@ -270,13 +270,14 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     assert "raw_kind" in readme
     assert "display_kind" in readme
     assert "normalized_kind" in readme
-    assert "If a prompt contains both an arXiv ID and an arXiv URL" in readme
+    assert "For raw user requests, prefer" in readme
     assert "papergraph-mcp doctor" in readme
-    assert "validate-arxiv" in readme
+    assert "validate-arxiv-request" in readme
     assert "`get_environment_diagnostics`" in readme
-    assert "`validate_arxiv_input`" in readme
+    assert "`validate_arxiv_request`" in readme
+    assert "`load_arxiv_request`" in readme
     assert "git fetch --tags origin" in readme
-    assert "Call `load_arxiv_paper` only when" in readme
+    assert "Use `load_arxiv_paper` only after" in readme
     assert "detecting a conflict and then continuing is a failure" in readme
 
     assert 'arxiv_id="math/0307200"' in readme
@@ -318,7 +319,8 @@ def test_onboarding_uses_v044_release_pin_and_mentions_id_url_conflicts():
 
     assert "papergraph-mcp.git@v0.4.4" in skill
     assert "papergraph-mcp 0.4.4" in skill
-    assert "validate_arxiv_input" in skill
+    assert "validate_arxiv_request" in skill
+    assert "load_arxiv_request" in skill
     assert "If a user provides both an arXiv ID and an arXiv URL" in skill
     assert "ask which one to analyze" in skill
     assert "arXiv ID and arXiv URL" in prompt

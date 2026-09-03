@@ -31,6 +31,14 @@ _MODERN_ID_RE = re.compile(r"\d{4}\.\d{4,5}(?:v[1-9]\d*)?")
 _LEGACY_ID_RE = re.compile(
     r"[A-Za-z][A-Za-z0-9.-]*/\d{7}(?:v[1-9]\d*)?"
 )
+_ARXIV_ID_SEARCH_RE = re.compile(
+    r"(?<![A-Za-z0-9./:-])(?:arXiv:)?"
+    r"(\d{4}\.\d{4,5}(?:v[1-9]\d*)?|[A-Za-z][A-Za-z0-9.-]*/\d{7}(?:v[1-9]\d*)?)"
+    r"(?![A-Za-z0-9./-])",
+    re.IGNORECASE,
+)
+_MARKDOWN_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
+_URL_RE = re.compile(r"https?://[^\s<>)\]]+")
 _ARXIV_URL_HOSTS = {"arxiv.org", "www.arxiv.org", "export.arxiv.org"}
 _ARXIV_URL_PREFIXES = {"/abs/", "/pdf/"}
 _HTTP_TIMEOUT = httpx.Timeout(connect=10.0, read=60.0, write=60.0, pool=10.0)
@@ -194,6 +202,135 @@ def validate_arxiv_input(
         "action": "safe_to_load",
         "selected_id": selected_id,
         "message": f"One arXiv input was provided. It is safe to load {selected_id}.",
+        "errors": [],
+    }
+
+
+def _candidate(kind: str, raw: str, normalized_id: str) -> dict:
+    return {
+        "kind": kind,
+        "raw": raw,
+        "normalized_id": normalized_id,
+    }
+
+
+def _span_is_consumed(span: tuple[int, int], consumed_spans: list[tuple[int, int]]) -> bool:
+    start, end = span
+    return any(start >= used_start and end <= used_end for used_start, used_end in consumed_spans)
+
+
+def _append_unique_normalized_id(normalized_ids: list[str], normalized_id: str) -> None:
+    if normalized_id not in normalized_ids:
+        normalized_ids.append(normalized_id)
+
+
+def _extract_request_candidates(value: str) -> list[dict]:
+    candidates: list[dict] = []
+    consumed_spans: list[tuple[int, int]] = []
+
+    for match in _MARKDOWN_LINK_RE.finditer(value):
+        consumed_spans.append(match.span())
+        text, url = match.groups()
+        try:
+            candidates.append(
+                _candidate("markdown_text", text, normalize_arxiv_id(text))
+            )
+        except InvalidArxivIdError:
+            pass
+        try:
+            candidates.append(
+                _candidate("markdown_url", url, extract_arxiv_id_from_url(url))
+            )
+        except InvalidArxivIdError:
+            pass
+
+    for match in _URL_RE.finditer(value):
+        if _span_is_consumed(match.span(), consumed_spans):
+            continue
+        consumed_spans.append(match.span())
+        url = match.group(0)
+        try:
+            candidates.append(
+                _candidate("plain_url", url, extract_arxiv_id_from_url(url))
+            )
+        except InvalidArxivIdError:
+            pass
+
+    for match in _ARXIV_ID_SEARCH_RE.finditer(value):
+        if _span_is_consumed(match.span(), consumed_spans):
+            continue
+        raw = match.group(0)
+        try:
+            candidates.append(_candidate("bare_id", raw, normalize_arxiv_id(raw)))
+        except InvalidArxivIdError:
+            pass
+
+    return candidates
+
+
+def validate_arxiv_request(input: str) -> dict:
+    """Extract arXiv IDs from a raw user request and return the safe next action."""
+
+    if not isinstance(input, str):
+        return {
+            "input": input,
+            "candidates": [],
+            "normalized_ids": [],
+            "status": "invalid",
+            "action": "ask_user_to_choose",
+            "selected_id": None,
+            "message": (
+                "The arXiv request must be text. Ask the user for one supported "
+                "arXiv ID, URL, or Markdown link before loading a paper."
+            ),
+            "errors": ["arXiv request must be text."],
+        }
+
+    candidates = _extract_request_candidates(input)
+    normalized_ids: list[str] = []
+    for item in candidates:
+        _append_unique_normalized_id(normalized_ids, item["normalized_id"])
+
+    if not normalized_ids:
+        return {
+            "input": input,
+            "candidates": candidates,
+            "normalized_ids": normalized_ids,
+            "status": "invalid",
+            "action": "ask_user_to_choose",
+            "selected_id": None,
+            "message": (
+                "No supported arXiv ID or arXiv URL was found. Ask the user for "
+                "one supported arXiv ID, URL, or Markdown arXiv link."
+            ),
+            "errors": ["Provide one arXiv ID, arXiv URL, or Markdown arXiv link."],
+        }
+
+    if len(normalized_ids) > 1:
+        return {
+            "input": input,
+            "candidates": candidates,
+            "normalized_ids": normalized_ids,
+            "status": "conflict",
+            "action": "ask_user_to_choose",
+            "selected_id": None,
+            "message": (
+                "The request contains multiple different arXiv IDs. Ask the user "
+                "which paper to analyze before loading anything."
+            ),
+            "errors": [],
+        }
+
+    selected_id = normalized_ids[0]
+    status = "match" if len(candidates) > 1 else "single_input"
+    return {
+        "input": input,
+        "candidates": candidates,
+        "normalized_ids": normalized_ids,
+        "status": status,
+        "action": "safe_to_load",
+        "selected_id": selected_id,
+        "message": f"The request identifies one paper. It is safe to load {selected_id}.",
         "errors": [],
     }
 

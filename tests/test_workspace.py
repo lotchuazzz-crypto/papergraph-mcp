@@ -102,7 +102,7 @@ def test_workspace_creates_versioned_schema_and_only_the_parent(tmp_path: Path):
     assert fetch_all(
         path,
         "SELECT value FROM workspace_meta WHERE key = 'schema_version'",
-    ) == [("1",)]
+    ) == [("2",)]
 
 
 def test_workspace_rejects_a_directory_path(tmp_path: Path):
@@ -123,7 +123,7 @@ def test_workspace_rejects_newer_schema_and_closes_connection(
             "CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
         )
         connection.execute(
-            "INSERT INTO workspace_meta VALUES ('schema_version', '2')"
+            "INSERT INTO workspace_meta VALUES ('schema_version', '3')"
         )
 
     import papergraph.workspace as workspace_module
@@ -138,7 +138,7 @@ def test_workspace_rejects_newer_schema_and_closes_connection(
 
     monkeypatch.setattr(workspace_module.sqlite3, "connect", tracking_connect)
 
-    with pytest.raises(WorkspaceSchemaError, match="schema version 2"):
+    with pytest.raises(WorkspaceSchemaError, match="schema version 3"):
         Workspace.open(path)
 
     with pytest.raises(sqlite3.ProgrammingError, match="closed"):
@@ -152,7 +152,7 @@ def test_workspace_rejects_partial_current_schema(tmp_path: Path):
             "CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
         )
         connection.execute(
-            "INSERT INTO workspace_meta VALUES ('schema_version', '1')"
+            "INSERT INTO workspace_meta VALUES ('schema_version', '2')"
         )
 
     with pytest.raises(WorkspaceSchemaError, match="missing required tables.*papers"):
@@ -166,14 +166,17 @@ def test_workspace_enables_and_enforces_foreign_keys(workspace: Workspace):
         workspace._connection.execute(
             """
             INSERT INTO theorems (
-                global_id, paper_id, local_id, kind, title, label,
-                content, source_file, position
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                global_id, paper_id, local_id, kind, raw_kind, display_kind,
+                normalized_kind, title, label, content, source_file, position
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 "local:missing::thm:x",
                 "local:missing",
                 "thm:x",
+                "theorem",
+                "theorem",
+                "theorem",
                 "theorem",
                 None,
                 "thm:x",
@@ -222,7 +225,34 @@ def test_import_persists_theorems_and_resolved_and_unresolved_refs(
     ).fetchall() == [
         ("lem:base", "local:paper-a::lem:base"),
         ("missing", None),
-    ]
+    ]    
+
+
+def test_workspace_persists_theorem_kind_metadata(
+    workspace: Workspace,
+    project_factory,
+):
+    project = project_factory(
+        r"\newtheorem{thm}{Theorem}"
+        r"\begin{thm}\label{thm:main}Main.\end{thm}"
+    )
+
+    workspace.import_project("local:kinds", "local", "main.tex", None, project)
+
+    assert workspace._connection.execute(
+        "SELECT kind, raw_kind, display_kind, normalized_kind FROM theorems"
+    ).fetchall() == [("thm", "thm", "Theorem", "theorem")]
+    assert workspace.get_paper("local:kinds")["kinds"] == {"theorem": 1}
+    result = workspace.search_theorems("Main")[0]
+    assert {
+        key: result[key]
+        for key in ("kind", "raw_kind", "display_kind", "normalized_kind")
+    } == {
+        "kind": "thm",
+        "raw_kind": "thm",
+        "display_kind": "Theorem",
+        "normalized_kind": "theorem",
+    }
 
 
 def test_import_rejects_duplicate_local_ids_without_replacing_old_data(

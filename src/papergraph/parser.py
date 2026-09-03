@@ -17,7 +17,7 @@ DEFAULT_ENVIRONMENTS = {
 
 
 NEW_THEOREM_RE = re.compile(
-    r"\\newtheorem\*?\{(?P<env>[^}]+)\}\{[^}]+\}"
+    r"\\newtheorem\*?\{(?P<env>[^}]+)\}\{(?P<display>[^}]+)\}"
 )
 
 LABEL_RE = re.compile(
@@ -27,6 +27,16 @@ LABEL_RE = re.compile(
 REF_RE = re.compile(
     r"\\(?:ref|eqref|autoref|cref|Cref)\{(?P<labels>[^}]+)\}"
 )
+
+KIND_ALIASES = {
+    "theorem": "theorem",
+    "lemma": "lemma",
+    "proposition": "proposition",
+    "corollary": "corollary",
+    "definition": "definition",
+    "claim": "claim",
+    "conjecture": "conjecture",
+}
 
 
 def extract_refs(text: str) -> tuple[str, ...]:
@@ -44,11 +54,24 @@ def extract_refs(text: str) -> tuple[str, ...]:
     return tuple(refs)
 
 
-def discover_theorem_environments(text: str) -> set[str]:
-    environments = set(DEFAULT_ENVIRONMENTS)
+def _normalize_display_kind(raw_kind: str, display_kind: str) -> str:
+    normalized = display_kind.strip().lower()
+    return KIND_ALIASES.get(normalized, raw_kind.lower())
+
+
+def discover_theorem_environments(text: str) -> dict[str, tuple[str, str]]:
+    environments = {
+        environment: (environment, environment)
+        for environment in DEFAULT_ENVIRONMENTS
+    }
 
     for match in NEW_THEOREM_RE.finditer(text):
-        environments.add(match.group("env"))
+        raw_kind = match.group("env")
+        display_kind = match.group("display").strip() or raw_kind
+        environments[raw_kind] = (
+            display_kind,
+            _normalize_display_kind(raw_kind, display_kind),
+        )
 
     return environments
 
@@ -57,10 +80,10 @@ def parse_latex(text: str) -> list[TheoremNode]:
     environments = discover_theorem_environments(text)
 
     matches: list[
-        tuple[int, str, str | None, str]
+        tuple[int, str, str, str, str | None, str]
     ] = []
 
-    for environment in environments:
+    for environment, (display_kind, normalized_kind) in environments.items():
         pattern = re.compile(
             rf"""
             \\begin\{{{re.escape(environment)}\}}
@@ -76,6 +99,8 @@ def parse_latex(text: str) -> list[TheoremNode]:
                 (
                     match.start(),
                     environment,
+                    display_kind,
+                    normalized_kind,
                     match.group("title"),
                     match.group("body").strip(),
                 )
@@ -86,7 +111,7 @@ def parse_latex(text: str) -> list[TheoremNode]:
     counters: dict[str, int] = {}
     nodes: list[TheoremNode] = []
 
-    for position, environment, title, body in matches:
+    for position, environment, display_kind, normalized_kind, title, body in matches:
         counters[environment] = counters.get(environment, 0) + 1
 
         label_match = LABEL_RE.search(body)
@@ -107,6 +132,9 @@ def parse_latex(text: str) -> list[TheoremNode]:
             TheoremNode(
                 id=node_id,
                 kind=environment,
+                raw_kind=environment,
+                display_kind=display_kind,
+                normalized_kind=normalized_kind,
                 title=title,
                 label=label,
                 content=body,

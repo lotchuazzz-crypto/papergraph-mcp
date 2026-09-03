@@ -169,11 +169,11 @@ def test_get_environment_diagnostics_returns_runtime_metadata(monkeypatch):
         "environment_diagnostics",
         lambda: {
             "package_name": "papergraph-mcp",
-            "version": "0.4.3",
-            "release_tag": "v0.4.3",
+            "version": "0.4.4",
+            "release_tag": "v0.4.4",
             "recommended_source": (
                 "git+https://github.com/lotchuazzz-crypto/"
-                "papergraph-mcp.git@v0.4.3"
+                "papergraph-mcp.git@v0.4.4"
             ),
             "dependency_extraction_basis": "statement_explicit_latex_refs_only",
             "git": None,
@@ -181,7 +181,7 @@ def test_get_environment_diagnostics_returns_runtime_metadata(monkeypatch):
         },
     )
 
-    assert server.get_environment_diagnostics()["release_tag"] == "v0.4.3"
+    assert server.get_environment_diagnostics()["release_tag"] == "v0.4.4"
 
 
 def test_validate_arxiv_input_tool_reports_conflict():

@@ -5,7 +5,7 @@
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/lotchuazzz-crypto/papergraph-mcp)](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases)
 
-PaperGraph turns local or arXiv LaTeX papers into theorem dependency graphs that AI agents can query through MCP. PaperGraph v0.4.3 hardens first-use analysis by making agents verify the running version, validate arXiv ID/URL pairs, and report dependency boundaries before interpreting sparse graphs.
+PaperGraph turns local or arXiv LaTeX papers into theorem dependency graphs that AI agents can query through MCP. PaperGraph v0.4.4 hardens first-use analysis by making agents verify the running version, validate arXiv ID/URL pairs, and report dependency boundaries before interpreting sparse graphs.
 
 PaperGraph v0.4.0 introduced the persistent, cross-paper SQLite workspace: retain a small literature collection, search theorem text, follow theorem dependencies, and inspect citation evidence without asking an agent to re-read every source paper.
 
@@ -46,11 +46,11 @@ returns `action: ask_user_to_choose`, ask the user to choose; detecting a confli
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the GitHub release without cloning the repository:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.4 papergraph-mcp --version
 papergraph-mcp doctor
 ```
 
-The pinned command becomes available after the `v0.4.3` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
+The pinned command becomes available after the `v0.4.4` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
 
 To validate conflicting arXiv input before loading a paper, run:
 
@@ -67,7 +67,7 @@ For an MCP client that accepts JSON-style stdio server configuration, add:
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.4", "papergraph-mcp"]
     }
   }
 }
@@ -98,7 +98,7 @@ For a compact single-paper check, call `load_arxiv_paper(arxiv_id="math/0307200"
 
 ## Reading Sparse Dependency Results
 
-PaperGraph v0.4.3 dependency traversal uses `statement_explicit_latex_refs_only`:
+PaperGraph v0.4.4 dependency traversal uses `statement_explicit_latex_refs_only`:
 it follows explicit LaTeX references such as `\ref`, `\eqref`, `\autoref`,
 `\cref`, and `\Cref` inside theorem-like statements. An empty dependency result
 means PaperGraph found no resolvable theorem-label references under that rule.

@@ -46,23 +46,23 @@ There are three separate approval boundaries:
 Use this immutable release source everywhere; never substitute a branch, a mutable default, or an unreleased revision:
 
 ```text
-git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3
+git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.4
 ```
 
 Never request credentials, upload papers, or place a workspace database inside the Git repository.
 
 ### What changed
 
-Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `0.4.3`; file presence alone is insufficient:
+Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `0.4.4`; file presence alone is insufficient:
 
 ```text
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.4 papergraph-mcp --version
 ```
 
 The expected output is:
 
 ```text
-papergraph-mcp 0.4.3
+papergraph-mcp 0.4.4
 ```
 
 Before restart, say “launch command validated”; never say “client has loaded the PaperGraph tools.” Tool loading can be confirmed only after the restarted client discovers the server.

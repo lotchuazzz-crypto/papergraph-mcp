@@ -10,6 +10,7 @@ import tempfile
 import uuid
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from urllib.parse import urlparse
 
 import httpx
 
@@ -30,6 +31,8 @@ _MODERN_ID_RE = re.compile(r"\d{4}\.\d{4,5}(?:v[1-9]\d*)?")
 _LEGACY_ID_RE = re.compile(
     r"[A-Za-z][A-Za-z0-9.-]*/\d{7}(?:v[1-9]\d*)?"
 )
+_ARXIV_URL_HOSTS = {"arxiv.org", "www.arxiv.org", "export.arxiv.org"}
+_ARXIV_URL_PREFIXES = {"/abs/", "/pdf/"}
 _HTTP_TIMEOUT = httpx.Timeout(connect=10.0, read=60.0, write=60.0, pool=10.0)
 _DRIVE_PREFIX_RE = re.compile(r"^[A-Za-z]:")
 _ROOT_COMMAND_READ_LIMIT = 1024 * 1024
@@ -84,6 +87,115 @@ def normalize_arxiv_id(value: str) -> str:
     ):
         raise InvalidArxivIdError(f"Invalid arXiv identifier: {value!r}")
     return normalized
+
+
+def extract_arxiv_id_from_url(url: str) -> str:
+    """Extract and validate an arXiv identifier from a supported arXiv URL."""
+
+    if not isinstance(url, str):
+        raise InvalidArxivIdError("arXiv URL must be text")
+    parsed = urlparse(url.strip())
+    if (
+        parsed.scheme not in {"http", "https"}
+        or parsed.netloc.lower() not in _ARXIV_URL_HOSTS
+    ):
+        raise InvalidArxivIdError(f"Unsupported arXiv URL: {url!r}")
+
+    path = parsed.path.rstrip("/")
+    for prefix in _ARXIV_URL_PREFIXES:
+        if path.startswith(prefix):
+            candidate = path[len(prefix):]
+            if prefix == "/pdf/" and candidate.endswith(".pdf"):
+                candidate = candidate[:-4]
+            return normalize_arxiv_id(candidate)
+
+    raise InvalidArxivIdError(f"Unsupported arXiv URL: {url!r}")
+
+
+def validate_arxiv_input(
+    text_id: str | None = None,
+    url: str | None = None,
+) -> dict:
+    """Normalize text and URL arXiv inputs and return the safe next action."""
+
+    normalized_text_id: str | None = None
+    normalized_url_id: str | None = None
+    errors: list[str] = []
+
+    if text_id is not None:
+        try:
+            normalized_text_id = normalize_arxiv_id(text_id)
+        except InvalidArxivIdError as exc:
+            errors.append(str(exc))
+
+    if url is not None:
+        try:
+            normalized_url_id = extract_arxiv_id_from_url(url)
+        except InvalidArxivIdError as exc:
+            errors.append(str(exc))
+
+    if errors or (normalized_text_id is None and normalized_url_id is None):
+        if not errors:
+            errors.append("Provide an arXiv text ID, an arXiv URL, or both.")
+        return {
+            "text_id": text_id,
+            "url": url,
+            "normalized_text_id": normalized_text_id,
+            "normalized_url_id": normalized_url_id,
+            "status": "invalid",
+            "action": "ask_user_to_choose",
+            "selected_id": None,
+            "message": (
+                "The arXiv input is invalid. Ask the user for one supported "
+                "arXiv ID or URL before loading a paper."
+            ),
+            "errors": errors,
+        }
+
+    if normalized_text_id is not None and normalized_url_id is not None:
+        if normalized_text_id != normalized_url_id:
+            return {
+                "text_id": text_id,
+                "url": url,
+                "normalized_text_id": normalized_text_id,
+                "normalized_url_id": normalized_url_id,
+                "status": "conflict",
+                "action": "ask_user_to_choose",
+                "selected_id": None,
+                "message": (
+                    "The text arXiv ID and arXiv URL identify different "
+                    "papers. Ask the user which one to analyze before "
+                    "calling load_arxiv_paper."
+                ),
+                "errors": [],
+            }
+        return {
+            "text_id": text_id,
+            "url": url,
+            "normalized_text_id": normalized_text_id,
+            "normalized_url_id": normalized_url_id,
+            "status": "match",
+            "action": "safe_to_load",
+            "selected_id": normalized_text_id,
+            "message": (
+                "The text arXiv ID and arXiv URL identify the same paper. "
+                f"It is safe to load {normalized_text_id}."
+            ),
+            "errors": [],
+        }
+
+    selected_id = normalized_text_id or normalized_url_id
+    return {
+        "text_id": text_id,
+        "url": url,
+        "normalized_text_id": normalized_text_id,
+        "normalized_url_id": normalized_url_id,
+        "status": "single_input",
+        "action": "safe_to_load",
+        "selected_id": selected_id,
+        "message": f"One arXiv input was provided. It is safe to load {selected_id}.",
+        "errors": [],
+    }
 
 
 def _write_response(

@@ -5,7 +5,7 @@ Use only the matching recipe below. In every recipe, detection and configuration
 The pinned source is always:
 
 ```text
-git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2
+git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3
 ```
 
 ## Install `uv` and `uvx`
@@ -34,11 +34,11 @@ git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2
 - **Proposed mutation:** show this exact native command:
 
   ```text
-  codex mcp add papergraph -- uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2 papergraph-mcp
+  codex mcp add papergraph -- uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3 papergraph-mcp
   ```
 
 - **Approval:** ask before creating the backup or running the command because both change user-level files outside the repository. If an existing `papergraph` entry differs, show the difference and ask before replacing only that entry. After approval, create the backup first and then run the command.
-- **Validation:** run `codex mcp list`, then validate `uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2 papergraph-mcp --version`.
+- **Validation:** run `codex mcp list`, then validate `uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3 papergraph-mcp --version` and `papergraph-mcp doctor`.
 - **Restart:** ask before restarting a controllable Codex client; otherwise tell the user to restart Codex or reload the IDE window.
 - **Official source:** https://learn.chatgpt.com/docs/extend/mcp
 
@@ -48,11 +48,11 @@ git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2
 - **Proposed mutation:** show this exact user-scoped native command:
 
   ```text
-  claude mcp add --transport stdio --scope user papergraph -- uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2 papergraph-mcp
+  claude mcp add --transport stdio --scope user papergraph -- uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3 papergraph-mcp
   ```
 
 - **Approval:** ask before creating the backup or running the command because both mutate user-scoped files. Show any differing existing entry before asking to replace only it. After approval, create the backup first and then run the command.
-- **Validation:** run `claude mcp get papergraph`, then validate `uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2 papergraph-mcp --version`.
+- **Validation:** run `claude mcp get papergraph`, then validate `uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3 papergraph-mcp --version` and `papergraph-mcp doctor`.
 - **Restart:** ask before restarting Claude Code; after restart, direct the user to `/mcp` to inspect the server connection.
 - **Official source:** https://code.claude.com/docs/en/mcp
 
@@ -69,7 +69,7 @@ git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2
         "command": "uvx",
         "args": [
           "--from",
-          "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2",
+          "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3",
           "papergraph-mcp"
         ]
       }
@@ -78,7 +78,7 @@ git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2
   ```
 
 - **Approval:** show the entry and ask before opening or changing user/workspace configuration. Prefer the MCP configuration UI or command. If editing a file, parse it, preserve other servers, and create a timestamped adjacent backup.
-- **Validation:** parse the resulting configuration, confirm only the intended entry changed, and validate `uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2 papergraph-mcp --version`.
+- **Validation:** parse the resulting configuration, confirm only the intended entry changed, and validate `uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3 papergraph-mcp --version` and `papergraph-mcp doctor`.
 - **Restart:** ask before restarting or reloading VS Code; otherwise give one direct reload-window instruction.
 - **Official source:** https://code.visualstudio.com/docs/agent-customization/mcp-servers
 
@@ -94,7 +94,7 @@ git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2
         "command": "uvx",
         "args": [
           "--from",
-          "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2",
+          "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3",
           "papergraph-mcp"
         ]
       }
@@ -103,6 +103,6 @@ git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2
   ```
 
 - **Approval:** ask before editing any discovered client file. Parse it, preserve unrelated entries, and create a timestamped adjacent backup; if safe editing is unavailable, leave the snippet for the user instead.
-- **Validation:** parse the result, compare the `papergraph` command and arguments, and validate `uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2 papergraph-mcp --version`.
+- **Validation:** parse the result, compare the `papergraph` command and arguments, and validate `uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3 papergraph-mcp --version` and `papergraph-mcp doctor`.
 - **Restart:** ask before any restart; if the client cannot be controlled, tell the user to restart it manually and consult its server-status view after reopening.
 - **Official source:** use the selected client's own MCP documentation for placement; do not substitute an unverified path.

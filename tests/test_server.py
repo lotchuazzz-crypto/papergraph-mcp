@@ -163,6 +163,38 @@ def test_missing_graph_message_mentions_both_load_tools():
     assert "load_arxiv_paper" in message
 
 
+def test_get_environment_diagnostics_returns_runtime_metadata(monkeypatch):
+    monkeypatch.setattr(
+        server,
+        "environment_diagnostics",
+        lambda: {
+            "package_name": "papergraph-mcp",
+            "version": "0.4.3",
+            "release_tag": "v0.4.3",
+            "recommended_source": (
+                "git+https://github.com/lotchuazzz-crypto/"
+                "papergraph-mcp.git@v0.4.3"
+            ),
+            "dependency_extraction_basis": "statement_explicit_latex_refs_only",
+            "git": None,
+            "warnings": [],
+        },
+    )
+
+    assert server.get_environment_diagnostics()["release_tag"] == "v0.4.3"
+
+
+def test_validate_arxiv_input_tool_reports_conflict():
+    result = server.validate_arxiv_input(
+        text_id="math/0307200",
+        url="https://arxiv.org/abs/2609.01574",
+    )
+
+    assert result["status"] == "conflict"
+    assert result["action"] == "ask_user_to_choose"
+    assert result["selected_id"] is None
+
+
 def test_get_dependency_diagnostics_reports_single_paper_basis(tmp_path: Path):
     local = tmp_path / "local.tex"
     local.write_text(

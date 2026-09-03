@@ -5,7 +5,7 @@
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/lotchuazzz-crypto/papergraph-mcp)](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases)
 
-PaperGraph turns local or arXiv LaTeX papers into theorem dependency graphs that AI agents can query through MCP. PaperGraph v0.4.2 hardens first-use analysis with clearer theorem-kind metadata, dependency diagnostics, and guardrails against overreading sparse graphs.
+PaperGraph turns local or arXiv LaTeX papers into theorem dependency graphs that AI agents can query through MCP. PaperGraph v0.4.3 hardens first-use analysis by making agents verify the running version, validate arXiv ID/URL pairs, and report dependency boundaries before interpreting sparse graphs.
 
 PaperGraph v0.4.0 introduced the persistent, cross-paper SQLite workspace: retain a small literature collection, search theorem text, follow theorem dependencies, and inspect citation evidence without asking an agent to re-read every source paper.
 
@@ -33,19 +33,30 @@ skill. The agent should show you a reusable PaperGraph prompt, explain why `uv`
 is needed, and ask before installing software, changing client configuration, or
 restarting the client. You can always use the manual setup below instead.
 
-If a prompt contains both an arXiv ID and an arXiv URL, ask the agent to compare
-the normalized identifiers before loading. If they differ, choose one explicitly;
-PaperGraph should not silently analyze the text ID or the link target.
+If your agent clones into a directory that already exists, ask it to run
+`git fetch --tags origin` before treating the checkout as current. Existing
+clones can otherwise remain pinned to an old local `origin/main`.
+
+If a prompt contains both an arXiv ID and an arXiv URL, ask the agent to call
+`validate_arxiv_input` or `papergraph-mcp validate-arxiv` before loading. Call `load_arxiv_paper` only when the validator returns `action: safe_to_load`. If it
+returns `action: ask_user_to_choose`, ask the user to choose; detecting a conflict and then continuing is a failure.
 
 ## Quick Start
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the GitHub release without cloning the repository:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3 papergraph-mcp --version
+papergraph-mcp doctor
 ```
 
-The pinned command becomes available after the `v0.4.2` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
+The pinned command becomes available after the `v0.4.3` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
+
+To validate conflicting arXiv input before loading a paper, run:
+
+```powershell
+papergraph-mcp validate-arxiv --id math/0307200 --url https://arxiv.org/abs/2609.01574
+```
 
 ## MCP Configuration
 
@@ -56,7 +67,7 @@ For an MCP client that accepts JSON-style stdio server configuration, add:
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3", "papergraph-mcp"]
     }
   }
 }
@@ -66,7 +77,7 @@ Restart the MCP client after changing its configuration. The server uses stdio, 
 
 ## Tools
 
-The original single-paper tools remain available: `load_paper`, `load_arxiv_paper`, `list_theorems`, `get_theorem`, `get_dependencies`, `get_dependency_diagnostics`, and `where_used`. Their signatures are `load_paper(path: str)`, `load_arxiv_paper(arxiv_id: str, main_file: str | None = None, refresh: bool = False)`, `list_theorems(kind: str | None = None)`, `get_theorem(theorem_id: str)`, `get_dependencies(theorem_id: str, recursive: bool = False)`, `get_dependency_diagnostics(theorem_id: str, recursive: bool = False)`, and `where_used(theorem_id: str)`.
+The original single-paper tools remain available: `get_environment_diagnostics`, `validate_arxiv_input`, `load_paper`, `load_arxiv_paper`, `list_theorems`, `get_theorem`, `get_dependencies`, `get_dependency_diagnostics`, and `where_used`. Their signatures are `get_environment_diagnostics()`, `validate_arxiv_input(text_id: str | None = None, url: str | None = None)`, `load_paper(path: str)`, `load_arxiv_paper(arxiv_id: str, main_file: str | None = None, refresh: bool = False)`, `list_theorems(kind: str | None = None)`, `get_theorem(theorem_id: str)`, `get_dependencies(theorem_id: str, recursive: bool = False)`, `get_dependency_diagnostics(theorem_id: str, recursive: bool = False)`, and `where_used(theorem_id: str)`.
 
 Workspace tools operate on the active database. Call `open_workspace` first: `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, `workspace_get_dependency_diagnostics`, and `workspace_get_citations` require that active workspace. Their exact MCP signatures and return summaries are:
 
@@ -87,7 +98,7 @@ For a compact single-paper check, call `load_arxiv_paper(arxiv_id="math/0307200"
 
 ## Reading Sparse Dependency Results
 
-PaperGraph v0.4.2 dependency traversal uses `statement_explicit_latex_refs_only`:
+PaperGraph v0.4.3 dependency traversal uses `statement_explicit_latex_refs_only`:
 it follows explicit LaTeX references such as `\ref`, `\eqref`, `\autoref`,
 `\cref`, and `\Cref` inside theorem-like statements. An empty dependency result
 means PaperGraph found no resolvable theorem-label references under that rule.

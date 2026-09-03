@@ -13,9 +13,11 @@ from papergraph.arxiv import (
     MainFileSelectionError,
     default_cache_root,
     download_arxiv_source,
+    extract_arxiv_id_from_url,
     normalize_arxiv_id,
     prepare_arxiv_project,
     select_main_file,
+    validate_arxiv_input,
 )
 
 
@@ -53,6 +55,98 @@ def test_normalizes_supported_arxiv_ids(value: str, expected: str):
 def test_rejects_invalid_arxiv_ids(value: str):
     with pytest.raises(InvalidArxivIdError):
         normalize_arxiv_id(value)
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://arxiv.org/abs/2609.01574", "2609.01574"),
+        ("https://arxiv.org/abs/2609.01574v2", "2609.01574v2"),
+        ("https://arxiv.org/pdf/math/0307200", "math/0307200"),
+        ("https://export.arxiv.org/abs/hep-th/9901001v3", "hep-th/9901001v3"),
+    ],
+)
+def test_extracts_arxiv_id_from_supported_urls(url: str, expected: str):
+    assert extract_arxiv_id_from_url(url) == expected
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "",
+        "https://example.com/abs/2609.01574",
+        "https://arxiv.org/",
+        "https://arxiv.org/abs/not-an-id",
+        "not a url",
+    ],
+)
+def test_rejects_unsupported_arxiv_urls(url: str):
+    with pytest.raises(InvalidArxivIdError):
+        extract_arxiv_id_from_url(url)
+
+
+def test_validate_arxiv_input_allows_matching_text_and_url():
+    result = validate_arxiv_input(
+        text_id="arXiv:2609.01574",
+        url="https://arxiv.org/abs/2609.01574",
+    )
+
+    assert result == {
+        "text_id": "arXiv:2609.01574",
+        "url": "https://arxiv.org/abs/2609.01574",
+        "normalized_text_id": "2609.01574",
+        "normalized_url_id": "2609.01574",
+        "status": "match",
+        "action": "safe_to_load",
+        "selected_id": "2609.01574",
+        "message": "The text arXiv ID and arXiv URL identify the same paper. It is safe to load 2609.01574.",
+        "errors": [],
+    }
+
+
+def test_validate_arxiv_input_stops_on_conflict():
+    result = validate_arxiv_input(
+        text_id="math/0307200",
+        url="https://arxiv.org/abs/2609.01574",
+    )
+
+    assert result["normalized_text_id"] == "math/0307200"
+    assert result["normalized_url_id"] == "2609.01574"
+    assert result["status"] == "conflict"
+    assert result["action"] == "ask_user_to_choose"
+    assert result["selected_id"] is None
+    assert "ask the user" in result["message"].lower()
+    assert result["errors"] == []
+
+
+@pytest.mark.parametrize(
+    ("text_id", "url", "selected"),
+    [
+        ("math/0307200", None, "math/0307200"),
+        (None, "https://arxiv.org/abs/2609.01574", "2609.01574"),
+    ],
+)
+def test_validate_arxiv_input_accepts_single_input(text_id, url, selected):
+    result = validate_arxiv_input(text_id=text_id, url=url)
+
+    assert result["status"] == "single_input"
+    assert result["action"] == "safe_to_load"
+    assert result["selected_id"] == selected
+    assert result["errors"] == []
+
+
+def test_validate_arxiv_input_reports_invalid_inputs_without_selection():
+    result = validate_arxiv_input(
+        text_id="not-an-id",
+        url="https://example.com/abs/2609.01574",
+    )
+
+    assert result["status"] == "invalid"
+    assert result["action"] == "ask_user_to_choose"
+    assert result["selected_id"] is None
+    assert result["normalized_text_id"] is None
+    assert result["normalized_url_id"] is None
+    assert len(result["errors"]) == 2
 
 
 def test_download_uses_fixed_endpoint_headers_redirects_and_streaming(

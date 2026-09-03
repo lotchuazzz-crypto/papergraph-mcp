@@ -1,4 +1,5 @@
 import argparse
+import json
 import sqlite3
 from collections.abc import Sequence
 from functools import wraps
@@ -9,7 +10,12 @@ from threading import RLock
 from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
-from papergraph.arxiv import ArxivImportError, prepare_arxiv_project
+from papergraph.arxiv import (
+    ArxivImportError,
+    prepare_arxiv_project,
+    validate_arxiv_input as validate_arxiv_input_result,
+)
+from papergraph.diagnostics import environment_diagnostics
 from papergraph.graph import PaperGraph
 from papergraph.identity import paper_id_from_arxiv
 from papergraph.loader import load_latex_project
@@ -80,6 +86,23 @@ def require_workspace() -> Workspace:
             )
 
         return _current_workspace
+
+
+@mcp.tool()
+def get_environment_diagnostics() -> dict:
+    """Return PaperGraph version and reproducible launch diagnostics."""
+
+    return environment_diagnostics()
+
+
+@mcp.tool()
+def validate_arxiv_input(
+    text_id: str | None = None,
+    url: str | None = None,
+) -> dict:
+    """Normalize arXiv ID and URL inputs and return the safe next action."""
+
+    return validate_arxiv_input_result(text_id=text_id, url=url)
 
 
 @mcp.tool()
@@ -438,6 +461,10 @@ def where_used(
     ]
 
 
+def _print_json(payload: dict) -> None:
+    print(json.dumps(payload, indent=2, sort_keys=True))
+
+
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="papergraph-mcp",
@@ -448,7 +475,30 @@ def main(argv: Sequence[str] | None = None) -> None:
         action="version",
         version=f"%(prog)s {distribution_version('papergraph-mcp')}",
     )
-    parser.parse_args(argv)
+    subparsers = parser.add_subparsers(dest="command")
+    subparsers.add_parser(
+        "doctor",
+        help="Print PaperGraph environment diagnostics as JSON.",
+    )
+    validate_parser = subparsers.add_parser(
+        "validate-arxiv",
+        help="Validate arXiv ID and URL inputs before loading a paper.",
+    )
+    validate_parser.add_argument("--id", dest="text_id")
+    validate_parser.add_argument("--url")
+
+    args = parser.parse_args(argv)
+    if args.command == "doctor":
+        _print_json(environment_diagnostics())
+        return
+    if args.command == "validate-arxiv":
+        _print_json(
+            validate_arxiv_input_result(
+                text_id=args.text_id,
+                url=args.url,
+            )
+        )
+        return
     mcp.run()
 
 

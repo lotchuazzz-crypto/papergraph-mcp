@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / ".agents" / "skills" / "setting-up-papergraph"
-PIN = "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2"
+PIN = "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3"
 
 
 def read(path: Path) -> str:
@@ -118,7 +118,7 @@ def test_checker_runs_the_exact_pinned_launch_command():
 
     class Result:
         returncode = 0
-        stdout = "papergraph-mcp 0.4.2\n"
+        stdout = "papergraph-mcp 0.4.3\n"
         stderr = ""
 
     def runner(command, **kwargs):
@@ -135,7 +135,7 @@ def test_checker_runs_the_exact_pinned_launch_command():
         "--version",
     ]
     assert result["ok"] is True
-    assert result["version"] == "papergraph-mcp 0.4.2"
+    assert result["version"] == "papergraph-mcp 0.4.3"
 
 
 def test_checker_rejects_an_unexpected_version_even_on_exit_zero():
@@ -181,7 +181,7 @@ def test_checker_main_smoke_test_emits_successful_launch_json(monkeypatch, capsy
         "commands": {"git": "/tools/git", "uv": "/tools/uv", "uvx": "/tools/uvx"},
         "ready_for_smoke_test": True,
     }
-    launch = {"ok": True, "reason": "ok", "version": "papergraph-mcp 0.4.2"}
+    launch = {"ok": True, "reason": "ok", "version": "papergraph-mcp 0.4.3"}
     monkeypatch.setattr(checker, "inspect_prerequisites", lambda: prerequisites)
     monkeypatch.setattr(checker, "validate_launch", lambda: launch)
 
@@ -325,6 +325,22 @@ def test_client_reference_discloses_launch_validation_side_effects():
     assert "populate the `uv` cache" in text
 
 
+def test_onboarding_requires_refresh_diagnostics_and_conflict_stop():
+    skill = read(SKILL / "SKILL.md")
+    prompt = read(SKILL / "references" / "usage-prompt.md")
+    client_reference = read(SKILL / "references" / "client-configuration.md")
+
+    assert "git fetch --tags origin" in skill
+    assert "papergraph-mcp doctor" in skill
+    assert "validate_arxiv_input" in skill
+    assert "Call `load_arxiv_paper` only when" in skill
+    assert "detecting a conflict and then continuing is a failure" in skill
+    assert "get_environment_diagnostics" in prompt
+    assert "validate_arxiv_input" in prompt
+    assert "ask_user_to_choose" in prompt
+    assert "papergraph-mcp doctor" in client_reference
+
+
 def test_readme_exposes_agent_guided_setup():
     text = read(ROOT / "README.md")
     assert "Ask your agent to set it up" in text
@@ -332,7 +348,7 @@ def test_readme_exposes_agent_guided_setup():
     assert ".agents/skills/setting-up-papergraph/SKILL.md" in text
 
 
-def test_all_onboarding_source_pins_match_v042():
+def test_all_onboarding_source_pins_match_v043():
     import re
 
     combined = "\n".join(
@@ -343,4 +359,4 @@ def test_all_onboarding_source_pins_match_v042():
     )
     refs = re.findall(r"papergraph-mcp\.git@(v[^\s\"'\],)]+)", combined)
     assert refs
-    assert set(refs) == {"v0.4.2"}
+    assert set(refs) == {"v0.4.3"}

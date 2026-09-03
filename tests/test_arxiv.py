@@ -18,6 +18,7 @@ from papergraph.arxiv import (
     prepare_arxiv_project,
     select_main_file,
     validate_arxiv_input,
+    validate_arxiv_request,
 )
 
 
@@ -147,6 +148,81 @@ def test_validate_arxiv_input_reports_invalid_inputs_without_selection():
     assert result["normalized_text_id"] is None
     assert result["normalized_url_id"] is None
     assert len(result["errors"]) == 2
+
+
+@pytest.mark.parametrize(
+    ("raw_request", "selected_id", "status"),
+    [
+        ("2609.02842", "2609.02842", "single_input"),
+        ("Please load math/0307200", "math/0307200", "single_input"),
+        ("https://arxiv.org/abs/2609.01574", "2609.01574", "single_input"),
+        ("[math/0307200](https://arxiv.org/abs/math/0307200)", "math/0307200", "match"),
+    ],
+)
+def test_validate_arxiv_request_accepts_single_or_matching_requests(
+    raw_request: str,
+    selected_id: str,
+    status: str,
+):
+    result = validate_arxiv_request(raw_request)
+
+    assert result["input"] == raw_request
+    assert result["status"] == status
+    assert result["action"] == "safe_to_load"
+    assert result["selected_id"] == selected_id
+    assert result["normalized_ids"] == [selected_id]
+    assert result["errors"] == []
+
+
+def test_validate_arxiv_request_stops_on_markdown_text_url_conflict():
+    request = "[math/0307200](https://arxiv.org/abs/2609.01574)"
+
+    result = validate_arxiv_request(request)
+
+    assert result["status"] == "conflict"
+    assert result["action"] == "ask_user_to_choose"
+    assert result["selected_id"] is None
+    assert result["normalized_ids"] == ["math/0307200", "2609.01574"]
+    assert [candidate["kind"] for candidate in result["candidates"]] == [
+        "markdown_text",
+        "markdown_url",
+    ]
+    assert "ask the user" in result["message"].lower()
+    assert result["errors"] == []
+
+
+def test_validate_arxiv_request_stops_on_prose_text_url_conflict():
+    result = validate_arxiv_request(
+        "Load math/0307200 from https://arxiv.org/abs/2609.01574"
+    )
+
+    assert result["status"] == "conflict"
+    assert result["action"] == "ask_user_to_choose"
+    assert result["selected_id"] is None
+    assert result["normalized_ids"] == ["2609.01574", "math/0307200"]
+
+
+def test_validate_arxiv_request_reports_empty_input_as_invalid():
+    result = validate_arxiv_request("   ")
+
+    assert result["status"] == "invalid"
+    assert result["action"] == "ask_user_to_choose"
+    assert result["selected_id"] is None
+    assert result["normalized_ids"] == []
+    assert result["candidates"] == []
+    assert result["errors"] == ["Provide one arXiv ID, arXiv URL, or Markdown arXiv link."]
+
+
+def test_validate_arxiv_request_ignores_non_arxiv_url_when_id_is_present():
+    result = validate_arxiv_request(
+        "Please load 2609.02842, source page https://example.com/2609.01574"
+    )
+
+    assert result["status"] == "single_input"
+    assert result["action"] == "safe_to_load"
+    assert result["selected_id"] == "2609.02842"
+    assert result["normalized_ids"] == ["2609.02842"]
+    assert result["errors"] == []
 
 
 def test_download_uses_fixed_endpoint_headers_redirects_and_streaming(

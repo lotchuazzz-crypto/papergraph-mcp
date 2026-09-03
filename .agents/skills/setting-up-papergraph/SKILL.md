@@ -21,9 +21,10 @@ Before loading arXiv papers:
 
 1. If a repository directory already exists, run `git fetch --tags origin` before trusting local `origin/main`.
 2. Verify `papergraph-mcp --version` and run `papergraph-mcp doctor` or call `get_environment_diagnostics`.
-3. If a user provides both an arXiv ID and an arXiv URL, call `validate_arxiv_input` first.
-4. Call `load_arxiv_paper` only when `validate_arxiv_input` returns `action: safe_to_load`.
-5. If validation returns `action: ask_user_to_choose`, stop and ask which one to analyze. detecting a conflict and then continuing is a failure.
+3. For raw user wording, Markdown links, URLs, or prose, call `validate_arxiv_request` or `load_arxiv_request`.
+4. If a user provides both an arXiv ID and an arXiv URL, `load_arxiv_request` must stop before loading unless they identify the same paper.
+5. Use `load_arxiv_paper` only after the user has provided one already-disambiguated arXiv ID.
+6. If validation returns `action: ask_user_to_choose`, stop and ask which one to analyze. detecting a conflict and then continuing is a failure.
 
 ### What is missing
 
@@ -46,23 +47,23 @@ There are three separate approval boundaries:
 Use this immutable release source everywhere; never substitute a branch, a mutable default, or an unreleased revision:
 
 ```text
-git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3
+git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.4
 ```
 
 Never request credentials, upload papers, or place a workspace database inside the Git repository.
 
 ### What changed
 
-Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `0.4.3`; file presence alone is insufficient:
+Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `0.4.4`; file presence alone is insufficient:
 
 ```text
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.3 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.4 papergraph-mcp --version
 ```
 
 The expected output is:
 
 ```text
-papergraph-mcp 0.4.3
+papergraph-mcp 0.4.4
 ```
 
 Before restart, say “launch command validated”; never say “client has loaded the PaperGraph tools.” Tool loading can be confirmed only after the restarted client discovers the server.

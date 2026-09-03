@@ -13,7 +13,7 @@ body:
     id: version
     attributes:
       label: PaperGraph version
-      placeholder: "0.4.3"
+      placeholder: "0.4.4"
     validations:
       required: true
   - type: input

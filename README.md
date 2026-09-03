@@ -5,7 +5,9 @@
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/lotchuazzz-crypto/papergraph-mcp)](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases)
 
-PaperGraph turns local or arXiv LaTeX papers into theorem dependency graphs that AI agents can query through MCP. v0.4.0 adds a persistent, cross-paper workspace: retain a small literature collection in SQLite, search its theorem text, follow theorem dependencies, and inspect citation evidence without asking an agent to re-read every source paper.
+PaperGraph turns local or arXiv LaTeX papers into theorem dependency graphs that AI agents can query through MCP. PaperGraph v0.4.2 hardens first-use analysis with clearer theorem-kind metadata, dependency diagnostics, and guardrails against overreading sparse graphs.
+
+PaperGraph v0.4.0 introduced the persistent, cross-paper SQLite workspace: retain a small literature collection, search theorem text, follow theorem dependencies, and inspect citation evidence without asking an agent to re-read every source paper.
 
 ## Why PaperGraph?
 
@@ -31,15 +33,19 @@ skill. The agent should show you a reusable PaperGraph prompt, explain why `uv`
 is needed, and ask before installing software, changing client configuration, or
 restarting the client. You can always use the manual setup below instead.
 
+If a prompt contains both an arXiv ID and an arXiv URL, ask the agent to compare
+the normalized identifiers before loading. If they differ, choose one explicitly;
+PaperGraph should not silently analyze the text ID or the link target.
+
 ## Quick Start
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the GitHub release without cloning the repository:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.1 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2 papergraph-mcp --version
 ```
 
-The pinned command becomes available after the `v0.4.1` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
+The pinned command becomes available after the `v0.4.2` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
 
 ## MCP Configuration
 
@@ -50,7 +56,7 @@ For an MCP client that accepts JSON-style stdio server configuration, add:
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.1", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2", "papergraph-mcp"]
     }
   }
 }
@@ -60,22 +66,37 @@ Restart the MCP client after changing its configuration. The server uses stdio, 
 
 ## Tools
 
-The original single-paper tools remain available: `load_paper`, `load_arxiv_paper`, `list_theorems`, `get_theorem`, `get_dependencies`, and `where_used`. Their signatures are `load_paper(path: str)`, `load_arxiv_paper(arxiv_id: str, main_file: str | None = None, refresh: bool = False)`, `list_theorems(kind: str | None = None)`, `get_theorem(theorem_id: str)`, `get_dependencies(theorem_id: str, recursive: bool = False)`, and `where_used(theorem_id: str)`.
+The original single-paper tools remain available: `load_paper`, `load_arxiv_paper`, `list_theorems`, `get_theorem`, `get_dependencies`, `get_dependency_diagnostics`, and `where_used`. Their signatures are `load_paper(path: str)`, `load_arxiv_paper(arxiv_id: str, main_file: str | None = None, refresh: bool = False)`, `list_theorems(kind: str | None = None)`, `get_theorem(theorem_id: str)`, `get_dependencies(theorem_id: str, recursive: bool = False)`, `get_dependency_diagnostics(theorem_id: str, recursive: bool = False)`, and `where_used(theorem_id: str)`.
 
-Workspace tools operate on the active database. Call `open_workspace` first: `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, and `workspace_get_citations` require that active workspace. Their exact MCP signatures and return summaries are:
+Workspace tools operate on the active database. Call `open_workspace` first: `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, `workspace_get_dependency_diagnostics`, and `workspace_get_citations` require that active workspace. Their exact MCP signatures and return summaries are:
 
 | Tool signature | Returns |
 | --- | --- |
 | `open_workspace(path: str) -> dict` | Resolved SQLite path, schema version, and paper/theorem counts. Opens an existing workspace or initializes one. |
 | `workspace_add_local_paper(path: str, paper_id: str) -> dict` | Imported paper metadata, theorem/kind counts, citation count, and unresolved-citation count. Re-importing an ID replaces it transactionally. |
+| `get_dependency_diagnostics(theorem_id: str, recursive: bool = False) -> dict` | Extraction basis, referenced labels, resolved and unresolved labels, dependency IDs, and warnings for sparse results. |
 | `workspace_add_arxiv_paper(arxiv_id: str, main_file: str | None = None, refresh: bool = False) -> dict` | The same import summary after safe arXiv preparation; paper ID and source version are normalized. |
 | `workspace_list_papers() -> list[dict]` | Stored-paper metadata and graph counts, in stable paper-ID order. |
 | `workspace_get_paper(paper_id: str) -> dict` | One paper's metadata, theorem/kind counts, resolved incoming/outgoing citation counts, and unresolved count. |
 | `workspace_search_theorems(query: str, paper_id: str | None = None, kind: str | None = None, limit: int = 20) -> list[dict]` | Matching global ID, paper/local IDs, kind, title, source file, and bounded content excerpt. Empty queries fail; `limit` is 1–100. |
 | `workspace_get_dependencies(global_theorem_id: str, recursive: bool = False) -> list[dict]` | Direct or cycle-safe recursive dependency records for a globally identified theorem. |
+| `workspace_get_dependency_diagnostics(global_theorem_id: str, recursive: bool = False) -> dict` | The same diagnostic contract for a globally identified theorem in the active workspace. |
 | `workspace_get_citations(paper_id: str, direction: str = "outgoing", include_unresolved: bool = True) -> list[dict]` | Explicit incoming or outgoing citation-evidence rows. Direction is `incoming` or `outgoing`; incoming rows are resolved. |
 
 For a compact single-paper check, call `load_arxiv_paper(arxiv_id="math/0307200")`. PaperGraph selects `main.tex`; a representative first response has `"path": "main.tex"`, `"cached": false`, and `"nodes": 7`.
+
+## Reading Sparse Dependency Results
+
+PaperGraph v0.4.2 dependency traversal uses `statement_explicit_latex_refs_only`:
+it follows explicit LaTeX references such as `\ref`, `\eqref`, `\autoref`,
+`\cref`, and `\Cref` inside theorem-like statements. An empty dependency result
+means PaperGraph found no resolvable theorem-label references under that rule.
+It is not evidence that the theorem has no mathematical dependencies.
+
+Theorem summaries include `kind`, `raw_kind`, `display_kind`, and
+`normalized_kind`. Use `display_kind` for human-facing labels and
+`normalized_kind` for grouping; `kind` remains the raw LaTeX environment name
+for compatibility.
 
 ## Three-paper local walkthrough
 

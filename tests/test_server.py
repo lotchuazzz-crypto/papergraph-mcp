@@ -161,3 +161,23 @@ def test_missing_graph_message_mentions_both_load_tools():
     message = str(caught.value)
     assert "load_paper" in message
     assert "load_arxiv_paper" in message
+
+
+def test_get_dependency_diagnostics_reports_single_paper_basis(tmp_path: Path):
+    local = tmp_path / "local.tex"
+    local.write_text(
+        r"\begin{lemma}\label{lem:base}Base.\end{lemma}"
+        r"\begin{theorem}\label{thm:main}"
+        r"Uses \ref{lem:base} and \ref{missing}."
+        r"\end{theorem}",
+        encoding="utf-8",
+    )
+    server.load_paper(str(local))
+
+    diagnostics = server.get_dependency_diagnostics("thm:main")
+
+    assert diagnostics["extraction_basis"] == "statement_explicit_latex_refs_only"
+    assert diagnostics["referenced_labels"] == ["lem:base", "missing"]
+    assert diagnostics["resolved_labels"] == ["lem:base"]
+    assert diagnostics["unresolved_labels"] == ["missing"]
+    assert diagnostics["dependency_ids"] == ["lem:base"]

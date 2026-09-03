@@ -1,6 +1,13 @@
 from dataclasses import dataclass
 
 
+DEPENDENCY_EXTRACTION_BASIS = "statement_explicit_latex_refs_only"
+EMPTY_DEPENDENCY_WARNING = (
+    "No explicit theorem-label dependencies were detected in the theorem statement. "
+    "This is not evidence that the theorem has no mathematical dependencies."
+)
+
+
 @dataclass(slots=True)
 class TheoremNode:
     id: str
@@ -10,12 +17,26 @@ class TheoremNode:
     content: str
     refs: tuple[str, ...]
     position: int
+    raw_kind: str | None = None
+    display_kind: str | None = None
+    normalized_kind: str | None = None
     source_file: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.raw_kind is None:
+            self.raw_kind = self.kind
+        if self.display_kind is None:
+            self.display_kind = self.raw_kind
+        if self.normalized_kind is None:
+            self.normalized_kind = self.raw_kind.lower()
 
     def summary(self) -> dict:
         return {
             "id": self.id,
             "kind": self.kind,
+            "raw_kind": self.raw_kind,
+            "display_kind": self.display_kind,
+            "normalized_kind": self.normalized_kind,
             "title": self.title,
             "label": self.label,
             "refs": list(self.refs),

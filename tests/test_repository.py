@@ -21,7 +21,7 @@ def test_project_metadata_is_discoverable_and_keeps_dependencies_separated():
     configuration = read_toml("pyproject.toml")
     project = configuration["project"]
 
-    assert project["version"] == "0.4.1"
+    assert project["version"] == "0.4.2"
     assert project["dependencies"] == [
         "httpx>=0.27,<1",
         "mcp[cli]>=2,<3",
@@ -65,7 +65,7 @@ def test_lockfile_matches_project_version():
         if package["name"] == "papergraph-mcp"
     )
 
-    assert package["version"] == "0.4.1"
+    assert package["version"] == "0.4.2"
 
 
 def test_runtime_and_issue_template_release_strings_match_project_version():
@@ -120,7 +120,7 @@ def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
         for token in ('"uv"', '"pip"', '"install"', '"--python"')
     )
     assert "papergraph-mcp --version" in build_steps
-    assert "papergraph-mcp 0.4.1" in build_steps
+    assert "papergraph-mcp 0.4.2" in build_steps
     assert 'version="$(.smoke-venv/bin/papergraph-mcp --version)"' in build_steps
 
 
@@ -228,7 +228,7 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     pinned_source = (
         "git+https://github.com/lotchuazzz-crypto/"
-        "papergraph-mcp.git@v0.4.1"
+        "papergraph-mcp.git@v0.4.2"
     )
 
     for badge in ("CI", "Python", "MIT", "Release"):
@@ -239,6 +239,7 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     )
     assert '"command": "uvx"' in readme
     assert pinned_source in readme
+    assert "PaperGraph v0.4.2" in readme
 
     for tool_name in (
         "load_paper",
@@ -246,6 +247,7 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
         "list_theorems",
         "get_theorem",
         "get_dependencies",
+        "get_dependency_diagnostics",
         "where_used",
     ):
         assert f"`{tool_name}`" in readme
@@ -258,9 +260,17 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
         "workspace_get_paper",
         "workspace_search_theorems",
         "workspace_get_dependencies",
+        "workspace_get_dependency_diagnostics",
         "workspace_get_citations",
     ):
         assert f"`{tool_name}`" in readme
+
+    assert "statement_explicit_latex_refs_only" in readme
+    assert "not evidence that the theorem has no mathematical dependencies" in readme
+    assert "raw_kind" in readme
+    assert "display_kind" in readme
+    assert "normalized_kind" in readme
+    assert "If a prompt contains both an arXiv ID and an arXiv URL" in readme
 
     assert 'arxiv_id="math/0307200"' in readme
     assert '"path": "main.tex"' in readme
@@ -279,7 +289,7 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     assert "[MIT License](LICENSE)" in readme
 
 
-def test_readme_documents_v040_cross_paper_graph():
+def test_readme_documents_v040_cross_paper_graph_history():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
     assert "v0.4.0" in readme
@@ -289,6 +299,21 @@ def test_readme_documents_v040_cross_paper_graph():
     assert "workspace_get_citations" in readme
     assert "explicit" in readme.lower()
     assert "semantic" in readme.lower()
+
+
+def test_onboarding_uses_v042_release_pin_and_mentions_id_url_conflicts():
+    skill = (
+        ROOT / ".agents/skills/setting-up-papergraph/SKILL.md"
+    ).read_text(encoding="utf-8")
+    prompt = (
+        ROOT / ".agents/skills/setting-up-papergraph/references/usage-prompt.md"
+    ).read_text(encoding="utf-8")
+
+    assert "papergraph-mcp.git@v0.4.2" in skill
+    assert "papergraph-mcp 0.4.2" in skill
+    assert "If a user provides both an arXiv ID and an arXiv URL" in skill
+    assert "ask which one to analyze" in skill
+    assert "arXiv ID and arXiv URL" in prompt
 
 
 def test_readme_relative_links_resolve_inside_repository():

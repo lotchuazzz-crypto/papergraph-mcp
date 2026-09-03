@@ -46,6 +46,7 @@ def result_json(result):
         lambda: server.workspace_get_paper("local:paper"),
         lambda: server.workspace_search_theorems("result"),
         lambda: server.workspace_get_dependencies("local:paper::thm:x"),
+        lambda: server.workspace_get_dependency_diagnostics("local:paper::thm:x"),
         lambda: server.workspace_get_citations("local:paper"),
     ],
 )
@@ -59,7 +60,7 @@ def test_open_workspace_returns_exact_payload(tmp_path: Path):
 
     assert server.open_workspace(str(database)) == {
         "path": str(database.resolve()),
-        "schema_version": 1,
+        "schema_version": 2,
         "papers": 0,
         "theorems": 0,
     }
@@ -165,10 +166,10 @@ def test_failed_workspace_open_preserves_active_workspace(tmp_path: Path):
             "CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
         )
         connection.execute(
-            "INSERT INTO workspace_meta VALUES ('schema_version', '2')"
+            "INSERT INTO workspace_meta VALUES ('schema_version', '3')"
         )
 
-    with pytest.raises(ToolError, match="schema version 2"):
+    with pytest.raises(ToolError, match="schema version 3"):
         server.open_workspace(str(future))
 
     assert server.workspace_list_papers() == []
@@ -218,6 +219,9 @@ def test_workspace_local_import_and_all_query_payloads(tmp_path: Path):
             "paper_id": "local:paper-a",
             "local_id": "lem:base",
             "kind": "lemma",
+            "raw_kind": "lemma",
+            "display_kind": "lemma",
+            "normalized_kind": "lemma",
             "title": None,
             "source_file": "main.tex",
             "excerpt": r"\label{lem:base}Compact base.",
@@ -231,6 +235,9 @@ def test_workspace_local_import_and_all_query_payloads(tmp_path: Path):
             "paper_id": "local:paper-a",
             "local_id": "lem:base",
             "kind": "lemma",
+            "raw_kind": "lemma",
+            "display_kind": "lemma",
+            "normalized_kind": "lemma",
             "title": None,
             "label": "lem:base",
             "source_file": "main.tex",
@@ -240,6 +247,24 @@ def test_workspace_local_import_and_all_query_payloads(tmp_path: Path):
     assert server.workspace_get_citations(
         "local:paper-a", direction="outgoing", include_unresolved=False
     ) == []
+
+
+def test_workspace_dependency_diagnostics_tool_reports_basis(tmp_path: Path):
+    server.open_workspace(str(tmp_path / "workspace.sqlite3"))
+    paper = make_paper(
+        tmp_path,
+        "paper",
+        r"\begin{lemma}\label{lem:base}Base.\end{lemma}"
+        r"\begin{theorem}\label{thm:main}Uses \ref{lem:base}.\end{theorem}",
+    )
+    server.workspace_add_local_paper(str(paper), "local:paper")
+
+    diagnostics = server.workspace_get_dependency_diagnostics(
+        "local:paper::thm:main"
+    )
+
+    assert diagnostics["extraction_basis"] == "statement_explicit_latex_refs_only"
+    assert diagnostics["dependency_ids"] == ["local:paper::lem:base"]
 
 
 def test_workspace_arxiv_import_passes_options_and_uses_canonical_identity(

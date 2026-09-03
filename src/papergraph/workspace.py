@@ -16,18 +16,36 @@ from papergraph.identity import (
     normalize_paper_id,
     split_global_theorem_id,
 )
-from papergraph.models import WorkspaceImportResult
+from papergraph.models import (
+    DEPENDENCY_EXTRACTION_BASIS,
+    EMPTY_DEPENDENCY_WARNING,
+    WorkspaceImportResult,
+)
 from papergraph.parser import parse_project
 from papergraph.project import LoadedProject
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 _REQUIRED_TABLES = {
     "workspace_meta",
     "papers",
     "theorems",
     "theorem_refs",
     "citation_evidence",
+}
+_REQUIRED_THEOREM_COLUMNS = {
+    "global_id",
+    "paper_id",
+    "local_id",
+    "kind",
+    "raw_kind",
+    "display_kind",
+    "normalized_kind",
+    "title",
+    "label",
+    "content",
+    "source_file",
+    "position",
 }
 
 _SCHEMA_SQL = """
@@ -51,6 +69,9 @@ CREATE TABLE theorems (
     paper_id TEXT NOT NULL REFERENCES papers(paper_id) ON DELETE CASCADE,
     local_id TEXT NOT NULL,
     kind TEXT NOT NULL,
+    raw_kind TEXT NOT NULL,
+    display_kind TEXT NOT NULL,
+    normalized_kind TEXT NOT NULL,
     title TEXT,
     label TEXT,
     content TEXT NOT NULL,
@@ -77,11 +98,11 @@ CREATE TABLE citation_evidence (
     target_paper_id TEXT REFERENCES papers(paper_id) ON DELETE SET NULL,
     resolution_status TEXT NOT NULL
 );
-CREATE INDEX theorems_paper_kind ON theorems(paper_id, kind);
+CREATE INDEX theorems_paper_kind ON theorems(paper_id, normalized_kind);
 CREATE INDEX citations_source ON citation_evidence(source_paper_id);
 CREATE INDEX citations_target ON citation_evidence(target_paper_id);
 CREATE INDEX citations_arxiv ON citation_evidence(cited_arxiv_id);
-INSERT INTO workspace_meta (key, value) VALUES ('schema_version', '1');
+INSERT INTO workspace_meta (key, value) VALUES ('schema_version', '2');
 """
 
 
@@ -178,6 +199,16 @@ class Workspace:
                 "Workspace schema is missing required tables: "
                 + ", ".join(missing_tables)
             )
+        columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(theorems)")
+        }
+        missing_columns = sorted(_REQUIRED_THEOREM_COLUMNS - columns)
+        if missing_columns:
+            raise WorkspaceSchemaError(
+                "Workspace schema is missing required theorem columns: "
+                + ", ".join(missing_columns)
+            )
 
     @_synchronized
     def close(self) -> None:
@@ -258,9 +289,10 @@ class Workspace:
             self._connection.executemany(
                 """
                 INSERT INTO theorems (
-                    global_id, paper_id, local_id, kind, title, label,
-                    content, source_file, position
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    global_id, paper_id, local_id, kind, raw_kind,
+                    display_kind, normalized_kind, title, label, content,
+                    source_file, position
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     (
@@ -268,6 +300,9 @@ class Workspace:
                         normalized_paper_id,
                         node.id,
                         node.kind,
+                        node.raw_kind,
+                        node.display_kind,
+                        node.normalized_kind,
                         node.title,
                         node.label,
                         node.content,
@@ -417,11 +452,11 @@ class Workspace:
             kind: count
             for kind, count in self._connection.execute(
                 """
-                SELECT kind, COUNT(*)
+                SELECT normalized_kind, COUNT(*)
                 FROM theorems
                 WHERE paper_id = ?
-                GROUP BY kind
-                ORDER BY kind
+                GROUP BY normalized_kind
+                ORDER BY normalized_kind
                 """,
                 (normalized_paper_id,),
             )
@@ -462,8 +497,9 @@ class Workspace:
 
         rows = self._connection.execute(
             f"""
-            SELECT global_id, paper_id, local_id, kind, title,
-                   source_file, substr(content, 1, 240)
+            SELECT global_id, paper_id, local_id, kind, raw_kind,
+                   display_kind, normalized_kind, title, source_file,
+                   substr(content, 1, 240)
             FROM theorems
             WHERE {' AND '.join(conditions)}
             ORDER BY paper_id, global_id
@@ -477,6 +513,9 @@ class Workspace:
                 "paper_id": stored_paper_id,
                 "local_id": local_id,
                 "kind": stored_kind,
+                "raw_kind": raw_kind,
+                "display_kind": display_kind,
+                "normalized_kind": normalized_kind,
                 "title": title,
                 "source_file": source_file,
                 "excerpt": excerpt,
@@ -486,6 +525,9 @@ class Workspace:
                 stored_paper_id,
                 local_id,
                 stored_kind,
+                raw_kind,
+                display_kind,
+                normalized_kind,
                 title,
                 source_file,
                 excerpt,
@@ -536,6 +578,53 @@ class Workspace:
             dependency_ids = adjacency.get(normalized_global_id, [])
 
         return [self._theorem_summary(item) for item in dependency_ids]
+
+    @_synchronized
+    def get_dependency_diagnostics(
+        self,
+        global_id: str,
+        recursive: bool = False,
+    ) -> dict:
+        """Explain how dependencies were extracted for a stored theorem."""
+
+        paper_id, local_id = split_global_theorem_id(global_id)
+        normalized_global_id = global_theorem_id(paper_id, local_id)
+        if self._connection.execute(
+            "SELECT 1 FROM theorems WHERE global_id = ?",
+            (normalized_global_id,),
+        ).fetchone() is None:
+            raise KeyError(f"Unknown theorem id: {normalized_global_id}")
+
+        rows = self._connection.execute(
+            """
+            SELECT ref_label, target_global_id
+            FROM theorem_refs
+            WHERE source_global_id = ?
+            ORDER BY ref_label
+            """,
+            (normalized_global_id,),
+        ).fetchall()
+        dependencies = self.get_dependencies(
+            normalized_global_id,
+            recursive=recursive,
+        )
+        dependency_ids = [
+            item["global_id"]
+            for item in dependencies
+        ]
+        warnings = []
+        if not dependency_ids:
+            warnings.append(EMPTY_DEPENDENCY_WARNING)
+        return {
+            "global_theorem_id": normalized_global_id,
+            "recursive": recursive,
+            "extraction_basis": DEPENDENCY_EXTRACTION_BASIS,
+            "referenced_labels": [row[0] for row in rows],
+            "resolved_labels": [row[0] for row in rows if row[1] is not None],
+            "unresolved_labels": [row[0] for row in rows if row[1] is None],
+            "dependency_ids": dependency_ids,
+            "warnings": warnings,
+        }
 
     @_synchronized
     def get_citations(
@@ -595,7 +684,8 @@ class Workspace:
     def _theorem_summary(self, global_id: str) -> dict:
         row = self._connection.execute(
             """
-            SELECT global_id, paper_id, local_id, kind, title, label, source_file
+            SELECT global_id, paper_id, local_id, kind, raw_kind,
+                   display_kind, normalized_kind, title, label, source_file
             FROM theorems
             WHERE global_id = ?
             """,
@@ -619,9 +709,12 @@ class Workspace:
             "paper_id": row[1],
             "local_id": row[2],
             "kind": row[3],
-            "title": row[4],
-            "label": row[5],
-            "source_file": row[6],
+            "raw_kind": row[4],
+            "display_kind": row[5],
+            "normalized_kind": row[6],
+            "title": row[7],
+            "label": row[8],
+            "source_file": row[9],
             "refs": references,
         }
 

@@ -215,6 +215,23 @@ def workspace_get_dependencies(
 
 @mcp.tool()
 @_serialized_workspace_tool
+def workspace_get_dependency_diagnostics(
+    global_theorem_id: str,
+    recursive: bool = False,
+) -> dict:
+    """Explain how workspace dependencies were extracted for one theorem."""
+
+    try:
+        return require_workspace().get_dependency_diagnostics(
+            global_theorem_id,
+            recursive=recursive,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
 def workspace_get_citations(
     paper_id: str,
     direction: str = "outgoing",
@@ -380,6 +397,24 @@ def get_dependencies(
         node.summary()
         for node in nodes
     ]
+
+
+@mcp.tool()
+def get_dependency_diagnostics(
+    theorem_id: str,
+    recursive: bool = False,
+) -> dict:
+    """Explain how dependencies were extracted for one theorem-like node."""
+
+    graph = require_graph()
+
+    try:
+        return graph.dependency_diagnostics(
+            theorem_id,
+            recursive=recursive,
+        )
+    except KeyError as exc:
+        raise ToolError(str(exc)) from exc
 
 
 @mcp.tool()

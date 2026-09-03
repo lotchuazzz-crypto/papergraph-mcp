@@ -855,3 +855,46 @@ def test_dependencies_are_deterministic_cycle_safe_and_match_graph_semantics(
 def test_dependencies_reject_unknown_global_id(workspace: Workspace):
     with pytest.raises(KeyError, match="Unknown theorem id: local:missing::thm:x"):
         workspace.get_dependencies("local:missing::thm:x")
+
+
+def test_workspace_dependency_diagnostics_include_unresolved_refs(
+    workspace: Workspace,
+    loaded_project,
+):
+    workspace.import_project(
+        "local:paper-a", "local", "paper-a/main.tex", None, loaded_project
+    )
+
+    diagnostics = workspace.get_dependency_diagnostics(
+        "local:paper-a::thm:main"
+    )
+
+    assert diagnostics == {
+        "global_theorem_id": "local:paper-a::thm:main",
+        "recursive": False,
+        "extraction_basis": "statement_explicit_latex_refs_only",
+        "referenced_labels": ["lem:base", "missing"],
+        "resolved_labels": ["lem:base"],
+        "unresolved_labels": ["missing"],
+        "dependency_ids": ["local:paper-a::lem:base"],
+        "warnings": [],
+    }
+
+
+def test_workspace_dependency_diagnostics_warn_for_empty_results(
+    workspace: Workspace,
+    project_factory,
+):
+    project = project_factory(
+        r"\begin{theorem}\label{thm:isolated}No references.\end{theorem}"
+    )
+    workspace.import_project("local:paper", "local", "main.tex", None, project)
+
+    diagnostics = workspace.get_dependency_diagnostics(
+        "local:paper::thm:isolated"
+    )
+
+    assert diagnostics["dependency_ids"] == []
+    assert diagnostics["warnings"] == [
+        "No explicit theorem-label dependencies were detected in the theorem statement. This is not evidence that the theorem has no mathematical dependencies."
+    ]

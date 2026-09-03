@@ -16,7 +16,11 @@ from papergraph.identity import (
     normalize_paper_id,
     split_global_theorem_id,
 )
-from papergraph.models import WorkspaceImportResult
+from papergraph.models import (
+    DEPENDENCY_EXTRACTION_BASIS,
+    EMPTY_DEPENDENCY_WARNING,
+    WorkspaceImportResult,
+)
 from papergraph.parser import parse_project
 from papergraph.project import LoadedProject
 
@@ -574,6 +578,53 @@ class Workspace:
             dependency_ids = adjacency.get(normalized_global_id, [])
 
         return [self._theorem_summary(item) for item in dependency_ids]
+
+    @_synchronized
+    def get_dependency_diagnostics(
+        self,
+        global_id: str,
+        recursive: bool = False,
+    ) -> dict:
+        """Explain how dependencies were extracted for a stored theorem."""
+
+        paper_id, local_id = split_global_theorem_id(global_id)
+        normalized_global_id = global_theorem_id(paper_id, local_id)
+        if self._connection.execute(
+            "SELECT 1 FROM theorems WHERE global_id = ?",
+            (normalized_global_id,),
+        ).fetchone() is None:
+            raise KeyError(f"Unknown theorem id: {normalized_global_id}")
+
+        rows = self._connection.execute(
+            """
+            SELECT ref_label, target_global_id
+            FROM theorem_refs
+            WHERE source_global_id = ?
+            ORDER BY ref_label
+            """,
+            (normalized_global_id,),
+        ).fetchall()
+        dependencies = self.get_dependencies(
+            normalized_global_id,
+            recursive=recursive,
+        )
+        dependency_ids = [
+            item["global_id"]
+            for item in dependencies
+        ]
+        warnings = []
+        if not dependency_ids:
+            warnings.append(EMPTY_DEPENDENCY_WARNING)
+        return {
+            "global_theorem_id": normalized_global_id,
+            "recursive": recursive,
+            "extraction_basis": DEPENDENCY_EXTRACTION_BASIS,
+            "referenced_labels": [row[0] for row in rows],
+            "resolved_labels": [row[0] for row in rows if row[1] is not None],
+            "unresolved_labels": [row[0] for row in rows if row[1] is None],
+            "dependency_ids": dependency_ids,
+            "warnings": warnings,
+        }
 
     @_synchronized
     def get_citations(

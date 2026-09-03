@@ -12,8 +12,10 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 from papergraph.arxiv import (
     ArxivImportError,
+    ArxivProject,
     prepare_arxiv_project,
     validate_arxiv_input as validate_arxiv_input_result,
+    validate_arxiv_request as validate_arxiv_request_result,
 )
 from papergraph.diagnostics import environment_diagnostics
 from papergraph.graph import PaperGraph
@@ -103,6 +105,13 @@ def validate_arxiv_input(
     """Normalize arXiv ID and URL inputs and return the safe next action."""
 
     return validate_arxiv_input_result(text_id=text_id, url=url)
+
+
+@mcp.tool()
+def validate_arxiv_request(input: str) -> dict:
+    """Validate a raw user arXiv request and return the safe next action."""
+
+    return validate_arxiv_request_result(input)
 
 
 @mcp.tool()
@@ -320,25 +329,13 @@ def load_paper(path: str) -> dict:
     }
 
 
-@mcp.tool()
-def load_arxiv_paper(
-    arxiv_id: str,
-    main_file: str | None = None,
-    refresh: bool = False,
-) -> dict:
-    """Download an arXiv source project and build its theorem graph."""
-
+def _load_prepared_arxiv_project(project: ArxivProject) -> dict:
     global _current_graph
     global _current_path
 
     try:
-        project = prepare_arxiv_project(
-            arxiv_id,
-            main_file,
-            refresh,
-        )
         text = load_latex_project(project.main_file)
-    except (ArxivImportError, OSError, ValueError) as exc:
+    except (OSError, ValueError) as exc:
         raise ToolError(str(exc)) from exc
 
     nodes = parse_latex(text)
@@ -358,6 +355,52 @@ def load_arxiv_paper(
         "nodes": len(nodes),
         "kinds": kinds,
     }
+
+
+@mcp.tool()
+def load_arxiv_paper(
+    arxiv_id: str,
+    main_file: str | None = None,
+    refresh: bool = False,
+) -> dict:
+    """Download an arXiv source project and build its theorem graph."""
+
+    try:
+        project = prepare_arxiv_project(
+            arxiv_id,
+            main_file,
+            refresh,
+        )
+    except ArxivImportError as exc:
+        raise ToolError(str(exc)) from exc
+
+    return _load_prepared_arxiv_project(project)
+
+
+@mcp.tool()
+def load_arxiv_request(
+    input: str,
+    main_file: str | None = None,
+    refresh: bool = False,
+) -> dict:
+    """Validate a raw arXiv request, then load it only if unambiguous."""
+
+    validation = validate_arxiv_request_result(input)
+    if validation["action"] != "safe_to_load" or validation["selected_id"] is None:
+        raise ToolError(validation["message"])
+
+    try:
+        project = prepare_arxiv_project(
+            validation["selected_id"],
+            main_file,
+            refresh,
+        )
+    except ArxivImportError as exc:
+        raise ToolError(str(exc)) from exc
+
+    result = _load_prepared_arxiv_project(project)
+    result["validation"] = validation
+    return result
 
 
 @mcp.tool()

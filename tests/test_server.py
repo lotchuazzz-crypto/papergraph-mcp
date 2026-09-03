@@ -195,6 +195,62 @@ def test_validate_arxiv_input_tool_reports_conflict():
     assert result["selected_id"] is None
 
 
+def test_validate_arxiv_request_tool_reports_markdown_conflict():
+    result = server.validate_arxiv_request(
+        "[math/0307200](https://arxiv.org/abs/2609.01574)"
+    )
+
+    assert result["status"] == "conflict"
+    assert result["action"] == "ask_user_to_choose"
+    assert result["selected_id"] is None
+    assert result["normalized_ids"] == ["math/0307200", "2609.01574"]
+
+
+def test_load_arxiv_request_loads_valid_request_and_includes_validation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    project = make_multifile_project(tmp_path)
+    monkeypatch.setattr(server, "prepare_arxiv_project", lambda *args, **kwargs: project)
+
+    result = server.load_arxiv_request("Please load arXiv:2401.12345")
+
+    assert result["arxiv_id"] == "2401.12345"
+    assert result["nodes"] == 2
+    assert result["validation"]["status"] == "single_input"
+    assert result["validation"]["selected_id"] == "2401.12345"
+    assert [node["id"] for node in server.list_theorems()] == [
+        "lem:base",
+        "thm:result",
+    ]
+
+
+def test_load_arxiv_request_conflict_preserves_active_graph(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    local = tmp_path / "local.tex"
+    local.write_text(
+        "\\newtheorem{lemma}{Lemma}\n"
+        "\\begin{lemma}Local.\\label{lem:local}\\end{lemma}",
+        encoding="utf-8",
+    )
+    server.load_paper(str(local))
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("conflicting raw requests must not prepare a project")
+
+    monkeypatch.setattr(server, "prepare_arxiv_project", fail_if_called)
+
+    with pytest.raises(ToolError, match="multiple different arXiv IDs"):
+        server.load_arxiv_request(
+            "[math/0307200](https://arxiv.org/abs/2609.01574)"
+        )
+
+    assert [node["id"] for node in server.list_theorems()] == ["lem:local"]
+    assert server._current_path == local.resolve()
+
+
 def test_get_dependency_diagnostics_reports_single_paper_basis(tmp_path: Path):
     local = tmp_path / "local.tex"
     local.write_text(

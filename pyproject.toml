@@ -1,6 +1,6 @@
 [project]
 name = "papergraph-mcp"
-version = "0.4.1"
+version = "0.4.2"
 description = "Turn mathematical LaTeX papers into theorem dependency graphs for AI agents."
 readme = "README.md"
 requires-python = ">=3.10"

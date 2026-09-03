@@ -17,6 +17,8 @@ Keep these four phases short and in this order. Do not show later phases as comp
 
 Briefly explain that PaperGraph lets an MCP client analyze LaTeX papers, build a multi-paper workspace, search theorem-like content, and inspect explicit citation evidence. Give the reusable prompt in a copyable block. Translate it only under the preservation rule in its reference.
 
+If a user provides both an arXiv ID and an arXiv URL, compare their normalized identifiers before loading a paper. If they differ, ask which one to analyze; do not silently prefer either value.
+
 ### What is missing
 
 Run read-only detection when the host permits it:
@@ -38,17 +40,23 @@ There are three separate approval boundaries:
 Use this immutable release source everywhere; never substitute a branch, a mutable default, or an unreleased revision:
 
 ```text
-git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.1
+git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2
 ```
 
 Never request credentials, upload papers, or place a workspace database inside the Git repository.
 
 ### What changed
 
-Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `0.4.1`; file presence alone is insufficient:
+Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `0.4.2`; file presence alone is insufficient:
 
 ```text
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.1 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2 papergraph-mcp --version
+```
+
+The expected output is:
+
+```text
+papergraph-mcp 0.4.2
 ```
 
 Before restart, say “launch command validated”; never say “client has loaded the PaperGraph tools.” Tool loading can be confirmed only after the restarted client discovers the server.

@@ -5,7 +5,9 @@
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/lotchuazzz-crypto/papergraph-mcp)](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases)
 
-PaperGraph turns local or arXiv LaTeX papers into theorem dependency graphs that AI agents can query through MCP. v0.4.0 adds a persistent, cross-paper workspace: retain a small literature collection in SQLite, search its theorem text, follow theorem dependencies, and inspect citation evidence without asking an agent to re-read every source paper.
+PaperGraph turns local or arXiv LaTeX papers into theorem dependency graphs that AI agents can query through MCP. PaperGraph v0.4.2 hardens first-use analysis with clearer theorem-kind metadata, dependency diagnostics, and guardrails against overreading sparse graphs.
+
+PaperGraph v0.4.0 introduced the persistent, cross-paper SQLite workspace: retain a small literature collection, search theorem text, follow theorem dependencies, and inspect citation evidence without asking an agent to re-read every source paper.
 
 ## Why PaperGraph?
 
@@ -36,10 +38,10 @@ restarting the client. You can always use the manual setup below instead.
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the GitHub release without cloning the repository:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.1 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2 papergraph-mcp --version
 ```
 
-The pinned command becomes available after the `v0.4.1` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
+The pinned command becomes available after the `v0.4.2` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
 
 ## MCP Configuration
 
@@ -50,7 +52,7 @@ For an MCP client that accepts JSON-style stdio server configuration, add:
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.1", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.2", "papergraph-mcp"]
     }
   }
 }

@@ -247,6 +247,7 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
         "list_theorems",
         "get_theorem",
         "get_dependencies",
+        "get_dependency_diagnostics",
         "where_used",
     ):
         assert f"`{tool_name}`" in readme
@@ -259,9 +260,17 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
         "workspace_get_paper",
         "workspace_search_theorems",
         "workspace_get_dependencies",
+        "workspace_get_dependency_diagnostics",
         "workspace_get_citations",
     ):
         assert f"`{tool_name}`" in readme
+
+    assert "statement_explicit_latex_refs_only" in readme
+    assert "not evidence that the theorem has no mathematical dependencies" in readme
+    assert "raw_kind" in readme
+    assert "display_kind" in readme
+    assert "normalized_kind" in readme
+    assert "If a prompt contains both an arXiv ID and an arXiv URL" in readme
 
     assert 'arxiv_id="math/0307200"' in readme
     assert '"path": "main.tex"' in readme

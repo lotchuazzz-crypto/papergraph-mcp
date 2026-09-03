@@ -1,6 +1,13 @@
 from dataclasses import dataclass
 
 
+DEPENDENCY_EXTRACTION_BASIS = "statement_explicit_latex_refs_only"
+EMPTY_DEPENDENCY_WARNING = (
+    "No explicit theorem-label dependencies were detected in the theorem statement. "
+    "This is not evidence that the theorem has no mathematical dependencies."
+)
+
+
 @dataclass(slots=True)
 class TheoremNode:
     id: str

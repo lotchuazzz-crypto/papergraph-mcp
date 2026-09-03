@@ -1,4 +1,8 @@
-from papergraph.models import TheoremNode
+from papergraph.models import (
+    DEPENDENCY_EXTRACTION_BASIS,
+    EMPTY_DEPENDENCY_WARNING,
+    TheoremNode,
+)
 
 
 class PaperGraph:
@@ -73,3 +77,41 @@ class PaperGraph:
                 result.append(node)
 
         return result
+
+    def dependency_diagnostics(
+        self,
+        theorem_id: str,
+        recursive: bool = False,
+    ) -> dict:
+        root = self.get(theorem_id)
+        dependencies = self.dependencies(
+            theorem_id,
+            recursive=recursive,
+        )
+        dependency_ids = [
+            node.id
+            for node in dependencies
+        ]
+        resolved_labels = [
+            ref
+            for ref in root.refs
+            if ref in self.by_id
+        ]
+        unresolved_labels = [
+            ref
+            for ref in root.refs
+            if ref not in self.by_id
+        ]
+        warnings = []
+        if not dependency_ids:
+            warnings.append(EMPTY_DEPENDENCY_WARNING)
+        return {
+            "theorem_id": theorem_id,
+            "recursive": recursive,
+            "extraction_basis": DEPENDENCY_EXTRACTION_BASIS,
+            "referenced_labels": list(root.refs),
+            "resolved_labels": resolved_labels,
+            "unresolved_labels": unresolved_labels,
+            "dependency_ids": dependency_ids,
+            "warnings": warnings,
+        }

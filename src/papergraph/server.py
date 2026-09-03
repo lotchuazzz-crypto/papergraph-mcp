@@ -383,6 +383,24 @@ def get_dependencies(
 
 
 @mcp.tool()
+def get_dependency_diagnostics(
+    theorem_id: str,
+    recursive: bool = False,
+) -> dict:
+    """Explain how dependencies were extracted for one theorem-like node."""
+
+    graph = require_graph()
+
+    try:
+        return graph.dependency_diagnostics(
+            theorem_id,
+            recursive=recursive,
+        )
+    except KeyError as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
 def where_used(
     theorem_id: str,
 ) -> list[dict]:

@@ -92,78 +92,6 @@ def require_workspace() -> Workspace:
         return _current_workspace
 
 
-def _workspace_evidence_import_counts(
-    workspace: Workspace,
-    paper_id: str,
-) -> dict:
-    connection = workspace._connection
-
-    def count(table: str) -> int:
-        return connection.execute(
-            f"SELECT COUNT(*) FROM {table} WHERE paper_id = ?",
-            (paper_id,),
-        ).fetchone()[0]
-
-    resolved_statuses = (
-        "resolved",
-        "resolved_bibliography_entry",
-        "resolved_candidate",
-        "resolved_unique",
-    )
-    resolved_placeholders = ",".join("?" for _ in resolved_statuses)
-    local_mention_count = count("local_result_mentions")
-    external_mention_count = count("external_result_mentions")
-    unresolved_local_count = connection.execute(
-        f"""
-        SELECT COUNT(*)
-        FROM local_result_mentions
-        WHERE paper_id = ?
-          AND (
-              target_result_id IS NULL
-              OR resolution_status NOT IN ({resolved_placeholders})
-          )
-        """,
-        (paper_id, *resolved_statuses),
-    ).fetchone()[0]
-    unresolved_citation_count = connection.execute(
-        f"""
-        SELECT COUNT(*)
-        FROM citation_mentions
-        WHERE paper_id = ?
-          AND (
-              entry_id IS NULL
-              OR resolution_status NOT IN ({resolved_placeholders})
-          )
-        """,
-        (paper_id, *resolved_statuses),
-    ).fetchone()[0]
-    unresolved_external_count = connection.execute(
-        f"""
-        SELECT COUNT(*)
-        FROM external_result_mentions
-        WHERE paper_id = ?
-          AND NOT (
-              (target_paper_id IS NOT NULL OR entry_id IS NOT NULL)
-              AND resolution_status IN ({resolved_placeholders})
-          )
-        """,
-        (paper_id, *resolved_statuses),
-    ).fetchone()[0]
-
-    return {
-        "result_count": count("results"),
-        "proof_count": count("proofs"),
-        "bibliography_entry_count": count("bibliography_entries"),
-        "local_mention_count": local_mention_count,
-        "external_mention_count": external_mention_count,
-        "unresolved_count": (
-            unresolved_local_count
-            + unresolved_citation_count
-            + unresolved_external_count
-        ),
-    }
-
-
 @mcp.tool()
 def get_environment_diagnostics() -> dict:
     """Return PaperGraph version and reproducible launch diagnostics."""
@@ -269,7 +197,7 @@ def workspace_add_pdf_paper(path: str, paper_id: str) -> dict:
         result = workspace.import_pdf(path, paper_id)
         return {
             **workspace.get_paper(result.paper_id),
-            **_workspace_evidence_import_counts(workspace, result.paper_id),
+            **result.evidence_import_summary(),
         }
     except _WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc

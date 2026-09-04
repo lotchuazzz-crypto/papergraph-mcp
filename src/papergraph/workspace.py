@@ -790,6 +790,13 @@ class Workspace:
             theorem_count=len(document.results),
             citation_count=len(document.citation_mentions),
             unresolved_citation_count=unresolved_count,
+            result_count=len(document.results),
+            proof_count=len(document.proofs),
+            bibliography_entry_count=len(document.bibliography_entries),
+            local_mention_count=len(document.local_result_mentions),
+            external_mention_count=len(document.external_result_mentions),
+            unresolved_count=unresolved_count,
+            warnings=document.warnings,
         )
 
     @_synchronized

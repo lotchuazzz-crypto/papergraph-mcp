@@ -80,3 +80,23 @@ class WorkspaceImportResult:
     theorem_count: int
     citation_count: int
     unresolved_citation_count: int
+    result_count: int = 0
+    proof_count: int = 0
+    bibliography_entry_count: int = 0
+    local_mention_count: int = 0
+    external_mention_count: int = 0
+    unresolved_count: int = 0
+    warnings: tuple[str, ...] = ()
+
+    def evidence_import_summary(self) -> dict:
+        payload = {
+            "result_count": self.result_count,
+            "proof_count": self.proof_count,
+            "bibliography_entry_count": self.bibliography_entry_count,
+            "local_mention_count": self.local_mention_count,
+            "external_mention_count": self.external_mention_count,
+            "unresolved_count": self.unresolved_count,
+        }
+        if self.warnings:
+            payload["warnings"] = list(self.warnings)
+        return payload

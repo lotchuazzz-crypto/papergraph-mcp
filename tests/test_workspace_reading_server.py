@@ -2,12 +2,43 @@ from pathlib import Path
 
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
+import fitz
 
 import papergraph.server as server
-from tests.test_workspace_reading import (
-    write_recursive_dependency_pdf,
-    write_slice_pdf,
-)
+
+
+def write_slice_pdf(path: Path) -> None:
+    document = fitz.open()
+    page = document.new_page()
+    y = 72
+    for line in [
+        "Lemma 1.2. Base estimate.",
+        "Theorem 1.1. Main result.",
+        "Proof. By Lemma 1.2.",
+        "Remark 1.3. Extra comment.",
+    ]:
+        page.insert_text((72, y), line, fontsize=11)
+        y += 18
+    document.save(path)
+    document.close()
+
+
+def write_recursive_dependency_pdf(path: Path) -> None:
+    document = fitz.open()
+    page = document.new_page()
+    y = 72
+    for line in [
+        "Lemma 1.1. Base estimate.",
+        "Proof. This is direct.",
+        "Lemma 1.2. Bootstrap estimate.",
+        "Proof. By Lemma 1.1.",
+        "Theorem 1.3. Main result.",
+        "Proof. By Lemma 1.2.",
+    ]:
+        page.insert_text((72, y), line, fontsize=11)
+        y += 18
+    document.save(path)
+    document.close()
 
 
 @pytest.fixture(autouse=True)

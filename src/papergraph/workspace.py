@@ -727,6 +727,7 @@ class Workspace:
             ((proof.proof_id, proof.span_indices) for proof in document.proofs),
             len(document.spans),
         )
+        _validate_evidence_traceability(document)
 
         imported_at = datetime.now(timezone.utc).isoformat()
         authors_json = json.dumps(list(document.authors), ensure_ascii=False)
@@ -1287,7 +1288,14 @@ class Workspace:
             """,
             (proof["proof_id"],),
         ).fetchall()
-        return [_external_result_mention_from_row(row) for row in rows]
+        return [
+            self._with_evidence_trace(
+                _external_result_mention_from_row(row),
+                row[0],
+                "external_result_mention",
+            )
+            for row in rows
+        ]
 
     @_synchronized
     def get_evidence(self, node_or_edge_id: str) -> dict:
@@ -1744,6 +1752,22 @@ class Workspace:
         return [_source_span_from_row(row) for row in rows]
 
     @_synchronized
+    def _source_spans_for_source_span_id(self, span_id: str) -> list[dict]:
+        rows = self._connection.execute(
+            """
+            SELECT
+                span_id, paper_id, source_type, source_ref, page,
+                block_index, start_offset, end_offset, bbox_json, text,
+                method, confidence
+            FROM source_spans
+            WHERE span_id = ?
+            ORDER BY paper_id, source_type, source_ref, page, block_index, id
+            """,
+            (span_id,),
+        ).fetchall()
+        return [_source_span_from_row(row) for row in rows]
+
+    @_synchronized
     def _with_evidence_trace(
         self,
         metadata: dict,
@@ -1854,6 +1878,10 @@ class Workspace:
         self,
         entry_id: str,
     ) -> tuple[list[dict], list[dict]]:
+        direct_spans = self._source_spans_for_source_span_id(entry_id)
+        if direct_spans:
+            return direct_spans, []
+
         row = self._connection.execute(
             """
             SELECT mention_id, proof_id
@@ -2153,6 +2181,139 @@ def _validate_span_indices(
                 raise ValueError(
                     f"{item_kind} {item_id!r} references unknown span index "
                     f"{span_index!r}"
+                )
+
+
+def _validate_evidence_traceability(document: EvidenceDocument) -> None:
+    span_ids = {
+        span.span_id
+        for span in document.spans
+        if span.span_id is not None
+    }
+    result_span_counts = {
+        result.result_id: len(result.span_indices)
+        for result in document.results
+    }
+    proof_span_counts = {
+        proof.proof_id: len(proof.span_indices)
+        for proof in document.proofs
+    }
+    bibliography_ids = {entry.entry_id for entry in document.bibliography_entries}
+    citation_mention_ids = {
+        mention.mention_id
+        for mention in document.citation_mentions
+    }
+
+    traceable_result_ids = {
+        result_id
+        for result_id, span_count in result_span_counts.items()
+        if span_count > 0
+    }
+    traceable_proof_ids = {
+        proof_id
+        for proof_id, span_count in proof_span_counts.items()
+        if span_count > 0
+    }
+    traceable_mention_ids: set[str] = set()
+    referenced_bibliography_ids: set[str] = set()
+
+    def require_traceable_parent_proof(mention_id: str, proof_id: str | None) -> None:
+        if proof_id is None:
+            raise ValueError(
+                f"mention {mention_id!r} is untraceable: missing parent proof"
+            )
+        if proof_id not in proof_span_counts:
+            raise ValueError(
+                f"mention {mention_id!r} is untraceable: unknown parent proof "
+                f"{proof_id!r}"
+            )
+        if proof_id not in traceable_proof_ids:
+            raise ValueError(
+                f"mention {mention_id!r} is untraceable: parent proof "
+                f"{proof_id!r} has no source spans"
+            )
+
+    for mention in document.local_result_mentions:
+        require_traceable_parent_proof(mention.mention_id, mention.proof_id)
+        traceable_mention_ids.add(mention.mention_id)
+
+    for mention in document.citation_mentions:
+        require_traceable_parent_proof(mention.mention_id, mention.proof_id)
+        traceable_mention_ids.add(mention.mention_id)
+        if mention.entry_id is not None:
+            if mention.entry_id not in bibliography_ids:
+                raise ValueError(
+                    f"mention {mention.mention_id!r} references unknown "
+                    f"bibliography entry {mention.entry_id!r}"
+                )
+            referenced_bibliography_ids.add(mention.entry_id)
+
+    for mention in document.external_result_mentions:
+        if mention.citation_mention_id is not None:
+            if mention.citation_mention_id not in citation_mention_ids:
+                raise ValueError(
+                    f"mention {mention.mention_id!r} references unknown citation "
+                    f"mention {mention.citation_mention_id!r}"
+                )
+        if mention.proof_id is not None:
+            require_traceable_parent_proof(mention.mention_id, mention.proof_id)
+        elif (
+            mention.citation_mention_id is None
+            or mention.citation_mention_id not in traceable_mention_ids
+        ):
+            raise ValueError(
+                f"mention {mention.mention_id!r} is untraceable: missing parent "
+                "proof or traceable citation mention"
+            )
+        traceable_mention_ids.add(mention.mention_id)
+        if mention.entry_id is not None:
+            if mention.entry_id not in bibliography_ids:
+                raise ValueError(
+                    f"mention {mention.mention_id!r} references unknown "
+                    f"bibliography entry {mention.entry_id!r}"
+                )
+            referenced_bibliography_ids.add(mention.entry_id)
+
+    traceable_bibliography_ids = set()
+    for entry in document.bibliography_entries:
+        if entry.entry_id in span_ids or entry.entry_id in referenced_bibliography_ids:
+            traceable_bibliography_ids.add(entry.entry_id)
+            continue
+        raise ValueError(
+            f"bibliography entry {entry.entry_id!r} is untraceable: no direct "
+            "source span, citation mention, or external result mention references it"
+        )
+
+    known_evidence_ids = {
+        *span_ids,
+        *result_span_counts.keys(),
+        *proof_span_counts.keys(),
+        *bibliography_ids,
+        *(mention.mention_id for mention in document.local_result_mentions),
+        *citation_mention_ids,
+        *(mention.mention_id for mention in document.external_result_mentions),
+    }
+    traceable_evidence_ids = {
+        *span_ids,
+        *traceable_result_ids,
+        *traceable_proof_ids,
+        *traceable_bibliography_ids,
+        *traceable_mention_ids,
+    }
+
+    for edge in document.edges:
+        if not edge.evidence_ids:
+            raise ValueError(f"edge {edge.edge_id!r} has no evidence_ids")
+        for evidence_id in edge.evidence_ids:
+            if evidence_id not in known_evidence_ids:
+                raise ValueError(
+                    f"edge {edge.edge_id!r} references unknown evidence id "
+                    f"{evidence_id!r}"
+                )
+            if evidence_id not in traceable_evidence_ids:
+                raise ValueError(
+                    f"edge {edge.edge_id!r} references untraceable evidence id "
+                    f"{evidence_id!r}"
                 )
 
 

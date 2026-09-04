@@ -341,6 +341,15 @@ def test_external_mentions_and_evidence_are_queryable(tmp_path: Path):
         )
         assert mentions[0]["raw_text"] == "Theorem A of [1]"
         assert mentions[0]["target_paper_id"] == "arxiv:2401.12345"
+        assert mentions[0]["evidence_id"] == "local:paper-a::external:target-thm"
+        assert mentions[0]["spans"][0]["source_ref"] == "paper.pdf"
+        assert mentions[0]["span_trail"] == [
+            {
+                "evidence_id": "local:paper-a::proof:1",
+                "evidence_type": "proof",
+                "relation": "parent_proof",
+            }
+        ]
 
         dependencies = workspace.get_proof_dependencies(
             "local:paper-a::pdf:theorem:1.1"
@@ -434,6 +443,136 @@ def test_get_evidence_payloads_are_traceable_for_supported_node_types(
             assert evidence["spans"], evidence_id
             assert evidence["spans"][0]["source_ref"] == "paper.pdf"
             assert evidence["span_trail"] == expected_trail
+    finally:
+        workspace.close()
+
+
+def test_import_rejects_unreferenced_bibliography_entries(tmp_path: Path):
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        bibliography = BibliographyEntryEvidence(
+            entry_id="local:paper-a::bib:orphan",
+            paper_id="local:paper-a",
+            raw_label="orphan",
+            raw_text="@article{orphan, title={Orphan}}",
+            entry_type="article",
+            title="Orphan",
+            authors=(),
+            year=None,
+            arxiv_id=None,
+            arxiv_version=None,
+            doi=None,
+            url=None,
+            method="pdf_bibliography",
+            confidence=0.7,
+        )
+
+        with pytest.raises(
+            ValueError,
+            match=(
+                "bibliography entry 'local:paper-a::bib:orphan' is untraceable"
+            ),
+        ):
+            workspace.import_evidence_document(
+                replace(simple_document(), bibliography_entries=(bibliography,))
+            )
+    finally:
+        workspace.close()
+
+
+@pytest.mark.parametrize(
+    "document",
+    [
+        replace(
+            simple_document(),
+            local_result_mentions=(
+                replace(simple_document().local_result_mentions[0], proof_id=None),
+            ),
+        ),
+        replace(
+            simple_document(),
+            local_result_mentions=(),
+            citation_mentions=(
+                CitationMentionEvidence(
+                    mention_id="local:paper-a::citation:no-proof",
+                    paper_id="local:paper-a",
+                    proof_id=None,
+                    raw_text="[missing]",
+                    raw_key="missing",
+                    entry_id=None,
+                    resolution_status="unresolved",
+                    method="proof_citation_regex",
+                    confidence=0.7,
+                ),
+            ),
+        ),
+        replace(
+            simple_document(),
+            local_result_mentions=(),
+            external_result_mentions=(
+                ExternalResultMentionEvidence(
+                    mention_id="local:paper-a::external:no-proof",
+                    paper_id="local:paper-a",
+                    proof_id=None,
+                    citation_mention_id=None,
+                    raw_text="Theorem B",
+                    external_kind="theorem",
+                    external_number="B",
+                    entry_id=None,
+                    target_paper_id=None,
+                    resolution_status="unresolved",
+                    method="external_result_regex",
+                    confidence=0.7,
+                ),
+            ),
+        ),
+    ],
+)
+def test_import_rejects_mentions_without_traceable_parent_proofs(
+    tmp_path: Path,
+    document: EvidenceDocument,
+):
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        with pytest.raises(ValueError, match="mention .* is untraceable"):
+            workspace.import_evidence_document(document)
+    finally:
+        workspace.close()
+
+
+@pytest.mark.parametrize(
+    ("evidence_ids", "message"),
+    [
+        ((), "edge 'local:paper-a::edge:bad' has no evidence_ids"),
+        (
+            ("local:paper-a::missing-evidence",),
+            (
+                "edge 'local:paper-a::edge:bad' references unknown evidence id "
+                "'local:paper-a::missing-evidence'"
+            ),
+        ),
+    ],
+)
+def test_import_rejects_edges_without_traceable_evidence_ids(
+    tmp_path: Path,
+    evidence_ids: tuple[str, ...],
+    message: str,
+):
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        edge = EvidenceEdge(
+            edge_id="local:paper-a::edge:bad",
+            paper_id="local:paper-a",
+            source_id="local:paper-a::pdf:theorem:1.1",
+            target_id="local:paper-a::local-mention:1",
+            relation="uses",
+            evidence_ids=evidence_ids,
+            method="proof_dependency",
+            confidence=0.6,
+        )
+
+        with pytest.raises(ValueError, match=message):
+            workspace.import_evidence_document(replace(simple_document(), edges=(edge,)))
     finally:
         workspace.close()
 

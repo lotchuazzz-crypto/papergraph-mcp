@@ -18,6 +18,7 @@ dependencies = [
     "httpx>=0.27,<1",
     "mcp[cli]>=2,<3",
     "pybtex>=0.25,<0.27",
+    "PyMuPDF>=1.24,<2",
 ]
 
 [project.scripts]

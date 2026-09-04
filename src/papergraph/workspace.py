@@ -999,15 +999,13 @@ class Workspace:
                 ):
                     resolved_external.append(mention)
                     known_external_mentions.append(mention)
-                elif mention["entry_id"] and _is_resolved(
-                    mention["resolution_status"]
-                ):
+                elif _is_known_external_result_mention(mention):
                     known_external_mentions.append(mention)
                 else:
                     unresolved_external.append(mention)
 
         warnings = []
-        if not resolved_local_result_ids and not resolved_external:
+        if not resolved_local_result_ids and not known_external_mentions:
             warnings.append(EVIDENCE_EMPTY_DEPENDENCY_WARNING)
         return {
             "result_id": result_id,
@@ -2395,9 +2393,25 @@ def _unresolved_evidence_mention_count(document: EvidenceDocument) -> int:
     unresolved_external = sum(
         1
         for mention in document.external_result_mentions
-        if not mention.target_paper_id or not _is_resolved(mention.resolution_status)
+        if not _is_known_external_result_mention(mention)
     )
     return unresolved_local + unresolved_citations + unresolved_external
+
+
+def _is_known_external_result_mention(mention) -> bool:
+    target_paper_id = _mention_value(mention, "target_paper_id")
+    entry_id = _mention_value(mention, "entry_id")
+    resolution_status = _mention_value(mention, "resolution_status")
+    return bool(
+        (target_paper_id or entry_id)
+        and _is_resolved(resolution_status)
+    )
+
+
+def _mention_value(mention, key: str):
+    if isinstance(mention, dict):
+        return mention[key]
+    return getattr(mention, key)
 
 
 def _is_resolved(resolution_status: str) -> bool:

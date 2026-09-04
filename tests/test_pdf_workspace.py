@@ -40,6 +40,24 @@ def write_external_only_pdf(path: Path) -> None:
     document.close()
 
 
+def write_recursive_dependency_pdf(path: Path) -> None:
+    document = fitz.open()
+    page = document.new_page()
+    y = 72
+    for line in [
+        "Lemma 1.1. Base estimate.",
+        "Proof. This is direct.",
+        "Lemma 1.2. Bootstrap estimate.",
+        "Proof. By Lemma 1.1.",
+        "Theorem 1.3. Main result.",
+        "Proof. By Lemma 1.2.",
+    ]:
+        page.insert_text((72, y), line, fontsize=11)
+        y += 18
+    document.save(path)
+    document.close()
+
+
 def test_workspace_import_pdf_paper_and_query_dependencies(tmp_path: Path):
     pdf = tmp_path / "paper.pdf"
     write_math_pdf(pdf)
@@ -66,6 +84,44 @@ def test_workspace_import_pdf_paper_and_query_dependencies(tmp_path: Path):
         assert dependencies["known"]["external_result_mentions"][0][
             "external_number"
         ] == "3.5"
+        via_mentions = dependencies["known"]["resolved_local_results"][0][
+            "via_mentions"
+        ]
+        assert via_mentions[0]["mention_id"] == "local:pdf-paper::local-mention:1"
+        assert via_mentions[0]["raw_text"] == "Lemma 1.2"
+        assert via_mentions[0]["spans"][0]["source_ref"] == str(pdf.resolve())
+        assert via_mentions[0]["span_trail"] == [
+            {
+                "evidence_id": "local:pdf-paper::proof:1",
+                "evidence_type": "proof",
+                "relation": "parent_proof",
+            }
+        ]
+    finally:
+        workspace.close()
+
+
+def test_pdf_recursive_dependencies_follow_resolved_unique_local_mentions(
+    tmp_path: Path,
+):
+    pdf = tmp_path / "recursive.pdf"
+    write_recursive_dependency_pdf(pdf)
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        workspace.import_pdf(pdf, "local:pdf-paper")
+
+        dependencies = workspace.get_proof_dependencies(
+            "local:pdf-paper::pdf:theorem:1.3",
+            recursive=True,
+        )
+
+        assert [
+            result["result_id"]
+            for result in dependencies["known"]["resolved_local_results"]
+        ] == [
+            "local:pdf-paper::pdf:lemma:1.2",
+            "local:pdf-paper::pdf:lemma:1.1",
+        ]
     finally:
         workspace.close()
 

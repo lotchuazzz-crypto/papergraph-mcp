@@ -35,6 +35,12 @@ from papergraph.project import LoadedProject
 
 
 SCHEMA_VERSION = 3
+_RESOLVED_RESOLUTION_STATUSES = (
+    "resolved",
+    "resolved_bibliography_entry",
+    "resolved_candidate",
+    "resolved_unique",
+)
 _REQUIRED_TABLES = {
     "workspace_meta",
     "papers",
@@ -928,6 +934,7 @@ class Workspace:
             proof_ids.extend(self._recursive_dependency_proof_ids(result_id))
 
         resolved_local_result_ids: list[str] = []
+        resolved_local_mentions_by_result: dict[str, list[dict]] = {}
         unresolved_local = []
         unresolved_citation = []
         unresolved_external = []
@@ -958,6 +965,10 @@ class Workspace:
                 ):
                     if mention["target_result_id"] not in resolved_local_result_ids:
                         resolved_local_result_ids.append(mention["target_result_id"])
+                    resolved_local_mentions_by_result.setdefault(
+                        mention["target_result_id"],
+                        [],
+                    ).append(mention)
                 else:
                     unresolved_local.append(mention)
 
@@ -1019,7 +1030,12 @@ class Workspace:
             "recursive": recursive,
             "known": {
                 "resolved_local_results": [
-                    self.get_result(resolved_id)
+                    {
+                        **self.get_result(resolved_id),
+                        "via_mentions": resolved_local_mentions_by_result[
+                            resolved_id
+                        ],
+                    }
                     for resolved_id in resolved_local_result_ids
                 ],
                 "resolved_external_results": resolved_external,
@@ -1771,8 +1787,11 @@ class Workspace:
         queue = [result_id]
         while queue:
             current_result_id = queue.pop(0)
+            resolved_status_placeholders = ", ".join(
+                "?" for _ in _RESOLVED_RESOLUTION_STATUSES
+            )
             rows = self._connection.execute(
-                """
+                f"""
                 SELECT DISTINCT local_result_mentions.target_result_id
                 FROM proofs
                 JOIN local_result_mentions
@@ -1780,12 +1799,11 @@ class Workspace:
                 WHERE proofs.result_id = ?
                   AND local_result_mentions.target_result_id IS NOT NULL
                   AND local_result_mentions.resolution_status IN (
-                      'resolved',
-                      'resolved_candidate'
+                      {resolved_status_placeholders}
                   )
                 ORDER BY local_result_mentions.target_result_id
                 """,
-                (current_result_id,),
+                (current_result_id, *_RESOLVED_RESOLUTION_STATUSES),
             ).fetchall()
             for (target_result_id,) in rows:
                 if target_result_id in visited_results:
@@ -2422,12 +2440,7 @@ def _mention_value(mention, key: str):
 
 
 def _is_resolved(resolution_status: str) -> bool:
-    return resolution_status in {
-        "resolved",
-        "resolved_bibliography_entry",
-        "resolved_candidate",
-        "resolved_unique",
-    }
+    return resolution_status in _RESOLVED_RESOLUTION_STATUSES
 
 
 def _paper_from_row(row: tuple) -> dict:

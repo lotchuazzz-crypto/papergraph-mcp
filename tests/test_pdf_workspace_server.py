@@ -87,6 +87,12 @@ def test_pdf_evidence_mcp_workflow(tmp_path: Path):
 
     dependencies = server.workspace_get_proof_dependencies("local:paper::pdf:theorem:1.1")
     assert dependencies["known"]["resolved_local_results"][0]["visible_number"] == "1.2"
+    assert dependencies["known"]["resolved_local_results"][0]["via_mentions"][0][
+        "raw_text"
+    ] == "Lemma 1.2"
+    assert dependencies["known"]["resolved_local_results"][0]["via_mentions"][0][
+        "spans"
+    ][0]["source_ref"] == str(pdf.resolve())
     assert dependencies["known"]["external_result_mentions"][0]["external_number"] == "3.5"
 
     evidence = server.workspace_get_evidence("local:paper::pdf:theorem:1.1")

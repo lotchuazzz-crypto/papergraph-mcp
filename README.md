@@ -5,7 +5,7 @@
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/lotchuazzz-crypto/papergraph-mcp)](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases)
 
-PaperGraph turns local or arXiv LaTeX papers and born-digital PDFs into evidence-first theorem, result, and proof dependency graphs that AI agents can query through MCP. PaperGraph v0.5.0 adds PDF import plus proof evidence tools that separate known local support, inferred external mentions, unresolved references, and parser warnings before an agent interprets a proof.
+PaperGraph turns local or arXiv LaTeX papers and born-digital PDFs into evidence-first theorem, result, and proof dependency graphs that AI agents can query through MCP. PaperGraph v0.5.0 adds PDF import plus proof evidence tools that separate known local and external support, proof association metadata, unresolved references, and parser warnings before an agent interprets a proof.
 
 PaperGraph v0.4.0 introduced the persistent, cross-paper SQLite workspace: retain a small literature collection, search theorem text, follow theorem dependencies, and inspect citation evidence without asking an agent to re-read every source paper.
 
@@ -98,9 +98,9 @@ Workspace tools operate on the active database. Call `open_workspace` first: `wo
 | `workspace_get_dependencies(global_theorem_id: str, recursive: bool = False) -> list[dict]` | Direct or cycle-safe recursive dependency records for a globally identified theorem. |
 | `workspace_get_dependency_diagnostics(global_theorem_id: str, recursive: bool = False) -> dict` | The same diagnostic contract for a globally identified theorem in the active workspace. |
 | `workspace_get_citations(paper_id: str, direction: str = "outgoing", include_unresolved: bool = True) -> list[dict]` | Explicit incoming or outgoing citation-evidence rows. Direction is `incoming` or `outgoing`; incoming rows are resolved. |
-| `workspace_list_results(paper_id: str | None = None, kind: str | None = None, limit: int = 50) -> list[dict]` | Stored PDF evidence results with IDs, paper IDs, kinds, visible numbers, and bounded ordering. |
-| `workspace_get_result(result_id: str) -> dict` | One stored PDF result with metadata and source spans. |
-| `workspace_get_result_proof(result_id: str) -> dict` | Proof evidence for a stored PDF result, including the proof span when one was extracted. |
+| `workspace_list_results(paper_id: str | None = None, kind: str | None = None, limit: int = 50) -> list[dict]` | Stored TeX or PDF evidence results with IDs, paper IDs, kinds, visible numbers, and bounded ordering. |
+| `workspace_get_result(result_id: str) -> dict` | One stored evidence result with metadata and source spans. |
+| `workspace_get_result_proof(result_id: str) -> dict` | Proof evidence for a stored TeX or PDF evidence result, including the proof span when one was extracted. |
 | `workspace_get_proof_dependencies(result_id: str, recursive: bool = False) -> dict` | Proof dependency evidence split into `known`, `inferred`, `unresolved`, and `warnings`. |
 | `workspace_get_external_result_mentions(result_id: str) -> list[dict]` | External result mentions found in a result's proof evidence. |
 | `workspace_get_evidence(node_or_edge_id: str) -> dict` | Metadata and source spans for one result, proof, dependency, or evidence edge. |
@@ -132,7 +132,7 @@ workspace_get_result_proof(result_id="local:example::pdf:theorem:1.1")
 workspace_get_proof_dependencies(result_id="local:example::pdf:theorem:1.1")
 ```
 
-Dependency responses split evidence into `known`, `inferred`, `unresolved`, and `warnings`. `known` covers local results or proof spans that PaperGraph can identify directly in the workspace. `inferred` covers mentions that look like external theorem or lemma references but are not resolved to a stored result. `unresolved` covers references that remain ambiguous or missing after extraction. `warnings` report low-confidence extraction boundaries and other cases where an agent should slow down before interpreting the result.
+Dependency responses split evidence into `known`, `inferred`, `unresolved`, and `warnings`. `known` covers resolved local results with their proof mentions, resolved external result mentions, and bibliography-backed external mentions in `known.external_result_mentions`. `inferred` reports proof association metadata, such as how confidently a proof block was associated with the result. `unresolved` covers references that remain ambiguous or missing after extraction. `warnings` report low-confidence extraction boundaries and other cases where an agent should slow down before interpreting the result.
 
 PaperGraph does not verify proofs. It extracts and stores evidence so an agent can inspect the text, source spans, and dependency status without silently upgrading a mention into a mathematical fact.
 

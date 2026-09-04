@@ -2176,6 +2176,10 @@ def _validate_span_indices(
     span_count: int,
 ) -> None:
     for item_id, span_indices in items:
+        if not span_indices:
+            raise ValueError(
+                f"{item_kind} {item_id!r} must reference at least one source span"
+            )
         for span_index in span_indices:
             if not isinstance(span_index, int) or not 0 <= span_index < span_count:
                 raise ValueError(

@@ -264,6 +264,42 @@ def test_import_evidence_document_and_query_result_proof_dependencies(tmp_path: 
         workspace.close()
 
 
+def test_import_rejects_results_without_span_indices(tmp_path: Path):
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        document = simple_document()
+        result = replace(document.results[0], span_indices=())
+
+        with pytest.raises(
+            ValueError,
+            match=(
+                "result 'local:paper-a::pdf:theorem:1.1' must reference at least "
+                "one source span"
+            ),
+        ):
+            workspace.import_evidence_document(replace(document, results=(result,)))
+    finally:
+        workspace.close()
+
+
+def test_import_rejects_proofs_without_span_indices(tmp_path: Path):
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        document = simple_document()
+        proof = replace(document.proofs[0], span_indices=())
+
+        with pytest.raises(
+            ValueError,
+            match=(
+                "proof 'local:paper-a::proof:1' must reference at least one "
+                "source span"
+            ),
+        ):
+            workspace.import_evidence_document(replace(document, proofs=(proof,)))
+    finally:
+        workspace.close()
+
+
 def test_v2_workspace_migrates_without_losing_legacy_tables(tmp_path: Path):
     path = tmp_path / "legacy.sqlite3"
     with sqlite3.connect(path) as connection:

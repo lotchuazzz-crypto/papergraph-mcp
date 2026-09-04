@@ -153,6 +153,56 @@ def document_with_external_mentions() -> EvidenceDocument:
     )
 
 
+def document_with_direct_span_backed_bibliography_edge() -> EvidenceDocument:
+    base = simple_document()
+    bibliography = BibliographyEntryEvidence(
+        entry_id="local:paper-a::bib:direct",
+        paper_id="local:paper-a",
+        raw_label="direct",
+        raw_text="@article{direct, title={Direct Span}}",
+        entry_type="article",
+        title="Direct Span",
+        authors=("Emmy Noether",),
+        year=1921,
+        arxiv_id=None,
+        arxiv_version=None,
+        doi=None,
+        url=None,
+        method="pdf_bibliography",
+        confidence=0.7,
+    )
+    bibliography_span = SourceSpanEvidence(
+        span_id=bibliography.entry_id,
+        paper_id="local:paper-a",
+        source_type="pdf",
+        source_ref="paper.pdf",
+        page=12,
+        block_index=4,
+        start_offset=120,
+        end_offset=180,
+        bbox=None,
+        text="[Direct] E. Noether. Direct Span.",
+        method="pdf_bibliography_block",
+        confidence=0.95,
+    )
+    edge = EvidenceEdge(
+        edge_id="local:paper-a::edge:uses-direct-bib",
+        paper_id="local:paper-a",
+        source_id=base.results[0].result_id,
+        target_id=bibliography.entry_id,
+        relation="cites",
+        evidence_ids=(bibliography.entry_id,),
+        method="bibliography_edge",
+        confidence=0.6,
+    )
+    return replace(
+        base,
+        spans=(*base.spans, bibliography_span),
+        bibliography_entries=(bibliography,),
+        edges=(edge,),
+    )
+
+
 def test_schema_v3_initializes_evidence_tables(tmp_path: Path):
     workspace = Workspace.open(tmp_path / "workspace.sqlite3")
     try:
@@ -479,6 +529,21 @@ def test_get_evidence_payloads_are_traceable_for_supported_node_types(
             assert evidence["spans"], evidence_id
             assert evidence["spans"][0]["source_ref"] == "paper.pdf"
             assert evidence["span_trail"] == expected_trail
+    finally:
+        workspace.close()
+
+
+def test_direct_span_backed_bibliography_entries_keep_edge_spans(tmp_path: Path):
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        workspace.import_evidence_document(
+            document_with_direct_span_backed_bibliography_edge()
+        )
+
+        edge_evidence = workspace.get_evidence("local:paper-a::edge:uses-direct-bib")
+        assert edge_evidence["spans"]
+        assert edge_evidence["spans"][0]["span_id"] == "local:paper-a::bib:direct"
+        assert edge_evidence["spans"][0]["page"] == 12
     finally:
         workspace.close()
 

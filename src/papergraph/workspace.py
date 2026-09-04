@@ -2116,7 +2116,7 @@ def _source_span_ids_by_evidence_id(
         )
 
     for entry in document.bibliography_entries:
-        source_span_ids[entry.entry_id] = []
+        source_span_ids.setdefault(entry.entry_id, [])
 
     for mention in document.citation_mentions:
         if mention.entry_id and not source_span_ids.get(mention.entry_id):

@@ -5,3 +5,4 @@ __pycache__/
 dist/
 .smoke-venv/
 .superpowers/
+.worktrees/

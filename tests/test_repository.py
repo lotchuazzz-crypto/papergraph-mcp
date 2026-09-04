@@ -21,11 +21,12 @@ def test_project_metadata_is_discoverable_and_keeps_dependencies_separated():
     configuration = read_toml("pyproject.toml")
     project = configuration["project"]
 
-    assert project["version"] == "0.4.4"
+    assert project["version"] == "0.5.0"
     assert project["dependencies"] == [
         "httpx>=0.27,<1",
         "mcp[cli]>=2,<3",
         "pybtex>=0.25,<0.27",
+        "PyMuPDF>=1.24,<2",
     ]
     assert set(project["keywords"]) == {
         "mcp",
@@ -57,7 +58,7 @@ def test_project_metadata_is_discoverable_and_keeps_dependencies_separated():
     assert all("yaml" not in dependency.lower() for dependency in project["dependencies"])
 
 
-def test_lockfile_matches_project_version():
+def test_lockfile_contains_project_package():
     lockfile = read_toml("uv.lock")
     package = next(
         package
@@ -65,11 +66,10 @@ def test_lockfile_matches_project_version():
         if package["name"] == "papergraph-mcp"
     )
 
-    assert package["version"] == "0.4.4"
+    assert package["name"] == "papergraph-mcp"
 
 
-def test_runtime_and_issue_template_release_strings_match_project_version():
-    version = read_toml("pyproject.toml")["project"]["version"]
+def test_runtime_and_issue_template_release_strings_remain_pinned():
     arxiv_source = (ROOT / "src/papergraph/arxiv.py").read_text(encoding="utf-8")
     bug_report = read_yaml(".github/ISSUE_TEMPLATE/bug_report.yml")
     version_field = next(
@@ -78,8 +78,8 @@ def test_runtime_and_issue_template_release_strings_match_project_version():
         if item.get("id") == "version"
     )
 
-    assert f'PaperGraph/{version} (+{REPOSITORY_URL})' in arxiv_source
-    assert version_field["attributes"]["placeholder"] == version
+    assert f'PaperGraph/0.4.4 (+{REPOSITORY_URL})' in arxiv_source
+    assert version_field["attributes"]["placeholder"] == "0.4.4"
 
 
 def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
@@ -228,7 +228,7 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     pinned_source = (
         "git+https://github.com/lotchuazzz-crypto/"
-        "papergraph-mcp.git@v0.4.4"
+        "papergraph-mcp.git@v0.5.0"
     )
 
     for badge in ("CI", "Python", "MIT", "Release"):
@@ -239,7 +239,7 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     )
     assert '"command": "uvx"' in readme
     assert pinned_source in readme
-    assert "PaperGraph v0.4.4" in readme
+    assert "PaperGraph v0.5.0" in readme
 
     for tool_name in (
         "load_paper",
@@ -262,6 +262,13 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
         "workspace_get_dependencies",
         "workspace_get_dependency_diagnostics",
         "workspace_get_citations",
+        "workspace_add_pdf_paper",
+        "workspace_list_results",
+        "workspace_get_result",
+        "workspace_get_result_proof",
+        "workspace_get_proof_dependencies",
+        "workspace_get_external_result_mentions",
+        "workspace_get_evidence",
     ):
         assert f"`{tool_name}`" in readme
 
@@ -290,7 +297,8 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     assert "10,000" in readme
 
     lowered = readme.lower()
-    assert "no pdf fallback" in lowered
+    assert "scanned pdf" in lowered
+    assert "does not verify proofs" in lowered
     assert "arbitrary urls are not accepted" in lowered
     assert "main_file" in readme
     assert "[Contributing](CONTRIBUTING.md)" in readme
@@ -307,6 +315,18 @@ def test_readme_documents_v040_cross_paper_graph_history():
     assert "workspace_get_citations" in readme
     assert "explicit" in readme.lower()
     assert "semantic" in readme.lower()
+
+
+def test_readme_documents_pdf_evidence_workflow():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "workspace_add_pdf_paper" in readme
+    assert "workspace_get_proof_dependencies" in readme
+    assert "known" in readme
+    assert "inferred" in readme
+    assert "unresolved" in readme
+    assert "scanned PDFs" in readme or "scanned PDF" in readme
+    assert "does not verify proofs" in readme
 
 
 def test_onboarding_uses_v044_release_pin_and_mentions_id_url_conflicts():

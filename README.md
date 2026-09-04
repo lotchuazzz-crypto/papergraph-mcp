@@ -5,7 +5,7 @@
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/lotchuazzz-crypto/papergraph-mcp)](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases)
 
-PaperGraph turns local or arXiv LaTeX papers into theorem dependency graphs that AI agents can query through MCP. PaperGraph v0.4.4 hardens first-use analysis by making agents verify the running version, validate raw arXiv requests, and report dependency boundaries before interpreting sparse graphs.
+PaperGraph turns local or arXiv LaTeX papers and born-digital PDFs into evidence-first theorem, result, and proof dependency graphs that AI agents can query through MCP. PaperGraph v0.5.0 adds PDF import plus proof evidence tools that separate known local support, inferred external mentions, unresolved references, and parser warnings before an agent interprets a proof.
 
 PaperGraph v0.4.0 introduced the persistent, cross-paper SQLite workspace: retain a small literature collection, search theorem text, follow theorem dependencies, and inspect citation evidence without asking an agent to re-read every source paper.
 
@@ -16,6 +16,7 @@ Single-paper tools expose theorem-like environments, labels, and `\ref` relation
 ## Features
 
 - Load local single-file or multi-file LaTeX projects, or safely prepare arXiv source projects.
+- Import born-digital PDFs into the same local workspace and inspect extracted result and proof evidence.
 - Keep theorem, reference, and citation records in a local SQLite workspace.
 - Search theorem titles and bodies across papers, with stable global IDs.
 - Traverse direct or recursive theorem dependencies and inspect incoming or outgoing citation evidence, including unresolved citations.
@@ -49,11 +50,11 @@ the decision without loading, call `validate_arxiv_request` or
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the GitHub release without cloning the repository:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.4 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.5.0 papergraph-mcp --version
 papergraph-mcp doctor
 ```
 
-The pinned command becomes available after the `v0.4.4` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
+The pinned command becomes available after the `v0.5.0` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
 
 To validate a raw arXiv request before loading a paper, run:
 
@@ -70,7 +71,7 @@ For an MCP client that accepts JSON-style stdio server configuration, add:
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.4.4", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.5.0", "papergraph-mcp"]
     }
   }
 }
@@ -82,7 +83,7 @@ Restart the MCP client after changing its configuration. The server uses stdio, 
 
 The original single-paper tools remain available: `get_environment_diagnostics`, `validate_arxiv_request`, `load_arxiv_request`, `validate_arxiv_input`, `load_paper`, `load_arxiv_paper`, `list_theorems`, `get_theorem`, `get_dependencies`, `get_dependency_diagnostics`, and `where_used`. Their signatures are `get_environment_diagnostics()`, `validate_arxiv_request(input: str)`, `load_arxiv_request(input: str, main_file: str | None = None, refresh: bool = False)`, `validate_arxiv_input(text_id: str | None = None, url: str | None = None)`, `load_paper(path: str)`, `load_arxiv_paper(arxiv_id: str, main_file: str | None = None, refresh: bool = False)`, `list_theorems(kind: str | None = None)`, `get_theorem(theorem_id: str)`, `get_dependencies(theorem_id: str, recursive: bool = False)`, `get_dependency_diagnostics(theorem_id: str, recursive: bool = False)`, and `where_used(theorem_id: str)`.
 
-Workspace tools operate on the active database. Call `open_workspace` first: `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, `workspace_get_dependency_diagnostics`, and `workspace_get_citations` require that active workspace. Their exact MCP signatures and return summaries are:
+Workspace tools operate on the active database. Call `open_workspace` first: `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_add_pdf_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, `workspace_get_dependency_diagnostics`, `workspace_get_citations`, `workspace_list_results`, `workspace_get_result`, `workspace_get_result_proof`, `workspace_get_proof_dependencies`, `workspace_get_external_result_mentions`, and `workspace_get_evidence` require that active workspace. Their exact MCP signatures and return summaries are:
 
 | Tool signature | Returns |
 | --- | --- |
@@ -90,12 +91,19 @@ Workspace tools operate on the active database. Call `open_workspace` first: `wo
 | `workspace_add_local_paper(path: str, paper_id: str) -> dict` | Imported paper metadata, theorem/kind counts, citation count, and unresolved-citation count. Re-importing an ID replaces it transactionally. |
 | `get_dependency_diagnostics(theorem_id: str, recursive: bool = False) -> dict` | Extraction basis, referenced labels, resolved and unresolved labels, dependency IDs, and warnings for sparse results. |
 | `workspace_add_arxiv_paper(arxiv_id: str, main_file: str | None = None, refresh: bool = False) -> dict` | The same import summary after safe arXiv preparation; paper ID and source version are normalized. |
+| `workspace_add_pdf_paper(path: str, paper_id: str) -> dict` | Imported PDF paper metadata, result counts, extracted evidence counts, and warnings. Re-importing an ID replaces it transactionally. |
 | `workspace_list_papers() -> list[dict]` | Stored-paper metadata and graph counts, in stable paper-ID order. |
 | `workspace_get_paper(paper_id: str) -> dict` | One paper's metadata, theorem/kind counts, resolved incoming/outgoing citation counts, and unresolved count. |
 | `workspace_search_theorems(query: str, paper_id: str | None = None, kind: str | None = None, limit: int = 20) -> list[dict]` | Matching global ID, paper/local IDs, kind, title, source file, and bounded content excerpt. Empty queries fail; `limit` is 1–100. |
 | `workspace_get_dependencies(global_theorem_id: str, recursive: bool = False) -> list[dict]` | Direct or cycle-safe recursive dependency records for a globally identified theorem. |
 | `workspace_get_dependency_diagnostics(global_theorem_id: str, recursive: bool = False) -> dict` | The same diagnostic contract for a globally identified theorem in the active workspace. |
 | `workspace_get_citations(paper_id: str, direction: str = "outgoing", include_unresolved: bool = True) -> list[dict]` | Explicit incoming or outgoing citation-evidence rows. Direction is `incoming` or `outgoing`; incoming rows are resolved. |
+| `workspace_list_results(paper_id: str | None = None, kind: str | None = None, limit: int = 50) -> list[dict]` | Stored PDF evidence results with IDs, paper IDs, kinds, visible numbers, and bounded ordering. |
+| `workspace_get_result(result_id: str) -> dict` | One stored PDF result with metadata and source spans. |
+| `workspace_get_result_proof(result_id: str) -> dict` | Proof evidence for a stored PDF result, including the proof span when one was extracted. |
+| `workspace_get_proof_dependencies(result_id: str, recursive: bool = False) -> dict` | Proof dependency evidence split into `known`, `inferred`, `unresolved`, and `warnings`. |
+| `workspace_get_external_result_mentions(result_id: str) -> list[dict]` | External result mentions found in a result's proof evidence. |
+| `workspace_get_evidence(node_or_edge_id: str) -> dict` | Metadata and source spans for one result, proof, dependency, or evidence edge. |
 
 For a compact single-paper check with an already-disambiguated ID, call `load_arxiv_paper(arxiv_id="math/0307200")`. For ordinary user text, call `load_arxiv_request(input="math/0307200")`. PaperGraph selects `main.tex`; a representative first response has `"path": "main.tex"`, `"cached": false`, and `"nodes": 7`.
 
@@ -111,6 +119,22 @@ Theorem summaries include `kind`, `raw_kind`, `display_kind`, and
 `normalized_kind`. Use `display_kind` for human-facing labels and
 `normalized_kind` for grouping; `kind` remains the raw LaTeX environment name
 for compatibility.
+
+## PDF proof evidence workflow
+
+Use PDF import when you have a born-digital PDF and want a local, evidence-first view of extracted results and proof references. The PDF tools store source spans so an agent can show where a theorem, proof, or dependency mention came from before drawing conclusions.
+
+```text
+open_workspace(path="C:/Temp/papergraph-pdf.sqlite3")
+workspace_add_pdf_paper(path="C:/Papers/example.pdf", paper_id="local:example")
+workspace_list_results(paper_id="local:example")
+workspace_get_result_proof(result_id="local:example::pdf:theorem:1.1")
+workspace_get_proof_dependencies(result_id="local:example::pdf:theorem:1.1")
+```
+
+Dependency responses split evidence into `known`, `inferred`, `unresolved`, and `warnings`. `known` covers local results or proof spans that PaperGraph can identify directly in the workspace. `inferred` covers mentions that look like external theorem or lemma references but are not resolved to a stored result. `unresolved` covers references that remain ambiguous or missing after extraction. `warnings` report low-confidence extraction boundaries and other cases where an agent should slow down before interpreting the result.
+
+PaperGraph does not verify proofs. It extracts and stores evidence so an agent can inspect the text, source spans, and dependency status without silently upgrading a mention into a mathematical fact.
 
 ## Three-paper local walkthrough
 
@@ -137,8 +161,10 @@ A citation obtains a stored target only when its cited arXiv ID is imported thro
 flowchart LR
     Local[Local LaTeX] --> Load[Structured project loading]
     Arxiv[arXiv source] --> Load
+    PDF[Born-digital PDF] --> Extract[PDF evidence extraction]
     Load --> Cite[Explicit citation evidence]
     Cite --> DB[(SQLite workspace)]
+    Extract --> DB
     DB --> MCP[Workspace MCP tools]
     Load --> Graph[Single-paper theorem graph]
     Graph --> MCP
@@ -148,7 +174,7 @@ flowchart LR
 
 PaperGraph only constructs remote downloads from arXiv's fixed e-print endpoint; arbitrary URLs are not accepted. It limits compressed responses to **100 MiB**, expanded content to **500 MiB**, and archives to **10,000** members. Absolute paths, parent traversal, symbolic links, hard links, devices, FIFOs, and other special archive members are rejected.
 
-A workspace is an ordinary local SQLite file. Choose a path you control, prefer a temporary directory for experiments, and do not commit its database, private manuscripts, cache data, credentials, tokens, or unsanitized logs. Back up a workspace only while it is not being written (or use your SQLite backup procedure); copying its database file gives you a portable snapshot of the imported evidence and graph data. Treat local source paths and citation content as potentially sensitive.
+A workspace is an ordinary local SQLite file. Local PDFs remain local; extracted PDF text, source spans, and proof evidence are stored in the user-chosen SQLite workspace. Choose a path you control, prefer a temporary directory for experiments, and do not commit its database, private manuscripts, cache data, credentials, tokens, or unsanitized logs. Back up a workspace only while it is not being written (or use your SQLite backup procedure); copying its database file gives you a portable snapshot of the imported evidence and graph data. Treat local source paths, extracted PDF text, and citation content as potentially sensitive.
 
 ## Development
 
@@ -167,8 +193,9 @@ Bug reports, focused features, and compatibility fixtures are welcome. Read [Con
 
 ## Limitations
 
-- There is no PDF fallback; PaperGraph requires LaTeX source.
-- It does not perform semantic theorem matching, proof verification, or automatic cited-paper download.
+- PDF import is intended for born-digital PDFs; scanned PDFs and OCR-heavy files may produce sparse text, missing spans, or warnings.
+- PaperGraph does not verify proofs, perform semantic theorem matching, or automatically download cited papers.
+- It does not recursively trace the literature from proof references or citations; import each source you want to inspect.
 - Citation resolution uses explicit bibliography identifiers and evidence; it does not infer a paper from similar titles, authors, or theorem wording.
 - Unusual project layouts may require an explicit `main_file`; the parser is not a complete TeX engine.
 

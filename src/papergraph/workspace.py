@@ -96,6 +96,7 @@ _REQUIRED_TABLE_COLUMNS = {
         "method",
         "confidence",
     },
+    "result_source_spans": {"result_id", "span_id", "position"},
     "proofs": {
         "proof_id",
         "paper_id",
@@ -106,6 +107,7 @@ _REQUIRED_TABLE_COLUMNS = {
         "method",
         "confidence",
     },
+    "proof_source_spans": {"proof_id", "span_id", "position"},
     "bibliography_entries": {
         "entry_id",
         "paper_id",
@@ -169,6 +171,7 @@ _REQUIRED_TABLE_COLUMNS = {
         "method",
         "confidence",
     },
+    "evidence_edge_source_spans": {"edge_id", "span_id", "position"},
 }
 
 _PAPERS_TABLE_SQL = """
@@ -755,6 +758,7 @@ class Workspace:
             )
 
             span_ids: dict[int, int] = {}
+            source_span_ids_by_span_id: dict[str, list[int]] = {}
             for index, span in enumerate(document.spans):
                 cursor = self._connection.execute(
                     """
@@ -780,6 +784,10 @@ class Workspace:
                     ),
                 )
                 span_ids[index] = int(cursor.lastrowid)
+                if span.span_id:
+                    source_span_ids_by_span_id.setdefault(span.span_id, []).append(
+                        span_ids[index]
+                    )
 
             self._connection.executemany(
                 """
@@ -808,16 +816,23 @@ class Workspace:
                     for result in document.results
                 ),
             )
+            result_source_span_ids: dict[str, list[int]] = {}
+            result_source_span_rows = []
+            for result in document.results:
+                linked_span_ids = [
+                    span_ids[span_index] for span_index in result.span_indices
+                ]
+                result_source_span_ids[result.result_id] = linked_span_ids
+                result_source_span_rows.extend(
+                    (result.result_id, span_id, position)
+                    for position, span_id in enumerate(linked_span_ids)
+                )
             self._connection.executemany(
                 """
                 INSERT INTO result_source_spans (result_id, span_id, position)
                 VALUES (?, ?, ?)
                 """,
-                (
-                    (result.result_id, span_ids[span_index], position)
-                    for result in document.results
-                    for position, span_index in enumerate(result.span_indices)
-                ),
+                result_source_span_rows,
             )
             self._connection.executemany(
                 """
@@ -840,16 +855,23 @@ class Workspace:
                     for proof in document.proofs
                 ),
             )
+            proof_source_span_ids: dict[str, list[int]] = {}
+            proof_source_span_rows = []
+            for proof in document.proofs:
+                linked_span_ids = [
+                    span_ids[span_index] for span_index in proof.span_indices
+                ]
+                proof_source_span_ids[proof.proof_id] = linked_span_ids
+                proof_source_span_rows.extend(
+                    (proof.proof_id, span_id, position)
+                    for position, span_id in enumerate(linked_span_ids)
+                )
             self._connection.executemany(
                 """
                 INSERT INTO proof_source_spans (proof_id, span_id, position)
                 VALUES (?, ?, ?)
                 """,
-                (
-                    (proof.proof_id, span_ids[span_index], position)
-                    for proof in document.proofs
-                    for position, span_index in enumerate(proof.span_indices)
-                ),
+                proof_source_span_rows,
             )
             self._connection.executemany(
                 """
@@ -971,6 +993,36 @@ class Workspace:
                     )
                     for edge in document.edges
                 ),
+            )
+            source_span_ids_by_evidence_id = _source_span_ids_by_evidence_id(
+                document=document,
+                source_span_ids_by_span_id=source_span_ids_by_span_id,
+                result_source_span_ids=result_source_span_ids,
+                proof_source_span_ids=proof_source_span_ids,
+            )
+            edge_source_span_rows = []
+            for edge in document.edges:
+                seen_span_ids = set()
+                edge_position = 0
+                for evidence_id in edge.evidence_ids:
+                    for span_id in source_span_ids_by_evidence_id.get(
+                        evidence_id,
+                        (),
+                    ):
+                        if span_id in seen_span_ids:
+                            continue
+                        seen_span_ids.add(span_id)
+                        edge_source_span_rows.append(
+                            (edge.edge_id, span_id, edge_position)
+                        )
+                        edge_position += 1
+            self._connection.executemany(
+                """
+                INSERT INTO evidence_edge_source_spans (
+                    edge_id, span_id, position
+                ) VALUES (?, ?, ?)
+                """,
+                edge_source_span_rows,
             )
 
         return WorkspaceImportResult(
@@ -1127,6 +1179,11 @@ class Workspace:
             ).fetchall()
             for row in local_rows:
                 mention = _local_result_mention_from_row(row)
+                mention = self._with_evidence_trace(
+                    mention,
+                    mention["mention_id"],
+                    "local_result_mention",
+                )
                 if mention["target_result_id"] and _is_resolved(
                     mention["resolution_status"]
                 ):
@@ -1147,6 +1204,11 @@ class Workspace:
                 (proof_id,),
             ):
                 mention = _citation_mention_from_row(row)
+                mention = self._with_evidence_trace(
+                    mention,
+                    mention["mention_id"],
+                    "citation_mention",
+                )
                 if not mention["entry_id"] or not _is_resolved(
                     mention["resolution_status"]
                 ):
@@ -1165,6 +1227,11 @@ class Workspace:
                 (proof_id,),
             ):
                 mention = _external_result_mention_from_row(row)
+                mention = self._with_evidence_trace(
+                    mention,
+                    mention["mention_id"],
+                    "external_result_mention",
+                )
                 if mention["target_paper_id"] and _is_resolved(
                     mention["resolution_status"]
                 ):
@@ -1227,55 +1294,52 @@ class Workspace:
         """Return metadata and spans for a stored evidence node or edge."""
 
         lookups = (
-            ("result", "results", "result_id", _result_from_row, self._source_spans_for_result),
-            ("proof", "proofs", "proof_id", _proof_from_row, self._source_spans_for_proof),
+            ("result", "results", "result_id", _result_from_row),
+            ("proof", "proofs", "proof_id", _proof_from_row),
             (
                 "bibliography_entry",
                 "bibliography_entries",
                 "entry_id",
                 _bibliography_entry_from_row,
-                lambda _id: [],
             ),
             (
                 "local_result_mention",
                 "local_result_mentions",
                 "mention_id",
                 _local_result_mention_from_row,
-                lambda _id: [],
             ),
             (
                 "citation_mention",
                 "citation_mentions",
                 "mention_id",
                 _citation_mention_from_row,
-                lambda _id: [],
             ),
             (
                 "external_result_mention",
                 "external_result_mentions",
                 "mention_id",
                 _external_result_mention_from_row,
-                lambda _id: [],
             ),
-            (
-                "edge",
-                "evidence_edges",
-                "edge_id",
-                _evidence_edge_from_row,
-                self._source_spans_for_edge,
-            ),
+            ("edge", "evidence_edges", "edge_id", _evidence_edge_from_row),
         )
-        for evidence_type, table, key_column, serializer, spans_for_id in lookups:
+        for evidence_type, table, key_column, serializer in lookups:
             row = self._connection.execute(
                 f"SELECT * FROM {table} WHERE {key_column} = ?",
                 (node_or_edge_id,),
             ).fetchone()
             if row is not None:
+                metadata = serializer(row)
+                spans, span_trail = self._source_spans_and_trail_for_evidence(
+                    evidence_type,
+                    node_or_edge_id,
+                    metadata,
+                )
                 return {
                     "id": node_or_edge_id,
                     "type": evidence_type,
-                    "metadata": serializer(row),
-                    "spans": spans_for_id(node_or_edge_id),
+                    "metadata": metadata,
+                    "spans": spans,
+                    "span_trail": span_trail,
                 }
         raise KeyError(f"Unknown evidence id: {node_or_edge_id}")
 
@@ -1680,6 +1744,227 @@ class Workspace:
         return [_source_span_from_row(row) for row in rows]
 
     @_synchronized
+    def _with_evidence_trace(
+        self,
+        metadata: dict,
+        evidence_id: str,
+        evidence_type: str,
+    ) -> dict:
+        spans, span_trail = self._source_spans_and_trail_for_evidence(
+            evidence_type,
+            evidence_id,
+            metadata,
+        )
+        return {
+            **metadata,
+            "evidence_id": evidence_id,
+            "spans": spans,
+            "span_trail": span_trail,
+        }
+
+    @_synchronized
+    def _source_spans_and_trail_for_evidence(
+        self,
+        evidence_type: str,
+        evidence_id: str,
+        metadata: dict,
+    ) -> tuple[list[dict], list[dict]]:
+        if evidence_type == "result":
+            return self._source_spans_for_result(evidence_id), []
+        if evidence_type == "proof":
+            return self._source_spans_for_proof(evidence_id), []
+        if evidence_type == "local_result_mention":
+            return self._source_spans_and_trail_for_parent_proof(
+                metadata["proof_id"],
+            )
+        if evidence_type == "citation_mention":
+            return self._source_spans_and_trail_for_parent_proof(
+                metadata["proof_id"],
+            )
+        if evidence_type == "external_result_mention":
+            if metadata["proof_id"]:
+                return self._source_spans_and_trail_for_parent_proof(
+                    metadata["proof_id"],
+                )
+            if metadata["citation_mention_id"]:
+                return self._source_spans_and_trail_for_citation_mention(
+                    metadata["citation_mention_id"],
+                    relation="parent_citation_mention",
+                )
+            return [], []
+        if evidence_type == "bibliography_entry":
+            return self._source_spans_and_trail_for_bibliography_entry(evidence_id)
+        if evidence_type == "edge":
+            return (
+                self._source_spans_for_edge(evidence_id),
+                self._span_trail_for_edge(metadata["evidence_ids"]),
+            )
+        return [], []
+
+    @_synchronized
+    def _source_spans_and_trail_for_parent_proof(
+        self,
+        proof_id: str | None,
+        prefix: list[dict] | None = None,
+    ) -> tuple[list[dict], list[dict]]:
+        span_trail = list(prefix or [])
+        if proof_id is None:
+            return [], span_trail
+        return (
+            self._source_spans_for_proof(proof_id),
+            [
+                *span_trail,
+                {
+                    "evidence_id": proof_id,
+                    "evidence_type": "proof",
+                    "relation": "parent_proof",
+                },
+            ],
+        )
+
+    @_synchronized
+    def _source_spans_and_trail_for_citation_mention(
+        self,
+        mention_id: str,
+        relation: str,
+    ) -> tuple[list[dict], list[dict]]:
+        row = self._connection.execute(
+            """
+            SELECT proof_id
+            FROM citation_mentions
+            WHERE mention_id = ?
+            """,
+            (mention_id,),
+        ).fetchone()
+        if row is None:
+            return [], []
+        return self._source_spans_and_trail_for_parent_proof(
+            row[0],
+            prefix=[
+                {
+                    "evidence_id": mention_id,
+                    "evidence_type": "citation_mention",
+                    "relation": relation,
+                }
+            ],
+        )
+
+    @_synchronized
+    def _source_spans_and_trail_for_bibliography_entry(
+        self,
+        entry_id: str,
+    ) -> tuple[list[dict], list[dict]]:
+        row = self._connection.execute(
+            """
+            SELECT mention_id, proof_id
+            FROM citation_mentions
+            WHERE entry_id = ? AND proof_id IS NOT NULL
+            ORDER BY mention_id
+            LIMIT 1
+            """,
+            (entry_id,),
+        ).fetchone()
+        if row is not None:
+            return self._source_spans_and_trail_for_parent_proof(
+                row[1],
+                prefix=[
+                    {
+                        "evidence_id": row[0],
+                        "evidence_type": "citation_mention",
+                        "relation": "referenced_by_citation_mention",
+                    }
+                ],
+            )
+
+        row = self._connection.execute(
+            """
+            SELECT mention_id, proof_id
+            FROM external_result_mentions
+            WHERE entry_id = ? AND proof_id IS NOT NULL
+            ORDER BY mention_id
+            LIMIT 1
+            """,
+            (entry_id,),
+        ).fetchone()
+        if row is not None:
+            return self._source_spans_and_trail_for_parent_proof(
+                row[1],
+                prefix=[
+                    {
+                        "evidence_id": row[0],
+                        "evidence_type": "external_result_mention",
+                        "relation": "referenced_by_external_result_mention",
+                    }
+                ],
+            )
+        return [], []
+
+    @_synchronized
+    def _span_trail_for_edge(self, evidence_ids: list[str]) -> list[dict]:
+        span_trail = []
+        for evidence_id in evidence_ids:
+            evidence = self._evidence_metadata_for_id(evidence_id)
+            if evidence is None:
+                continue
+            evidence_type, metadata = evidence
+            span_trail.append(
+                {
+                    "evidence_id": evidence_id,
+                    "evidence_type": evidence_type,
+                    "relation": "edge_evidence",
+                }
+            )
+            if evidence_type == "edge":
+                continue
+            _, inherited_trail = self._source_spans_and_trail_for_evidence(
+                evidence_type,
+                evidence_id,
+                metadata,
+            )
+            span_trail.extend(inherited_trail)
+        return _dedupe_span_trail(span_trail)
+
+    @_synchronized
+    def _evidence_metadata_for_id(self, evidence_id: str) -> tuple[str, dict] | None:
+        lookups = (
+            ("result", "results", "result_id", _result_from_row),
+            ("proof", "proofs", "proof_id", _proof_from_row),
+            (
+                "bibliography_entry",
+                "bibliography_entries",
+                "entry_id",
+                _bibliography_entry_from_row,
+            ),
+            (
+                "local_result_mention",
+                "local_result_mentions",
+                "mention_id",
+                _local_result_mention_from_row,
+            ),
+            (
+                "citation_mention",
+                "citation_mentions",
+                "mention_id",
+                _citation_mention_from_row,
+            ),
+            (
+                "external_result_mention",
+                "external_result_mentions",
+                "mention_id",
+                _external_result_mention_from_row,
+            ),
+            ("edge", "evidence_edges", "edge_id", _evidence_edge_from_row),
+        )
+        for evidence_type, table, key_column, serializer in lookups:
+            row = self._connection.execute(
+                f"SELECT * FROM {table} WHERE {key_column} = ?",
+                (evidence_id,),
+            ).fetchone()
+            if row is not None:
+                return evidence_type, serializer(row)
+        return None
+
+    @_synchronized
     def _recursive_dependency_proof_ids(self, result_id: str) -> list[str]:
         proof_ids: list[str] = []
         visited_results = {result_id}
@@ -1770,6 +2055,70 @@ def _execute_sql_script(connection: sqlite3.Connection, script: str) -> None:
         stripped = statement.strip()
         if stripped:
             connection.execute(stripped)
+
+
+def _source_span_ids_by_evidence_id(
+    *,
+    document: EvidenceDocument,
+    source_span_ids_by_span_id: dict[str, list[int]],
+    result_source_span_ids: dict[str, list[int]],
+    proof_source_span_ids: dict[str, list[int]],
+) -> dict[str, list[int]]:
+    source_span_ids: dict[str, list[int]] = {}
+    source_span_ids.update(source_span_ids_by_span_id)
+    source_span_ids.update(result_source_span_ids)
+    source_span_ids.update(proof_source_span_ids)
+
+    for mention in document.local_result_mentions:
+        source_span_ids[mention.mention_id] = _copy_source_span_ids(
+            proof_source_span_ids.get(mention.proof_id or ""),
+        )
+
+    for mention in document.citation_mentions:
+        source_span_ids[mention.mention_id] = _copy_source_span_ids(
+            proof_source_span_ids.get(mention.proof_id or ""),
+        )
+
+    for mention in document.external_result_mentions:
+        inherited_span_ids = proof_source_span_ids.get(mention.proof_id or "")
+        if not inherited_span_ids and mention.citation_mention_id:
+            inherited_span_ids = source_span_ids.get(mention.citation_mention_id)
+        source_span_ids[mention.mention_id] = _copy_source_span_ids(
+            inherited_span_ids,
+        )
+
+    for entry in document.bibliography_entries:
+        source_span_ids[entry.entry_id] = []
+
+    for mention in document.citation_mentions:
+        if mention.entry_id and not source_span_ids.get(mention.entry_id):
+            source_span_ids[mention.entry_id] = _copy_source_span_ids(
+                source_span_ids.get(mention.mention_id),
+            )
+
+    for mention in document.external_result_mentions:
+        if mention.entry_id and not source_span_ids.get(mention.entry_id):
+            source_span_ids[mention.entry_id] = _copy_source_span_ids(
+                source_span_ids.get(mention.mention_id),
+            )
+
+    return source_span_ids
+
+
+def _copy_source_span_ids(span_ids: list[int] | None) -> list[int]:
+    return list(span_ids or [])
+
+
+def _dedupe_span_trail(span_trail: list[dict]) -> list[dict]:
+    deduped = []
+    seen = set()
+    for item in span_trail:
+        key = (item["evidence_id"], item["evidence_type"], item["relation"])
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped
 
 
 def _validate_document_paper_ids(

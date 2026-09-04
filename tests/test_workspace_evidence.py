@@ -15,7 +15,7 @@ from papergraph.evidence import (
     ResultEvidence,
     SourceSpanEvidence,
 )
-from papergraph.workspace import SCHEMA_VERSION, Workspace
+from papergraph.workspace import SCHEMA_VERSION, Workspace, WorkspaceSchemaError
 
 
 def simple_document() -> EvidenceDocument:
@@ -163,12 +163,74 @@ def test_schema_v3_initializes_evidence_tables(tmp_path: Path):
                 "SELECT name FROM sqlite_master WHERE type = 'table'"
             )
         }
-        assert {"source_spans", "results", "proofs", "local_result_mentions", "evidence_edges"} <= tables
+        assert {
+            "source_spans",
+            "results",
+            "proofs",
+            "local_result_mentions",
+            "evidence_edges",
+        } <= tables
         assert workspace._connection.execute(
             "SELECT value FROM workspace_meta WHERE key = 'schema_version'"
         ).fetchone() == ("3",)
     finally:
         workspace.close()
+
+
+@pytest.mark.parametrize(
+    ("table_name", "replacement_sql", "missing_column"),
+    [
+        (
+            "result_source_spans",
+            """
+            CREATE TABLE result_source_spans (
+                result_id TEXT NOT NULL,
+                span_id INTEGER NOT NULL
+            )
+            """,
+            "position",
+        ),
+        (
+            "proof_source_spans",
+            """
+            CREATE TABLE proof_source_spans (
+                proof_id TEXT NOT NULL,
+                span_id INTEGER NOT NULL
+            )
+            """,
+            "position",
+        ),
+        (
+            "evidence_edge_source_spans",
+            """
+            CREATE TABLE evidence_edge_source_spans (
+                edge_id TEXT NOT NULL,
+                span_id INTEGER NOT NULL
+            )
+            """,
+            "position",
+        ),
+    ],
+)
+def test_schema_validation_rejects_incomplete_evidence_link_tables(
+    tmp_path: Path,
+    table_name: str,
+    replacement_sql: str,
+    missing_column: str,
+):
+    path = tmp_path / "workspace.sqlite3"
+    workspace = Workspace.open(path)
+    workspace.close()
+    with sqlite3.connect(path) as connection:
+        connection.execute("PRAGMA foreign_keys = OFF")
+        connection.execute(f"DROP TABLE {table_name}")
+        connection.execute(replacement_sql)
+
+    with pytest.raises(
+        WorkspaceSchemaError,
+        match=f"missing required {table_name} columns.*{missing_column}",
+    ):
+        Workspace.open(path)
 
 
 def test_import_evidence_document_and_query_result_proof_dependencies(tmp_path: Path):
@@ -193,7 +255,10 @@ def test_import_evidence_document_and_query_result_proof_dependencies(tmp_path: 
 
         dependencies = workspace.get_proof_dependencies("local:paper-a::pdf:theorem:1.1")
         assert dependencies["known"]["resolved_local_results"] == []
-        assert dependencies["unresolved"]["local_result_mentions"][0]["raw_text"] == "Lemma 1.2"
+        local_mention = dependencies["unresolved"]["local_result_mentions"][0]
+        assert local_mention["raw_text"] == "Lemma 1.2"
+        assert local_mention["evidence_id"] == "local:paper-a::local-mention:1"
+        assert local_mention["spans"][0]["source_ref"] == "paper.pdf"
         assert dependencies["warnings"]
     finally:
         workspace.close()
@@ -283,17 +348,92 @@ def test_external_mentions_and_evidence_are_queryable(tmp_path: Path):
         assert dependencies["known"]["resolved_external_results"][0]["mention_id"] == (
             "local:paper-a::external:target-thm"
         )
+        external_dependency = dependencies["known"]["resolved_external_results"][0]
+        assert external_dependency["evidence_id"] == "local:paper-a::external:target-thm"
+        assert external_dependency["spans"][0]["page"] == 1
         assert dependencies["warnings"] == []
 
         evidence = workspace.get_evidence("local:paper-a::external:target-thm")
         assert evidence["metadata"]["raw_text"] == "Theorem A of [1]"
-        assert evidence["spans"] == []
+        assert evidence["spans"][0]["source_ref"] == "paper.pdf"
+        assert evidence["span_trail"][0] == {
+            "evidence_id": "local:paper-a::proof:1",
+            "evidence_type": "proof",
+            "relation": "parent_proof",
+        }
 
         edge_evidence = workspace.get_evidence("local:paper-a::edge:uses-external")
         assert edge_evidence["metadata"]["relation"] == "uses"
         assert edge_evidence["metadata"]["evidence_ids"] == [
             "local:paper-a::external:target-thm"
         ]
+        assert edge_evidence["spans"][0]["source_ref"] == "paper.pdf"
+    finally:
+        workspace.close()
+
+
+def test_get_evidence_payloads_are_traceable_for_supported_node_types(
+    tmp_path: Path,
+):
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        workspace.import_evidence_document(document_with_external_mentions())
+
+        expected_span_trails = {
+            "local:paper-a::pdf:theorem:1.1": [],
+            "local:paper-a::proof:1": [],
+            "local:paper-a::bib:target": [
+                {
+                    "evidence_id": "local:paper-a::citation:target",
+                    "evidence_type": "citation_mention",
+                    "relation": "referenced_by_citation_mention",
+                },
+                {
+                    "evidence_id": "local:paper-a::proof:1",
+                    "evidence_type": "proof",
+                    "relation": "parent_proof",
+                },
+            ],
+            "local:paper-a::local-mention:1": [
+                {
+                    "evidence_id": "local:paper-a::proof:1",
+                    "evidence_type": "proof",
+                    "relation": "parent_proof",
+                }
+            ],
+            "local:paper-a::citation:target": [
+                {
+                    "evidence_id": "local:paper-a::proof:1",
+                    "evidence_type": "proof",
+                    "relation": "parent_proof",
+                }
+            ],
+            "local:paper-a::external:target-thm": [
+                {
+                    "evidence_id": "local:paper-a::proof:1",
+                    "evidence_type": "proof",
+                    "relation": "parent_proof",
+                }
+            ],
+            "local:paper-a::edge:uses-external": [
+                {
+                    "evidence_id": "local:paper-a::external:target-thm",
+                    "evidence_type": "external_result_mention",
+                    "relation": "edge_evidence",
+                },
+                {
+                    "evidence_id": "local:paper-a::proof:1",
+                    "evidence_type": "proof",
+                    "relation": "parent_proof",
+                },
+            ],
+        }
+
+        for evidence_id, expected_trail in expected_span_trails.items():
+            evidence = workspace.get_evidence(evidence_id)
+            assert evidence["spans"], evidence_id
+            assert evidence["spans"][0]["source_ref"] == "paper.pdf"
+            assert evidence["span_trail"] == expected_trail
     finally:
         workspace.close()
 

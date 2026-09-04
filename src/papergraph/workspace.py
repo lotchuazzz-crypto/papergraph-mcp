@@ -27,7 +27,7 @@ from papergraph.models import (
     EMPTY_DEPENDENCY_WARNING,
     WorkspaceImportResult,
 )
-from papergraph.parser import parse_project
+from papergraph.parser import latex_project_to_evidence_document, parse_project
 from papergraph.project import LoadedProject
 
 
@@ -193,7 +193,7 @@ CREATE TABLE source_spans (
     id INTEGER PRIMARY KEY,
     span_id TEXT,
     paper_id TEXT NOT NULL REFERENCES papers(paper_id) ON DELETE CASCADE,
-    source_type TEXT NOT NULL CHECK (source_type IN ('local', 'arxiv', 'pdf')),
+    source_type TEXT NOT NULL CHECK (source_type IN ('local', 'arxiv', 'pdf', 'tex')),
     source_ref TEXT NOT NULL,
     page INTEGER,
     block_index INTEGER,
@@ -579,6 +579,14 @@ class Workspace:
             for node in nodes
             if node.label is not None
         }
+        evidence_document = latex_project_to_evidence_document(
+            normalized_paper_id,
+            source_type,
+            source_ref,
+            source_version,
+            project,
+        )
+        _validate_evidence_document(evidence_document, normalized_paper_id)
         main_file = project.root_file.relative_to(project.project_root).as_posix()
         imported_at = datetime.now(timezone.utc).isoformat()
         authors_json = json.dumps(list(project.authors), ensure_ascii=False)
@@ -669,6 +677,7 @@ class Workspace:
                     for citation in citations
                 ),
             )
+            _insert_evidence_document(self._connection, evidence_document)
             self._connection.execute(
                 """
                 UPDATE citation_evidence
@@ -716,18 +725,7 @@ class Workspace:
                 f"paper id {normalized_paper_id!r}"
             )
 
-        _validate_document_paper_ids(document, normalized_paper_id)
-        _validate_span_indices(
-            "result",
-            ((result.result_id, result.span_indices) for result in document.results),
-            len(document.spans),
-        )
-        _validate_span_indices(
-            "proof",
-            ((proof.proof_id, proof.span_indices) for proof in document.proofs),
-            len(document.spans),
-        )
-        _validate_evidence_traceability(document)
+        _validate_evidence_document(document, normalized_paper_id)
 
         imported_at = datetime.now(timezone.utc).isoformat()
         authors_json = json.dumps(list(document.authors), ensure_ascii=False)
@@ -758,273 +756,7 @@ class Workspace:
                 ),
             )
 
-            span_ids: dict[int, int] = {}
-            source_span_ids_by_span_id: dict[str, list[int]] = {}
-            for index, span in enumerate(document.spans):
-                cursor = self._connection.execute(
-                    """
-                    INSERT INTO source_spans (
-                        span_id, paper_id, source_type, source_ref, page,
-                        block_index, start_offset, end_offset, bbox_json, text,
-                        method, confidence
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        span.span_id,
-                        normalized_paper_id,
-                        span.source_type,
-                        span.source_ref,
-                        span.page,
-                        span.block_index,
-                        span.start_offset,
-                        span.end_offset,
-                        json.dumps(list(span.bbox)) if span.bbox is not None else None,
-                        span.text,
-                        span.method,
-                        span.confidence,
-                    ),
-                )
-                span_ids[index] = int(cursor.lastrowid)
-                if span.span_id:
-                    source_span_ids_by_span_id.setdefault(span.span_id, []).append(
-                        span_ids[index]
-                    )
-
-            self._connection.executemany(
-                """
-                INSERT INTO results (
-                    result_id, paper_id, local_id, kind, raw_kind,
-                    display_kind, normalized_kind, label, visible_number, title,
-                    statement, method, confidence
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    (
-                        result.result_id,
-                        normalized_paper_id,
-                        result.local_id,
-                        result.kind,
-                        result.raw_kind,
-                        result.display_kind,
-                        result.normalized_kind,
-                        result.label,
-                        result.visible_number,
-                        result.title,
-                        result.statement,
-                        result.method,
-                        result.confidence,
-                    )
-                    for result in document.results
-                ),
-            )
-            result_source_span_ids: dict[str, list[int]] = {}
-            result_source_span_rows = []
-            for result in document.results:
-                linked_span_ids = [
-                    span_ids[span_index] for span_index in result.span_indices
-                ]
-                result_source_span_ids[result.result_id] = linked_span_ids
-                result_source_span_rows.extend(
-                    (result.result_id, span_id, position)
-                    for position, span_id in enumerate(linked_span_ids)
-                )
-            self._connection.executemany(
-                """
-                INSERT INTO result_source_spans (result_id, span_id, position)
-                VALUES (?, ?, ?)
-                """,
-                result_source_span_rows,
-            )
-            self._connection.executemany(
-                """
-                INSERT INTO proofs (
-                    proof_id, paper_id, result_id, text, association_basis,
-                    association_confidence, method, confidence
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    (
-                        proof.proof_id,
-                        normalized_paper_id,
-                        proof.result_id,
-                        proof.text,
-                        proof.association_basis,
-                        proof.association_confidence,
-                        proof.method,
-                        proof.confidence,
-                    )
-                    for proof in document.proofs
-                ),
-            )
-            proof_source_span_ids: dict[str, list[int]] = {}
-            proof_source_span_rows = []
-            for proof in document.proofs:
-                linked_span_ids = [
-                    span_ids[span_index] for span_index in proof.span_indices
-                ]
-                proof_source_span_ids[proof.proof_id] = linked_span_ids
-                proof_source_span_rows.extend(
-                    (proof.proof_id, span_id, position)
-                    for position, span_id in enumerate(linked_span_ids)
-                )
-            self._connection.executemany(
-                """
-                INSERT INTO proof_source_spans (proof_id, span_id, position)
-                VALUES (?, ?, ?)
-                """,
-                proof_source_span_rows,
-            )
-            self._connection.executemany(
-                """
-                INSERT INTO bibliography_entries (
-                    entry_id, paper_id, raw_label, raw_text, entry_type, title,
-                    authors_json, year, arxiv_id, arxiv_version, doi, url,
-                    method, confidence
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    (
-                        entry.entry_id,
-                        normalized_paper_id,
-                        entry.raw_label,
-                        entry.raw_text,
-                        entry.entry_type,
-                        entry.title,
-                        json.dumps(list(entry.authors), ensure_ascii=False),
-                        entry.year,
-                        entry.arxiv_id,
-                        entry.arxiv_version,
-                        entry.doi,
-                        entry.url,
-                        entry.method,
-                        entry.confidence,
-                    )
-                    for entry in document.bibliography_entries
-                ),
-            )
-            self._connection.executemany(
-                """
-                INSERT INTO local_result_mentions (
-                    mention_id, paper_id, proof_id, raw_text, kind,
-                    visible_number, target_result_id, resolution_status,
-                    method, confidence
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    (
-                        mention.mention_id,
-                        normalized_paper_id,
-                        mention.proof_id,
-                        mention.raw_text,
-                        mention.kind,
-                        mention.visible_number,
-                        mention.target_result_id,
-                        mention.resolution_status,
-                        mention.method,
-                        mention.confidence,
-                    )
-                    for mention in document.local_result_mentions
-                ),
-            )
-            self._connection.executemany(
-                """
-                INSERT INTO citation_mentions (
-                    mention_id, paper_id, proof_id, raw_text, raw_key,
-                    entry_id, resolution_status, method, confidence
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    (
-                        mention.mention_id,
-                        normalized_paper_id,
-                        mention.proof_id,
-                        mention.raw_text,
-                        mention.raw_key,
-                        mention.entry_id,
-                        mention.resolution_status,
-                        mention.method,
-                        mention.confidence,
-                    )
-                    for mention in document.citation_mentions
-                ),
-            )
-            self._connection.executemany(
-                """
-                INSERT INTO external_result_mentions (
-                    mention_id, paper_id, proof_id, citation_mention_id,
-                    raw_text, external_kind, external_number, entry_id,
-                    target_paper_id, resolution_status, method, confidence
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    (
-                        mention.mention_id,
-                        normalized_paper_id,
-                        mention.proof_id,
-                        mention.citation_mention_id,
-                        mention.raw_text,
-                        mention.external_kind,
-                        mention.external_number,
-                        mention.entry_id,
-                        mention.target_paper_id,
-                        mention.resolution_status,
-                        mention.method,
-                        mention.confidence,
-                    )
-                    for mention in document.external_result_mentions
-                ),
-            )
-            self._connection.executemany(
-                """
-                INSERT INTO evidence_edges (
-                    edge_id, paper_id, source_id, target_id, relation,
-                    evidence_ids_json, method, confidence
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    (
-                        edge.edge_id,
-                        normalized_paper_id,
-                        edge.source_id,
-                        edge.target_id,
-                        edge.relation,
-                        json.dumps(list(edge.evidence_ids), ensure_ascii=False),
-                        edge.method,
-                        edge.confidence,
-                    )
-                    for edge in document.edges
-                ),
-            )
-            source_span_ids_by_evidence_id = _source_span_ids_by_evidence_id(
-                document=document,
-                source_span_ids_by_span_id=source_span_ids_by_span_id,
-                result_source_span_ids=result_source_span_ids,
-                proof_source_span_ids=proof_source_span_ids,
-            )
-            edge_source_span_rows = []
-            for edge in document.edges:
-                seen_span_ids = set()
-                edge_position = 0
-                for evidence_id in edge.evidence_ids:
-                    for span_id in source_span_ids_by_evidence_id.get(
-                        evidence_id,
-                        (),
-                    ):
-                        if span_id in seen_span_ids:
-                            continue
-                        seen_span_ids.add(span_id)
-                        edge_source_span_rows.append(
-                            (edge.edge_id, span_id, edge_position)
-                        )
-                        edge_position += 1
-            self._connection.executemany(
-                """
-                INSERT INTO evidence_edge_source_spans (
-                    edge_id, span_id, position
-                ) VALUES (?, ?, ?)
-                """,
-                edge_source_span_rows,
-            )
+            _insert_evidence_document(self._connection, document)
 
         return WorkspaceImportResult(
             paper_id=normalized_paper_id,
@@ -2085,6 +1817,281 @@ def _execute_sql_script(connection: sqlite3.Connection, script: str) -> None:
             connection.execute(stripped)
 
 
+def _insert_evidence_document(
+    connection: sqlite3.Connection,
+    document: EvidenceDocument,
+) -> None:
+    normalized_paper_id = normalize_paper_id(document.paper_id)
+
+    span_ids: dict[int, int] = {}
+    source_span_ids_by_span_id: dict[str, list[int]] = {}
+    for index, span in enumerate(document.spans):
+        cursor = connection.execute(
+            """
+            INSERT INTO source_spans (
+                span_id, paper_id, source_type, source_ref, page,
+                block_index, start_offset, end_offset, bbox_json, text,
+                method, confidence
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                span.span_id,
+                normalized_paper_id,
+                span.source_type,
+                span.source_ref,
+                span.page,
+                span.block_index,
+                span.start_offset,
+                span.end_offset,
+                json.dumps(list(span.bbox)) if span.bbox is not None else None,
+                span.text,
+                span.method,
+                span.confidence,
+            ),
+        )
+        span_ids[index] = int(cursor.lastrowid)
+        if span.span_id:
+            source_span_ids_by_span_id.setdefault(span.span_id, []).append(
+                span_ids[index]
+            )
+
+    connection.executemany(
+        """
+        INSERT INTO results (
+            result_id, paper_id, local_id, kind, raw_kind,
+            display_kind, normalized_kind, label, visible_number, title,
+            statement, method, confidence
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            (
+                result.result_id,
+                normalized_paper_id,
+                result.local_id,
+                result.kind,
+                result.raw_kind,
+                result.display_kind,
+                result.normalized_kind,
+                result.label,
+                result.visible_number,
+                result.title,
+                result.statement,
+                result.method,
+                result.confidence,
+            )
+            for result in document.results
+        ),
+    )
+    result_source_span_ids: dict[str, list[int]] = {}
+    result_source_span_rows = []
+    for result in document.results:
+        linked_span_ids = [
+            span_ids[span_index] for span_index in result.span_indices
+        ]
+        result_source_span_ids[result.result_id] = linked_span_ids
+        result_source_span_rows.extend(
+            (result.result_id, span_id, position)
+            for position, span_id in enumerate(linked_span_ids)
+        )
+    connection.executemany(
+        """
+        INSERT INTO result_source_spans (result_id, span_id, position)
+        VALUES (?, ?, ?)
+        """,
+        result_source_span_rows,
+    )
+    connection.executemany(
+        """
+        INSERT INTO proofs (
+            proof_id, paper_id, result_id, text, association_basis,
+            association_confidence, method, confidence
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            (
+                proof.proof_id,
+                normalized_paper_id,
+                proof.result_id,
+                proof.text,
+                proof.association_basis,
+                proof.association_confidence,
+                proof.method,
+                proof.confidence,
+            )
+            for proof in document.proofs
+        ),
+    )
+    proof_source_span_ids: dict[str, list[int]] = {}
+    proof_source_span_rows = []
+    for proof in document.proofs:
+        linked_span_ids = [
+            span_ids[span_index] for span_index in proof.span_indices
+        ]
+        proof_source_span_ids[proof.proof_id] = linked_span_ids
+        proof_source_span_rows.extend(
+            (proof.proof_id, span_id, position)
+            for position, span_id in enumerate(linked_span_ids)
+        )
+    connection.executemany(
+        """
+        INSERT INTO proof_source_spans (proof_id, span_id, position)
+        VALUES (?, ?, ?)
+        """,
+        proof_source_span_rows,
+    )
+    connection.executemany(
+        """
+        INSERT INTO bibliography_entries (
+            entry_id, paper_id, raw_label, raw_text, entry_type, title,
+            authors_json, year, arxiv_id, arxiv_version, doi, url,
+            method, confidence
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            (
+                entry.entry_id,
+                normalized_paper_id,
+                entry.raw_label,
+                entry.raw_text,
+                entry.entry_type,
+                entry.title,
+                json.dumps(list(entry.authors), ensure_ascii=False),
+                entry.year,
+                entry.arxiv_id,
+                entry.arxiv_version,
+                entry.doi,
+                entry.url,
+                entry.method,
+                entry.confidence,
+            )
+            for entry in document.bibliography_entries
+        ),
+    )
+    connection.executemany(
+        """
+        INSERT INTO local_result_mentions (
+            mention_id, paper_id, proof_id, raw_text, kind,
+            visible_number, target_result_id, resolution_status,
+            method, confidence
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            (
+                mention.mention_id,
+                normalized_paper_id,
+                mention.proof_id,
+                mention.raw_text,
+                mention.kind,
+                mention.visible_number,
+                mention.target_result_id,
+                mention.resolution_status,
+                mention.method,
+                mention.confidence,
+            )
+            for mention in document.local_result_mentions
+        ),
+    )
+    connection.executemany(
+        """
+        INSERT INTO citation_mentions (
+            mention_id, paper_id, proof_id, raw_text, raw_key,
+            entry_id, resolution_status, method, confidence
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            (
+                mention.mention_id,
+                normalized_paper_id,
+                mention.proof_id,
+                mention.raw_text,
+                mention.raw_key,
+                mention.entry_id,
+                mention.resolution_status,
+                mention.method,
+                mention.confidence,
+            )
+            for mention in document.citation_mentions
+        ),
+    )
+    connection.executemany(
+        """
+        INSERT INTO external_result_mentions (
+            mention_id, paper_id, proof_id, citation_mention_id,
+            raw_text, external_kind, external_number, entry_id,
+            target_paper_id, resolution_status, method, confidence
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            (
+                mention.mention_id,
+                normalized_paper_id,
+                mention.proof_id,
+                mention.citation_mention_id,
+                mention.raw_text,
+                mention.external_kind,
+                mention.external_number,
+                mention.entry_id,
+                mention.target_paper_id,
+                mention.resolution_status,
+                mention.method,
+                mention.confidence,
+            )
+            for mention in document.external_result_mentions
+        ),
+    )
+    connection.executemany(
+        """
+        INSERT INTO evidence_edges (
+            edge_id, paper_id, source_id, target_id, relation,
+            evidence_ids_json, method, confidence
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            (
+                edge.edge_id,
+                normalized_paper_id,
+                edge.source_id,
+                edge.target_id,
+                edge.relation,
+                json.dumps(list(edge.evidence_ids), ensure_ascii=False),
+                edge.method,
+                edge.confidence,
+            )
+            for edge in document.edges
+        ),
+    )
+    source_span_ids_by_evidence_id = _source_span_ids_by_evidence_id(
+        document=document,
+        source_span_ids_by_span_id=source_span_ids_by_span_id,
+        result_source_span_ids=result_source_span_ids,
+        proof_source_span_ids=proof_source_span_ids,
+    )
+    edge_source_span_rows = []
+    for edge in document.edges:
+        seen_span_ids = set()
+        edge_position = 0
+        for evidence_id in edge.evidence_ids:
+            for span_id in source_span_ids_by_evidence_id.get(
+                evidence_id,
+                (),
+            ):
+                if span_id in seen_span_ids:
+                    continue
+                seen_span_ids.add(span_id)
+                edge_source_span_rows.append(
+                    (edge.edge_id, span_id, edge_position)
+                )
+                edge_position += 1
+    connection.executemany(
+        """
+        INSERT INTO evidence_edge_source_spans (
+            edge_id, span_id, position
+        ) VALUES (?, ?, ?)
+        """,
+        edge_source_span_rows,
+    )
+
+
 def _source_span_ids_by_evidence_id(
     *,
     document: EvidenceDocument,
@@ -2168,6 +2175,24 @@ def _validate_document_paper_ids(
                 f"Evidence item paper id {item.paper_id!r} does not match "
                 f"document paper id {normalized_paper_id!r}"
             )
+
+
+def _validate_evidence_document(
+    document: EvidenceDocument,
+    normalized_paper_id: str,
+) -> None:
+    _validate_document_paper_ids(document, normalized_paper_id)
+    _validate_span_indices(
+        "result",
+        ((result.result_id, result.span_indices) for result in document.results),
+        len(document.spans),
+    )
+    _validate_span_indices(
+        "proof",
+        ((proof.proof_id, proof.span_indices) for proof in document.proofs),
+        len(document.spans),
+    )
+    _validate_evidence_traceability(document)
 
 
 def _validate_span_indices(

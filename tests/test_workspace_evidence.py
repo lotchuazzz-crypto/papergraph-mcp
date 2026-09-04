@@ -15,7 +15,31 @@ from papergraph.evidence import (
     ResultEvidence,
     SourceSpanEvidence,
 )
+from papergraph.project import load_project
 from papergraph.workspace import SCHEMA_VERSION, Workspace, WorkspaceSchemaError
+
+
+@pytest.fixture
+def workspace(tmp_path: Path):
+    opened = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        yield opened
+    finally:
+        opened.close()
+
+
+@pytest.fixture
+def loaded_project(tmp_path: Path):
+    main = tmp_path / "main.tex"
+    main.write_text(
+        r"\title{A paper}"
+        r"\begin{lemma}\label{lem:base}Base.\end{lemma}"
+        r"\begin{theorem}\label{thm:main}"
+        r"Uses \ref{lem:base} and \ref{missing}."
+        r"\end{theorem}",
+        encoding="utf-8",
+    )
+    return load_project(main)
 
 
 def simple_document() -> EvidenceDocument:
@@ -312,6 +336,18 @@ def test_import_evidence_document_and_query_result_proof_dependencies(tmp_path: 
         assert dependencies["warnings"]
     finally:
         workspace.close()
+
+
+def test_latex_import_populates_source_agnostic_results(workspace, loaded_project):
+    workspace.import_project("local:paper-a", "local", "main.tex", None, loaded_project)
+
+    results = workspace.list_results()
+
+    assert [item["result_id"] for item in results] == [
+        "local:paper-a::lem:base",
+        "local:paper-a::thm:main",
+    ]
+    assert results[0]["source_type"] == "local"
 
 
 def test_import_rejects_results_without_span_indices(tmp_path: Path):

@@ -670,6 +670,26 @@ def _print_json(payload: dict) -> None:
     print(json.dumps(payload, indent=2, sort_keys=True))
 
 
+def _run_workspace_cli_command(command: str, workspace_path: str, callback) -> None:
+    workspace = None
+    try:
+        workspace = Workspace.open(workspace_path)
+        _print_json(callback(workspace))
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        _print_json(
+            {
+                "status": "error",
+                "action": "inspect_error",
+                "command": command,
+                "message": str(exc),
+            }
+        )
+        raise SystemExit(1) from exc
+    finally:
+        if workspace is not None:
+            workspace.close()
+
+
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="papergraph-mcp",
@@ -703,6 +723,38 @@ def main(argv: Sequence[str] | None = None) -> None:
     load_request_parser.add_argument("input")
     load_request_parser.add_argument("--main-file")
     load_request_parser.add_argument("--refresh", action="store_true")
+    export_bundle_parser = subparsers.add_parser(
+        "export-reading-bundle",
+        help="Export a paper-level Reading Bridge bundle from a workspace.",
+    )
+    export_bundle_parser.add_argument("--workspace", required=True)
+    export_bundle_parser.add_argument("--paper-id", required=True)
+    export_context_parser = subparsers.add_parser(
+        "export-result-reading-context",
+        help="Export focused Reading Bridge context for one result.",
+    )
+    export_context_parser.add_argument("--workspace", required=True)
+    export_context_parser.add_argument("--result-id", required=True)
+    source_slice_parser = subparsers.add_parser(
+        "get-source-slice",
+        help="Export bounded source text around a span, result, or proof.",
+    )
+    source_slice_parser.add_argument("--workspace", required=True)
+    source_slice_parser.add_argument("--span-id")
+    source_slice_parser.add_argument("--result-id")
+    source_slice_parser.add_argument("--proof-id")
+    source_slice_parser.add_argument("--context", type=int, default=1)
+    reading_path_parser = subparsers.add_parser(
+        "get-result-reading-path",
+        help="Export top-down and bottom-up local reading paths for one result.",
+    )
+    reading_path_parser.add_argument("--workspace", required=True)
+    reading_path_parser.add_argument("--result-id", required=True)
+    reading_path_parser.add_argument(
+        "--direct",
+        action="store_true",
+        help="Return only direct dependencies instead of recursive traversal.",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -743,6 +795,42 @@ def main(argv: Sequence[str] | None = None) -> None:
                 }
             )
             raise SystemExit(1) from exc
+        return
+    if args.command == "export-reading-bundle":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.export_reading_bundle(args.paper_id),
+        )
+        return
+    if args.command == "export-result-reading-context":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.export_result_reading_context(args.result_id),
+        )
+        return
+    if args.command == "get-source-slice":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.get_source_slice(
+                span_id=args.span_id,
+                result_id=args.result_id,
+                proof_id=args.proof_id,
+                context=args.context,
+            ),
+        )
+        return
+    if args.command == "get-result-reading-path":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.get_result_reading_path(
+                args.result_id,
+                recursive=not args.direct,
+            ),
+        )
         return
     mcp.run()
 

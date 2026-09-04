@@ -67,6 +67,7 @@ def test_lockfile_contains_project_package():
     )
 
     assert package["name"] == "papergraph-mcp"
+    assert package["version"] == "0.5.0"
 
 
 def test_runtime_and_issue_template_release_strings_remain_pinned():
@@ -78,8 +79,8 @@ def test_runtime_and_issue_template_release_strings_remain_pinned():
         if item.get("id") == "version"
     )
 
-    assert f'PaperGraph/0.4.4 (+{REPOSITORY_URL})' in arxiv_source
-    assert version_field["attributes"]["placeholder"] == "0.4.4"
+    assert f'PaperGraph/0.5.0 (+{REPOSITORY_URL})' in arxiv_source
+    assert version_field["attributes"]["placeholder"] == "0.5.0"
 
 
 def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
@@ -120,7 +121,7 @@ def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
         for token in ('"uv"', '"pip"', '"install"', '"--python"')
     )
     assert "papergraph-mcp --version" in build_steps
-    assert "papergraph-mcp 0.4.4" in build_steps
+    assert "papergraph-mcp 0.5.0" in build_steps
     assert 'version="$(.smoke-venv/bin/papergraph-mcp --version)"' in build_steps
 
 
@@ -329,7 +330,7 @@ def test_readme_documents_pdf_evidence_workflow():
     assert "does not verify proofs" in readme
 
 
-def test_onboarding_uses_v044_release_pin_and_mentions_id_url_conflicts():
+def test_onboarding_uses_v050_release_pin_and_mentions_id_url_conflicts():
     skill = (
         ROOT / ".agents/skills/setting-up-papergraph/SKILL.md"
     ).read_text(encoding="utf-8")
@@ -337,8 +338,8 @@ def test_onboarding_uses_v044_release_pin_and_mentions_id_url_conflicts():
         ROOT / ".agents/skills/setting-up-papergraph/references/usage-prompt.md"
     ).read_text(encoding="utf-8")
 
-    assert "papergraph-mcp.git@v0.4.4" in skill
-    assert "papergraph-mcp 0.4.4" in skill
+    assert "papergraph-mcp.git@v0.5.0" in skill
+    assert "papergraph-mcp 0.5.0" in skill
     assert "validate_arxiv_request" in skill
     assert "load_arxiv_request" in skill
     assert "If a user provides both an arXiv ID and an arXiv URL" in skill

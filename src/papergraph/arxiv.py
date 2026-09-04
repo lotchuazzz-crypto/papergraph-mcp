@@ -26,7 +26,7 @@ from papergraph.loader import _is_commented
 
 ARXIV_SOURCE_BASE = "https://export.arxiv.org/e-print"
 MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024
-_USER_AGENT = "PaperGraph/0.4.4 (+https://github.com/lotchuazzz-crypto/papergraph-mcp)"
+_USER_AGENT = "PaperGraph/0.5.0 (+https://github.com/lotchuazzz-crypto/papergraph-mcp)"
 _MODERN_ID_RE = re.compile(r"\d{4}\.\d{4,5}(?:v[1-9]\d*)?")
 _LEGACY_ID_RE = re.compile(
     r"[A-Za-z][A-Za-z0-9.-]*/\d{7}(?:v[1-9]\d*)?"

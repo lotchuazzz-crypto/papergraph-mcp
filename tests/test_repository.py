@@ -1,4 +1,7 @@
+import json
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import yaml
@@ -68,6 +71,26 @@ def test_lockfile_contains_project_package():
 
     assert package["name"] == "papergraph-mcp"
     assert package["version"] == "0.5.0"
+
+
+def test_validate_arxiv_request_module_stdout_is_json_only():
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "papergraph.server",
+            "validate-arxiv-request",
+            "[math/0307200](https://arxiv.org/abs/2609.01574)",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(completed.stdout)
+    assert payload["status"] == "conflict"
+    assert payload["action"] == "ask_user_to_choose"
+    assert payload["selected_id"] is None
 
 
 def test_runtime_and_issue_template_release_strings_remain_pinned():

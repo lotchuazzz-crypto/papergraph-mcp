@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-import fitz
+import pymupdf as fitz
 
 from papergraph.evidence import SourceSpanEvidence
 

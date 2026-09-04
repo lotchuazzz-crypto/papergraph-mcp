@@ -384,6 +384,66 @@ def workspace_get_evidence(node_or_edge_id: str) -> dict:
 
 
 @mcp.tool()
+@_serialized_workspace_tool
+def workspace_export_reading_bundle(paper_id: str) -> dict:
+    """Export a paper-level evidence bundle for paper-reading consumers."""
+
+    try:
+        return require_workspace().export_reading_bundle(paper_id)
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_export_result_reading_context(result_id: str) -> dict:
+    """Export focused evidence context for reading one result's proof."""
+
+    try:
+        return require_workspace().export_result_reading_context(result_id)
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_get_source_slice(
+    span_id: str | None = None,
+    result_id: str | None = None,
+    proof_id: str | None = None,
+    context: int = 1,
+) -> dict:
+    """Return bounded source text around one span, result, or proof."""
+
+    try:
+        return require_workspace().get_source_slice(
+            span_id=span_id,
+            result_id=result_id,
+            proof_id=proof_id,
+            context=context,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_get_result_reading_path(
+    result_id: str,
+    recursive: bool = True,
+) -> dict:
+    """Return deterministic local reading paths for one result."""
+
+    try:
+        return require_workspace().get_result_reading_path(
+            result_id,
+            recursive=recursive,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
 def load_paper(path: str) -> dict:
     """Load a local LaTeX paper and build its theorem graph."""
 

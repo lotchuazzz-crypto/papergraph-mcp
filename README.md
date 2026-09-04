@@ -17,6 +17,7 @@ Single-paper tools expose theorem-like environments, labels, and `\ref` relation
 
 - Load local single-file or multi-file LaTeX projects, or safely prepare arXiv source projects.
 - Import born-digital PDFs into the same local workspace and inspect extracted result and proof evidence.
+- Export reading bridge bundles, result contexts, source slices, and reading paths for explanation-focused consumers.
 - Keep theorem, reference, and citation records in a local SQLite workspace.
 - Search theorem titles and bodies across papers, with stable global IDs.
 - Traverse direct or recursive theorem dependencies and inspect incoming or outgoing citation evidence, including unresolved citations.
@@ -83,7 +84,7 @@ Restart the MCP client after changing its configuration. The server uses stdio, 
 
 The original single-paper tools remain available: `get_environment_diagnostics`, `validate_arxiv_request`, `load_arxiv_request`, `validate_arxiv_input`, `load_paper`, `load_arxiv_paper`, `list_theorems`, `get_theorem`, `get_dependencies`, `get_dependency_diagnostics`, and `where_used`. Their signatures are `get_environment_diagnostics()`, `validate_arxiv_request(input: str)`, `load_arxiv_request(input: str, main_file: str | None = None, refresh: bool = False)`, `validate_arxiv_input(text_id: str | None = None, url: str | None = None)`, `load_paper(path: str)`, `load_arxiv_paper(arxiv_id: str, main_file: str | None = None, refresh: bool = False)`, `list_theorems(kind: str | None = None)`, `get_theorem(theorem_id: str)`, `get_dependencies(theorem_id: str, recursive: bool = False)`, `get_dependency_diagnostics(theorem_id: str, recursive: bool = False)`, and `where_used(theorem_id: str)`.
 
-Workspace tools operate on the active database. Call `open_workspace` first: `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_add_pdf_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, `workspace_get_dependency_diagnostics`, `workspace_get_citations`, `workspace_list_results`, `workspace_get_result`, `workspace_get_result_proof`, `workspace_get_proof_dependencies`, `workspace_get_external_result_mentions`, and `workspace_get_evidence` require that active workspace. Their exact MCP signatures and return summaries are:
+Workspace tools operate on the active database. Call `open_workspace` first: `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_add_pdf_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, `workspace_get_dependency_diagnostics`, `workspace_get_citations`, `workspace_list_results`, `workspace_get_result`, `workspace_get_result_proof`, `workspace_get_proof_dependencies`, `workspace_get_external_result_mentions`, `workspace_get_evidence`, `workspace_export_reading_bundle`, `workspace_export_result_reading_context`, `workspace_get_source_slice`, and `workspace_get_result_reading_path` require that active workspace. Their exact MCP signatures and return summaries are:
 
 | Tool signature | Returns |
 | --- | --- |
@@ -104,6 +105,10 @@ Workspace tools operate on the active database. Call `open_workspace` first: `wo
 | `workspace_get_proof_dependencies(result_id: str, recursive: bool = False) -> dict` | Proof dependency evidence split into `known`, `inferred`, `unresolved`, and `warnings`. |
 | `workspace_get_external_result_mentions(result_id: str) -> list[dict]` | External result mentions found in a result's proof evidence. |
 | `workspace_get_evidence(node_or_edge_id: str) -> dict` | Metadata and source spans for one result, proof, dependency, or evidence edge. |
+| `workspace_export_reading_bundle(paper_id: str) -> dict` | Paper-level Reading Bridge bundle with results, AI4Math-like entities, dependency evidence, URI mappings, source handles, uncertainty logs, and interpretation policy. |
+| `workspace_export_result_reading_context(result_id: str) -> dict` | Focused result context for deep reading, including statement evidence, proof evidence, dependencies, source-slice handles, and allowed consumer interpretation prompts. |
+| `workspace_get_source_slice(span_id: str | None = None, result_id: str | None = None, proof_id: str | None = None, context: int = 1) -> dict` | Bounded source text around exactly one span, result, or proof selector. `context` is 0 through 5 neighboring source spans. |
+| `workspace_get_result_reading_path(result_id: str, recursive: bool = True) -> dict` | Top-down and bottom-up local reading paths derived from resolved proof dependencies, with external and unresolved stop nodes. |
 
 For a compact single-paper check with an already-disambiguated ID, call `load_arxiv_paper(arxiv_id="math/0307200")`. For ordinary user text, call `load_arxiv_request(input="math/0307200")`. PaperGraph selects `main.tex`; a representative first response has `"path": "main.tex"`, `"cached": false`, and `"nodes": 7`.
 
@@ -135,6 +140,21 @@ workspace_get_proof_dependencies(result_id="local:example::pdf:theorem:1.1")
 Dependency responses split evidence into `known`, `inferred`, `unresolved`, and `warnings`. `known` covers resolved local results with their proof mentions, resolved external result mentions, and bibliography-backed external mentions in `known.external_result_mentions`. `inferred` reports proof association metadata, such as how confidently a proof block was associated with the result. `unresolved` covers references that remain ambiguous or missing after extraction. `warnings` report low-confidence extraction boundaries and other cases where an agent should slow down before interpreting the result.
 
 PaperGraph does not verify proofs. It extracts and stores evidence so an agent can inspect the text, source spans, and dependency status without silently upgrading a mention into a mathematical fact.
+
+## Reading Bridge workflow
+
+Use the Reading Bridge when you want PaperGraph to provide evidence and source handles for a separate paper-reading skill or agent. PaperGraph exports the extracted statements, proof evidence, dependency buckets, unresolved mentions, warnings, and bounded source slices. AI4Math-Paper-Reading or another consumer should perform plain-language explanation, proof-gap filling, symbol tables, and interpretation after it states which parts came from PaperGraph evidence.
+
+```text
+open_workspace(path="C:/Temp/papergraph-reading.sqlite3")
+workspace_add_pdf_paper(path="C:/Papers/example.pdf", paper_id="local:example")
+workspace_export_reading_bundle(paper_id="local:example")
+workspace_export_result_reading_context(result_id="local:example::pdf:theorem:1.1")
+workspace_get_source_slice(proof_id="local:example::proof:1", context=1)
+workspace_get_result_reading_path(result_id="local:example::pdf:theorem:1.1", recursive=True)
+```
+
+Bridge payloads include `bridge_schema_version`, reversible PaperGraph-to-reading URI maps, AI4Math-like `entities`, `dependency_index`, `external_mentions`, `source_handles`, `completeness_check`, `uncertain_log`, and an `interpretation_policy`. Fields such as `paper_summary`, proof-gap filling, main-result detection, and proof strategy narration are marked for the consumer instead of being generated by PaperGraph.
 
 ## Three-paper local walkthrough
 

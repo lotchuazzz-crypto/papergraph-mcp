@@ -22,6 +22,7 @@ from papergraph.graph import PaperGraph
 from papergraph.identity import paper_id_from_arxiv
 from papergraph.loader import load_latex_project
 from papergraph.parser import parse_latex
+from papergraph.pdf import PdfExtractionError
 from papergraph.project import load_project
 from papergraph.workspace import SCHEMA_VERSION, Workspace, WorkspaceError
 
@@ -36,6 +37,7 @@ _workspace_state_lock = RLock()
 
 _WORKSPACE_TOOL_ERRORS = (
     WorkspaceError,
+    PdfExtractionError,
     sqlite3.DatabaseError,
     OSError,
     ValueError,
@@ -88,6 +90,78 @@ def require_workspace() -> Workspace:
             )
 
         return _current_workspace
+
+
+def _workspace_evidence_import_counts(
+    workspace: Workspace,
+    paper_id: str,
+) -> dict:
+    connection = workspace._connection
+
+    def count(table: str) -> int:
+        return connection.execute(
+            f"SELECT COUNT(*) FROM {table} WHERE paper_id = ?",
+            (paper_id,),
+        ).fetchone()[0]
+
+    resolved_statuses = (
+        "resolved",
+        "resolved_bibliography_entry",
+        "resolved_candidate",
+        "resolved_unique",
+    )
+    resolved_placeholders = ",".join("?" for _ in resolved_statuses)
+    local_mention_count = count("local_result_mentions")
+    external_mention_count = count("external_result_mentions")
+    unresolved_local_count = connection.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM local_result_mentions
+        WHERE paper_id = ?
+          AND (
+              target_result_id IS NULL
+              OR resolution_status NOT IN ({resolved_placeholders})
+          )
+        """,
+        (paper_id, *resolved_statuses),
+    ).fetchone()[0]
+    unresolved_citation_count = connection.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM citation_mentions
+        WHERE paper_id = ?
+          AND (
+              entry_id IS NULL
+              OR resolution_status NOT IN ({resolved_placeholders})
+          )
+        """,
+        (paper_id, *resolved_statuses),
+    ).fetchone()[0]
+    unresolved_external_count = connection.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM external_result_mentions
+        WHERE paper_id = ?
+          AND NOT (
+              (target_paper_id IS NOT NULL OR entry_id IS NOT NULL)
+              AND resolution_status IN ({resolved_placeholders})
+          )
+        """,
+        (paper_id, *resolved_statuses),
+    ).fetchone()[0]
+
+    return {
+        "result_count": count("results"),
+        "proof_count": count("proofs"),
+        "bibliography_entry_count": count("bibliography_entries"),
+        "local_mention_count": local_mention_count,
+        "external_mention_count": external_mention_count,
+        "unresolved_count": (
+            unresolved_local_count
+            + unresolved_citation_count
+            + unresolved_external_count
+        ),
+    }
 
 
 @mcp.tool()
@@ -187,6 +261,22 @@ def workspace_add_arxiv_paper(
 
 @mcp.tool()
 @_serialized_workspace_tool
+def workspace_add_pdf_paper(path: str, paper_id: str) -> dict:
+    """Add or replace a born-digital PDF paper in the active workspace."""
+
+    workspace = require_workspace()
+    try:
+        result = workspace.import_pdf(path, paper_id)
+        return {
+            **workspace.get_paper(result.paper_id),
+            **_workspace_evidence_import_counts(workspace, result.paper_id),
+        }
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
 def workspace_list_papers() -> list[dict]:
     """List all papers stored in the active workspace."""
 
@@ -277,6 +367,90 @@ def workspace_get_citations(
             direction=direction,
             include_unresolved=include_unresolved,
         )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_list_results(
+    paper_id: str | None = None,
+    kind: str | None = None,
+    limit: int = 50,
+) -> list[dict]:
+    """List stored evidence results across the active workspace."""
+
+    try:
+        return require_workspace().list_results(
+            paper_id=paper_id,
+            kind=kind,
+            limit=limit,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_get_result(result_id: str) -> dict:
+    """Return one stored evidence result with source spans."""
+
+    try:
+        return require_workspace().get_result(result_id)
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_get_result_proof(result_id: str) -> dict:
+    """Return proof evidence for one stored evidence result."""
+
+    try:
+        return require_workspace().get_result_proof(result_id)
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_get_proof_dependencies(
+    result_id: str,
+    recursive: bool = False,
+) -> dict:
+    """Return proof dependency evidence for one stored evidence result."""
+
+    try:
+        return require_workspace().get_proof_dependencies(
+            result_id,
+            recursive=recursive,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_get_external_result_mentions(result_id: str) -> list[dict]:
+    """Return external result mentions from a result's proof evidence."""
+
+    try:
+        return require_workspace().get_external_result_mentions(result_id)
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_get_evidence(node_or_edge_id: str) -> dict:
+    """Return metadata and source spans for one evidence node or edge."""
+
+    try:
+        evidence = require_workspace().get_evidence(node_or_edge_id)
+        return {
+            "node_or_edge_id": node_or_edge_id,
+            **evidence,
+        }
     except _WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc
 

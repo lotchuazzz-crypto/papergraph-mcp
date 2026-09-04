@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from dataclasses import replace
 from datetime import datetime, timezone
 from functools import wraps
 from importlib.metadata import PackageNotFoundError, version
@@ -17,6 +18,7 @@ from papergraph.evidence import (
     SourceSpanEvidence,
     source_span_payload,
 )
+from papergraph.evidence_extractors import build_pdf_evidence_document
 from papergraph.identity import (
     global_theorem_id,
     normalize_paper_id,
@@ -28,6 +30,7 @@ from papergraph.models import (
     WorkspaceImportResult,
 )
 from papergraph.parser import latex_project_to_evidence_document, parse_project
+from papergraph.pdf import load_pdf_evidence_spans
 from papergraph.project import LoadedProject
 
 
@@ -707,6 +710,30 @@ class Workspace:
         )
 
     @_synchronized
+    def import_pdf(
+        self,
+        path: str | Path,
+        paper_id: str,
+    ) -> WorkspaceImportResult:
+        """Atomically add or replace one born-digital PDF paper."""
+
+        normalized_paper_id = normalize_paper_id(paper_id)
+        if not normalized_paper_id.startswith("local:"):
+            raise ValueError("PDF paper ids must use the local: prefix in v0.5")
+
+        resolved = Path(path).expanduser().resolve()
+        source_ref = str(resolved)
+        spans = load_pdf_evidence_spans(resolved, normalized_paper_id)
+        document = build_pdf_evidence_document(
+            normalized_paper_id,
+            source_ref,
+            spans,
+        )
+        return self.import_evidence_document(
+            replace(document, main_file=resolved.name)
+        )
+
+    @_synchronized
     def import_evidence_document(
         self,
         document: EvidenceDocument,
@@ -882,6 +909,7 @@ class Workspace:
                 "known": {
                     "resolved_local_results": [],
                     "resolved_external_results": [],
+                    "external_result_mentions": [],
                 },
                 "inferred": [],
                 "unresolved": {"proof": "not_found"},
@@ -897,6 +925,7 @@ class Workspace:
         unresolved_citation = []
         unresolved_external = []
         resolved_external = []
+        known_external_mentions = []
         for proof_id in proof_ids:
             local_rows = self._connection.execute(
                 """
@@ -969,6 +998,11 @@ class Workspace:
                     mention["resolution_status"]
                 ):
                     resolved_external.append(mention)
+                    known_external_mentions.append(mention)
+                elif mention["entry_id"] and _is_resolved(
+                    mention["resolution_status"]
+                ):
+                    known_external_mentions.append(mention)
                 else:
                     unresolved_external.append(mention)
 
@@ -984,6 +1018,7 @@ class Workspace:
                     for resolved_id in resolved_local_result_ids
                 ],
                 "resolved_external_results": resolved_external,
+                "external_result_mentions": known_external_mentions,
             },
             "inferred": [
                 {
@@ -2366,7 +2401,12 @@ def _unresolved_evidence_mention_count(document: EvidenceDocument) -> int:
 
 
 def _is_resolved(resolution_status: str) -> bool:
-    return resolution_status in {"resolved", "resolved_candidate"}
+    return resolution_status in {
+        "resolved",
+        "resolved_bibliography_entry",
+        "resolved_candidate",
+        "resolved_unique",
+    }
 
 
 def _paper_from_row(row: tuple) -> dict:

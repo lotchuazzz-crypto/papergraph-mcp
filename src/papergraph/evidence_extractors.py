@@ -294,7 +294,11 @@ def extract_local_result_mentions(
     mentions: list[LocalResultMentionEvidence] = []
 
     for proof in proofs:
+        excluded_ranges = _local_mention_excluded_ranges(proof.text)
         for match in _LOCAL_RESULT_MENTION_RE.finditer(proof.text):
+            if _overlaps_any_range(match.span(), excluded_ranges):
+                continue
+
             raw_text = match.group(0)
             kind = _normalized_kind(match.group("kind"))
             visible_number = match.group("number") or None
@@ -323,6 +327,26 @@ def extract_local_result_mentions(
             )
 
     return tuple(mentions)
+
+
+def _local_mention_excluded_ranges(text: str) -> tuple[tuple[int, int], ...]:
+    ranges: list[tuple[int, int]] = [match.span() for match in _CITATION_RE.finditer(text)]
+    proof_match = PROOF_RE.match(text)
+    if (
+        proof_match is not None
+        and proof_match.group("kind") is not None
+        and proof_match.group("number") is not None
+    ):
+        ranges.append((proof_match.start("kind"), proof_match.end("number")))
+    return tuple(ranges)
+
+
+def _overlaps_any_range(
+    target: tuple[int, int],
+    ranges: tuple[tuple[int, int], ...],
+) -> bool:
+    start, end = target
+    return any(start < range_end and range_start < end for range_start, range_end in ranges)
 
 
 def _bibliography_lookup(

@@ -60,6 +60,9 @@ def test_extracts_explicit_proof_of_number_association():
     proof = document.proofs[0]
     assert proof.result_id == "local:paper-a::pdf:theorem:1.1"
     assert proof.association_basis == "proof_heading_names_result"
+    assert [mention.raw_text for mention in document.local_result_mentions] == [
+        "Lemma 1.2"
+    ]
 
 
 def test_ambiguous_local_mentions_remain_visible():
@@ -107,3 +110,21 @@ def test_extracts_numeric_bibliography_and_external_result_mentions():
     assert external.external_number == "3.5"
     assert external.entry_id == "local:paper-a::bib:12"
     assert external.resolution_status == "resolved_bibliography_entry"
+
+
+def test_cited_result_inside_brackets_is_not_local_result_mention():
+    document = build_pdf_evidence_document(
+        "local:paper-a",
+        "paper.pdf",
+        (
+            span(0, "Theorem 3.5. Local result with same number."),
+            span(1, "Theorem 4.1. Main result."),
+            span(2, "Proof. We apply [12, Theorem 3.5]."),
+            span(3, "References"),
+            span(4, "[12] A. Author. Cited paper."),
+        ),
+    )
+
+    assert document.local_result_mentions == ()
+    assert document.citation_mentions[0].raw_text == "[12, Theorem 3.5]"
+    assert document.external_result_mentions[0].external_number == "3.5"

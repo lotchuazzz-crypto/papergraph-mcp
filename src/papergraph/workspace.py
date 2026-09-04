@@ -1140,6 +1140,78 @@ class Workspace:
         raise KeyError(f"Unknown evidence id: {node_or_edge_id}")
 
     @_synchronized
+    def get_source_slice(
+        self,
+        span_id: str | None = None,
+        result_id: str | None = None,
+        proof_id: str | None = None,
+        context: int = 1,
+    ) -> dict:
+        """Return a bounded source-text slice around a span, result, or proof."""
+
+        if (
+            isinstance(context, bool)
+            or not isinstance(context, int)
+            or not 0 <= context <= 5
+        ):
+            raise ValueError("context must be an integer from 0 through 5")
+
+        selectors = {
+            "span_id": span_id,
+            "result_id": result_id,
+            "proof_id": proof_id,
+        }
+        provided = [(kind, value) for kind, value in selectors.items() if value]
+        if len(provided) != 1:
+            raise ValueError(
+                "Exactly one source slice selector is required: "
+                "span_id, result_id, or proof_id"
+            )
+        selector_kind, selector_value = provided[0]
+        anchor_rows = self._source_slice_anchor_rows(selector_kind, selector_value)
+        if not anchor_rows:
+            raise KeyError(f"Unknown {selector_kind}: {selector_value}")
+
+        paper_id = anchor_rows[0]["paper_id"]
+        source_type = anchor_rows[0]["source_type"]
+        source_ref = anchor_rows[0]["source_ref"]
+        anchor_ids = {row["id"] for row in anchor_rows}
+        all_rows = self._source_slice_rows_for_source(
+            paper_id,
+            source_type,
+            source_ref,
+        )
+        anchor_positions = [
+            index for index, row in enumerate(all_rows) if row["id"] in anchor_ids
+        ]
+        start = max(min(anchor_positions) - context, 0)
+        end = min(max(anchor_positions) + context + 1, len(all_rows))
+        slices = []
+        for index, row in enumerate(all_rows[start:end]):
+            if row["id"] in anchor_ids:
+                role = "anchor"
+            elif index + start < min(anchor_positions):
+                role = "before"
+            else:
+                role = "after"
+            slices.append(_source_slice_from_row(row, role))
+
+        return {
+            "selector": {
+                "kind": selector_kind,
+                "value": selector_value,
+            },
+            "paper_id": paper_id,
+            "source_type": source_type,
+            "source_ref": source_ref,
+            "context": context,
+            "anchor_span_ids": [row["span_id"] for row in anchor_rows],
+            "slices": slices,
+            "bounded": True,
+            "warnings": [],
+        }
+
+    @_synchronized
     def counts(self) -> dict[str, int]:
         """Return the total paper and theorem counts."""
 
@@ -1554,6 +1626,87 @@ class Workspace:
             (span_id,),
         ).fetchall()
         return [_source_span_from_row(row) for row in rows]
+
+    @_synchronized
+    def _source_slice_anchor_rows(
+        self,
+        selector_kind: str,
+        selector_value: str,
+    ) -> list[dict]:
+        if selector_kind == "span_id":
+            rows = self._connection.execute(
+                """
+                SELECT
+                    id, span_id, paper_id, source_type, source_ref, page,
+                    block_index, start_offset, end_offset, bbox_json, text,
+                    method, confidence
+                FROM source_spans
+                WHERE span_id = ?
+                ORDER BY paper_id, source_type, source_ref, page, block_index, id
+                """,
+                (selector_value,),
+            ).fetchall()
+        elif selector_kind == "result_id":
+            self._ensure_result_exists(selector_value)
+            rows = self._connection.execute(
+                """
+                SELECT
+                    source_spans.id, source_spans.span_id,
+                    source_spans.paper_id, source_spans.source_type,
+                    source_spans.source_ref, source_spans.page,
+                    source_spans.block_index, source_spans.start_offset,
+                    source_spans.end_offset, source_spans.bbox_json,
+                    source_spans.text, source_spans.method,
+                    source_spans.confidence
+                FROM result_source_spans
+                JOIN source_spans ON source_spans.id = result_source_spans.span_id
+                WHERE result_source_spans.result_id = ?
+                ORDER BY result_source_spans.position, source_spans.id
+                """,
+                (selector_value,),
+            ).fetchall()
+        elif selector_kind == "proof_id":
+            rows = self._connection.execute(
+                """
+                SELECT
+                    source_spans.id, source_spans.span_id,
+                    source_spans.paper_id, source_spans.source_type,
+                    source_spans.source_ref, source_spans.page,
+                    source_spans.block_index, source_spans.start_offset,
+                    source_spans.end_offset, source_spans.bbox_json,
+                    source_spans.text, source_spans.method,
+                    source_spans.confidence
+                FROM proof_source_spans
+                JOIN source_spans ON source_spans.id = proof_source_spans.span_id
+                WHERE proof_source_spans.proof_id = ?
+                ORDER BY proof_source_spans.position, source_spans.id
+                """,
+                (selector_value,),
+            ).fetchall()
+        else:
+            raise ValueError(f"Invalid source slice selector: {selector_kind!r}")
+        return [_source_slice_record_from_row(row) for row in rows]
+
+    @_synchronized
+    def _source_slice_rows_for_source(
+        self,
+        paper_id: str,
+        source_type: str,
+        source_ref: str,
+    ) -> list[dict]:
+        rows = self._connection.execute(
+            """
+            SELECT
+                id, span_id, paper_id, source_type, source_ref, page,
+                block_index, start_offset, end_offset, bbox_json, text,
+                method, confidence
+            FROM source_spans
+            WHERE paper_id = ? AND source_type = ? AND source_ref = ?
+            ORDER BY page, block_index, id
+            """,
+            (paper_id, source_type, source_ref),
+        ).fetchall()
+        return [_source_slice_record_from_row(row) for row in rows]
 
     @_synchronized
     def _with_evidence_trace(
@@ -2479,6 +2632,39 @@ def _source_span_from_row(row: tuple) -> dict:
         confidence=row[11],
     )
     return source_span_payload(span)
+
+
+def _source_slice_record_from_row(row: tuple) -> dict:
+    return {
+        "id": row[0],
+        "span_id": row[1],
+        "paper_id": row[2],
+        "source_type": row[3],
+        "source_ref": row[4],
+        "page": row[5],
+        "block_index": row[6],
+        "start_offset": row[7],
+        "end_offset": row[8],
+        "bbox": json.loads(row[9]) if row[9] is not None else None,
+        "text": row[10],
+        "method": row[11],
+        "confidence": row[12],
+    }
+
+
+def _source_slice_from_row(row: dict, role: str) -> dict:
+    return {
+        "span_id": row["span_id"],
+        "page": row["page"],
+        "block_index": row["block_index"],
+        "start_offset": row["start_offset"],
+        "end_offset": row["end_offset"],
+        "bbox": row["bbox"],
+        "role": role,
+        "text": row["text"],
+        "method": row["method"],
+        "confidence": row["confidence"],
+    }
 
 
 def _result_from_row(row: tuple) -> dict:

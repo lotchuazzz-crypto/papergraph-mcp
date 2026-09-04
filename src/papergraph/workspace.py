@@ -32,6 +32,16 @@ from papergraph.models import (
 from papergraph.parser import latex_project_to_evidence_document, parse_project
 from papergraph.pdf import load_pdf_evidence_spans
 from papergraph.project import LoadedProject
+from papergraph.reading import (
+    base_bridge_payload,
+    interpretation_policy,
+    interpretation_prompts,
+    proof_methods_from_proof_payload,
+    reading_uri_map,
+    result_to_reading_entity,
+    result_to_reading_result,
+    source_handle,
+)
 
 
 SCHEMA_VERSION = 3
@@ -1212,6 +1222,183 @@ class Workspace:
         }
 
     @_synchronized
+    def export_reading_bundle(self, paper_id: str) -> dict:
+        """Export a paper-level reading bridge bundle."""
+
+        paper = self.get_paper(paper_id)
+        results = [self.get_result(row["result_id"]) for row in self.list_results(
+            paper_id=paper["paper_id"],
+            limit=100,
+        )]
+        proofs = self._proofs_for_paper(paper["paper_id"])
+        dependency_index = {}
+        entities = []
+        reading_results = []
+        external_mentions = []
+        source_handles = []
+        warnings = []
+
+        for result in results:
+            result_handles = [
+                source_handle(
+                    "result_id",
+                    result["result_id"],
+                    result["paper_id"],
+                    "statement",
+                )
+            ]
+            proof_payload = self.get_result_proof(result["result_id"])
+            proof_methods = proof_methods_from_proof_payload(proof_payload)
+            dependencies = self.get_proof_dependencies(result["result_id"])
+            dependency_index[result["result_id"]] = dependencies
+            entities.append(
+                result_to_reading_entity(
+                    result,
+                    dependencies,
+                    result_handles,
+                    proof_methods,
+                )
+            )
+            reading_results.append(result_to_reading_result(result, result_handles))
+            external_mentions.extend(
+                self.get_external_result_mentions(result["result_id"])
+            )
+            source_handles.extend(result_handles)
+            for proof_method in proof_methods:
+                source_handles.extend(proof_method["source_handles"])
+            warnings.extend(proof_payload.get("warnings", []))
+            warnings.extend(dependencies.get("warnings", []))
+
+        return {
+            **base_bridge_payload(_parser_version()),
+            "paper": paper,
+            "uri_map": reading_uri_map(results),
+            "results": reading_results,
+            "proofs": proofs,
+            "entities": entities,
+            "dependency_index": dependency_index,
+            "external_mentions": external_mentions,
+            "source_handles": _dedupe_source_handles(source_handles),
+            "completeness_check": self._reading_completeness_check(
+                results,
+                dependency_index,
+            ),
+            "uncertain_log": self._reading_uncertain_log(dependency_index),
+            "interpretation_policy": interpretation_policy(),
+            "warnings": _dedupe_strings(warnings),
+        }
+
+    @_synchronized
+    def export_result_reading_context(self, result_id: str) -> dict:
+        """Export focused reading context for one result."""
+
+        result = self.get_result(result_id)
+        proof_payload = self.get_result_proof(result_id)
+        dependencies = self.get_proof_dependencies(result_id)
+        handles = [
+            source_handle(
+                "result_id",
+                result["result_id"],
+                result["paper_id"],
+                "statement",
+            )
+        ]
+        proof = proof_payload.get("known", {}).get("proof")
+        if proof:
+            handles.append(
+                source_handle(
+                    "proof_id",
+                    proof["proof_id"],
+                    proof["paper_id"],
+                    "proof",
+                )
+            )
+        return {
+            **base_bridge_payload(_parser_version()),
+            "result": result_to_reading_result(result, handles[:1]),
+            "proof": proof_payload,
+            "dependencies": dependencies,
+            "reading_path_preview": self.get_result_reading_path(
+                result_id,
+                recursive=True,
+            ),
+            "source_slice_handles": _dedupe_source_handles(handles),
+            "interpretation_prompts": interpretation_prompts(),
+            "warnings": _dedupe_strings(
+                [
+                    *proof_payload.get("warnings", []),
+                    *dependencies.get("warnings", []),
+                ]
+            ),
+        }
+
+    @_synchronized
+    def get_result_reading_path(
+        self,
+        result_id: str,
+        recursive: bool = True,
+    ) -> dict:
+        """Return deterministic top-down and bottom-up local reading paths."""
+
+        self._ensure_result_exists(result_id)
+        top_down = []
+        edges = []
+        external_stops = []
+        unresolved_stops = []
+        cycles = []
+        visited: set[str] = set()
+        active: set[str] = set()
+
+        def visit(current_id: str) -> None:
+            if current_id in active:
+                cycles.append(current_id)
+                return
+            if current_id in visited:
+                return
+            active.add(current_id)
+            visited.add(current_id)
+            top_down.append(self.get_result(current_id))
+            dependencies = self.get_proof_dependencies(current_id)
+            for dependency in dependencies["known"]["resolved_local_results"]:
+                target_id = dependency["result_id"]
+                edges.append(
+                    {
+                        "source_result_id": current_id,
+                        "target_result_id": target_id,
+                        "relation": "uses_local_result",
+                    }
+                )
+                if recursive:
+                    visit(target_id)
+            external_stops.extend(
+                dependencies["known"].get("external_result_mentions", [])
+            )
+            for key, mentions in dependencies.get("unresolved", {}).items():
+                if mentions:
+                    unresolved_stops.append(
+                        {
+                            "result_id": current_id,
+                            "kind": key,
+                            "mentions": mentions,
+                        }
+                    )
+            active.remove(current_id)
+
+        visit(result_id)
+        return {
+            **base_bridge_payload(_parser_version()),
+            "result_id": result_id,
+            "recursive": recursive,
+            "top_down": top_down,
+            "bottom_up": list(reversed(top_down)),
+            "edges": edges,
+            "external_stops": external_stops,
+            "unresolved_stops": unresolved_stops,
+            "cycles": cycles,
+            "warnings": [],
+        }
+
+    @_synchronized
     def counts(self) -> dict[str, int]:
         """Return the total paper and theorem counts."""
 
@@ -1550,6 +1737,112 @@ class Workspace:
         proof = _proof_from_row(row)
         proof["spans"] = self._source_spans_for_proof(proof["proof_id"])
         return proof
+
+    @_synchronized
+    def _proofs_for_paper(self, paper_id: str) -> list[dict]:
+        rows = self._connection.execute(
+            """
+            SELECT
+                proof_id, paper_id, result_id, text, association_basis,
+                association_confidence, method, confidence
+            FROM proofs
+            WHERE paper_id = ?
+            ORDER BY proof_id
+            """,
+            (paper_id,),
+        ).fetchall()
+        proofs = []
+        for row in rows:
+            proof = _proof_from_row(row)
+            proof["source_handles"] = [
+                source_handle("proof_id", proof["proof_id"], paper_id, "proof")
+            ]
+            proofs.append(proof)
+        return proofs
+
+    @_synchronized
+    def _reading_completeness_check(
+        self,
+        results: list[dict],
+        dependency_index: dict[str, dict],
+    ) -> dict:
+        dependency_integrity = []
+        locally_used = set()
+        external_deps = []
+        unresolved_count = 0
+        for result_id, dependencies in dependency_index.items():
+            for target in dependencies["known"]["resolved_local_results"]:
+                locally_used.add(target["result_id"])
+                dependency_integrity.append(
+                    {
+                        "edge": f"{result_id} -> {target['result_id']}",
+                        "status": "ok",
+                        "note": "resolved local result mention",
+                    }
+                )
+            for mention in dependencies["known"].get(
+                "external_result_mentions",
+                [],
+            ):
+                external_deps.append(
+                    {
+                        "label": mention["raw_text"],
+                        "ref": mention.get("entry_id"),
+                        "impact": "external proof dependency evidence",
+                    }
+                )
+            for key, mentions in dependencies.get("unresolved", {}).items():
+                unresolved_count += len(mentions) if isinstance(mentions, list) else 1
+                for mention in mentions if isinstance(mentions, list) else []:
+                    dependency_integrity.append(
+                        {
+                            "edge": f"{result_id} -> {mention.get('raw_text')}",
+                            "status": "missing",
+                            "note": mention.get("resolution_status", key),
+                        }
+                    )
+        result_ids = {result["result_id"] for result in results}
+        isolated = [
+            {
+                "label": result["result_id"],
+                "possible_reasons": ["not referenced by known local dependencies"],
+            }
+            for result in results
+            if result["result_id"] not in locally_used
+            and result["result_id"] in result_ids
+        ]
+        if external_deps or unresolved_count:
+            self_containment = "low" if unresolved_count else "medium"
+        else:
+            self_containment = "high"
+        return {
+            "dependency_integrity": dependency_integrity,
+            "self_containment": self_containment,
+            "external_deps": external_deps,
+            "isolated_results": isolated,
+            "circular_deps": [],
+            "summary": "requires_consumer_interpretation",
+        }
+
+    @_synchronized
+    def _reading_uncertain_log(
+        self,
+        dependency_index: dict[str, dict],
+    ) -> list[dict]:
+        uncertain = []
+        for result_id, dependencies in dependency_index.items():
+            for key, mentions in dependencies.get("unresolved", {}).items():
+                if not isinstance(mentions, list):
+                    continue
+                for mention in mentions:
+                    uncertain.append(
+                        {
+                            "location": result_id,
+                            "reason": mention.get("resolution_status", key),
+                            "severity": "HIGH",
+                        }
+                    )
+        return uncertain
 
     @_synchronized
     def _source_spans_for_result(self, result_id: str) -> list[dict]:
@@ -2364,6 +2657,29 @@ def _dedupe_span_trail(span_trail: list[dict]) -> list[dict]:
             continue
         seen.add(key)
         deduped.append(item)
+    return deduped
+
+
+def _dedupe_source_handles(handles: list[dict]) -> list[dict]:
+    deduped = []
+    seen = set()
+    for handle in handles:
+        key = (handle["kind"], handle["value"], handle["paper_id"], handle["role"])
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(handle)
+    return deduped
+
+
+def _dedupe_strings(values: list[str]) -> list[str]:
+    deduped = []
+    seen = set()
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        deduped.append(value)
     return deduped
 
 

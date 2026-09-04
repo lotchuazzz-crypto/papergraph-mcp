@@ -70,6 +70,7 @@ def result_to_reading_entity(
     result: dict,
     dependencies: dict,
     source_handles: list[dict],
+    proof_methods: list[dict] | None = None,
 ) -> dict:
     """Map a PaperGraph result and dependency payload to an AI4Math-like entity."""
 
@@ -88,7 +89,7 @@ def result_to_reading_entity(
         "dependencies": _known_local_dependency_labels(dependencies),
         "uncertain_dependencies": _uncertain_local_dependency_labels(dependencies),
         "external_refs": _external_refs(dependencies),
-        "proof_methods": [],
+        "proof_methods": list(proof_methods or []),
         "source_handles": source_handles,
         "method": result["method"],
         "confidence": result["confidence"],
@@ -113,6 +114,80 @@ def result_to_reading_result(result: dict, source_handles: list[dict]) -> dict:
         "location": _location_from_result(result),
         "source_handles": source_handles,
     }
+
+
+def reading_uri_map(results: list[dict]) -> dict:
+    """Return reversible PaperGraph ID to reading URI mappings."""
+
+    paper_id = results[0]["paper_id"] if results else None
+    papergraph_to_reading = {
+        result["result_id"]: reading_result_uri(
+            result["paper_id"],
+            result["display_kind"],
+            result.get("visible_number"),
+            result["local_id"],
+        )
+        for result in results
+    }
+    return {
+        "paper_uri": reading_paper_uri(paper_id) if paper_id else None,
+        "papergraph_to_reading": papergraph_to_reading,
+        "reading_to_papergraph": {
+            reading_uri: papergraph_id
+            for papergraph_id, reading_uri in papergraph_to_reading.items()
+        },
+    }
+
+
+def interpretation_policy() -> dict:
+    """Return fields the consumer, not PaperGraph, is expected to create."""
+
+    return {
+        "paper_summary": "requires_consumer_interpretation",
+        "proof_gap_filling": "requires_bounded_source_slice",
+        "main_result_detection": "not_provided",
+    }
+
+
+def interpretation_prompts() -> dict:
+    """Return allowed consumer interpretation tasks for result contexts."""
+
+    return {
+        "allowed": [
+            "plain_language_explanation",
+            "proof_gap_filling",
+            "symbol_table",
+            "uncertainty_review",
+        ],
+        "requires_source_slice_for": [
+            "proof_gap_filling",
+            "implicit_claim_extraction",
+        ],
+    }
+
+
+def proof_methods_from_proof_payload(proof_payload: dict) -> list[dict]:
+    """Return proof association metadata in AI4Math-like proof_methods form."""
+
+    proof = proof_payload.get("known", {}).get("proof")
+    if not proof:
+        return []
+    return [
+        {
+            "proof_variant": 1,
+            "association_basis": proof["association_basis"],
+            "association_confidence": proof["association_confidence"],
+            "method": proof["method"],
+            "source_handles": [
+                source_handle(
+                    "proof_id",
+                    proof["proof_id"],
+                    proof["paper_id"],
+                    "proof",
+                )
+            ],
+        }
+    ]
 
 
 def _kind_abbreviation(display_kind: str) -> str:

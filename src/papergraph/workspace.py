@@ -16,6 +16,7 @@ from papergraph.evidence import (
     EVIDENCE_EMPTY_DEPENDENCY_WARNING,
     EvidenceDocument,
     SourceSpanEvidence,
+    slug_fragment,
     source_span_payload,
 )
 from papergraph.evidence_extractors import build_pdf_evidence_document
@@ -44,13 +45,24 @@ from papergraph.reading import (
 )
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 _RESOLVED_RESOLUTION_STATUSES = (
     "resolved",
     "resolved_bibliography_entry",
     "resolved_candidate",
     "resolved_unique",
 )
+_READING_SESSION_STATUSES = {"active", "paused", "completed"}
+_READING_CHECKPOINT_STATUSES = {"queued", "reviewed", "blocked", "skipped"}
+_READING_TARGET_KINDS = {
+    "result_id",
+    "proof_id",
+    "span_id",
+    "external_stop",
+    "unresolved_stop",
+}
+_READING_NOTE_TARGET_KINDS = {*_READING_TARGET_KINDS, "session"}
+_READING_NOTE_TYPES = {"note", "question", "warning", "decision"}
 _REQUIRED_TABLES = {
     "workspace_meta",
     "papers",
@@ -68,6 +80,9 @@ _REQUIRED_TABLES = {
     "external_result_mentions",
     "evidence_edges",
     "evidence_edge_source_spans",
+    "reading_sessions",
+    "reading_checkpoints",
+    "reading_notes",
 }
 _REQUIRED_THEOREM_COLUMNS = {
     "global_id",
@@ -191,6 +206,35 @@ _REQUIRED_TABLE_COLUMNS = {
         "confidence",
     },
     "evidence_edge_source_spans": {"edge_id", "span_id", "position"},
+    "reading_sessions": {
+        "session_id",
+        "paper_id",
+        "target_result_id",
+        "label",
+        "status",
+        "created_at",
+        "updated_at",
+    },
+    "reading_checkpoints": {
+        "checkpoint_id",
+        "session_id",
+        "target_kind",
+        "target_id",
+        "status",
+        "summary",
+        "evidence_json",
+        "created_at",
+        "updated_at",
+    },
+    "reading_notes": {
+        "note_id",
+        "session_id",
+        "target_kind",
+        "target_id",
+        "note_type",
+        "text",
+        "created_at",
+    },
 }
 
 _PAPERS_TABLE_SQL = """
@@ -344,6 +388,68 @@ CREATE INDEX evidence_edges_source ON evidence_edges(source_id, relation, edge_i
 CREATE INDEX evidence_edges_target ON evidence_edges(target_id, relation, edge_id);
 """
 
+_READING_SESSION_SCHEMA_SQL = """
+CREATE TABLE reading_sessions (
+    session_id TEXT PRIMARY KEY,
+    paper_id TEXT NOT NULL REFERENCES papers(paper_id) ON DELETE CASCADE,
+    target_result_id TEXT REFERENCES results(result_id) ON DELETE SET NULL,
+    label TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('active', 'paused', 'completed')),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE TABLE reading_checkpoints (
+    checkpoint_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES reading_sessions(session_id)
+        ON DELETE CASCADE,
+    target_kind TEXT NOT NULL CHECK (
+        target_kind IN (
+            'result_id',
+            'proof_id',
+            'span_id',
+            'external_stop',
+            'unresolved_stop'
+        )
+    ),
+    target_id TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (
+        status IN ('queued', 'reviewed', 'blocked', 'skipped')
+    ),
+    summary TEXT NOT NULL,
+    evidence_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (session_id, target_kind, target_id)
+);
+CREATE TABLE reading_notes (
+    note_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES reading_sessions(session_id)
+        ON DELETE CASCADE,
+    target_kind TEXT CHECK (
+        target_kind IS NULL OR target_kind IN (
+            'result_id',
+            'proof_id',
+            'span_id',
+            'external_stop',
+            'unresolved_stop',
+            'session'
+        )
+    ),
+    target_id TEXT,
+    note_type TEXT NOT NULL CHECK (
+        note_type IN ('note', 'question', 'warning', 'decision')
+    ),
+    text TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX reading_sessions_paper_status
+    ON reading_sessions(paper_id, status, updated_at, session_id);
+CREATE INDEX reading_checkpoints_session
+    ON reading_checkpoints(session_id, updated_at, checkpoint_id);
+CREATE INDEX reading_notes_session
+    ON reading_notes(session_id, created_at, note_id);
+"""
+
 _SCHEMA_SQL = """
 CREATE TABLE workspace_meta (
     key TEXT PRIMARY KEY,
@@ -388,8 +494,8 @@ CREATE INDEX theorems_paper_kind ON theorems(paper_id, normalized_kind);
 CREATE INDEX citations_source ON citation_evidence(source_paper_id);
 CREATE INDEX citations_target ON citation_evidence(target_paper_id);
 CREATE INDEX citations_arxiv ON citation_evidence(cited_arxiv_id);
-""" + _EVIDENCE_SCHEMA_SQL + """
-INSERT INTO workspace_meta (key, value) VALUES ('schema_version', '3');
+""" + _EVIDENCE_SCHEMA_SQL + _READING_SESSION_SCHEMA_SQL + """
+INSERT INTO workspace_meta (key, value) VALUES ('schema_version', '4');
 """
 
 
@@ -475,7 +581,7 @@ class Workspace:
             raise WorkspaceSchemaError(
                 f"Invalid workspace schema version: {row[0]!r}"
             ) from error
-        if schema_version == 2 and SCHEMA_VERSION == 3:
+        if schema_version == 2:
             Workspace._migrate_v2_to_v3(connection)
             tables = {
                 row[0]
@@ -484,6 +590,15 @@ class Workspace:
                 )
             }
             schema_version = 3
+        if schema_version == 3:
+            Workspace._migrate_v3_to_v4(connection)
+            tables = {
+                row[0]
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                )
+            }
+            schema_version = 4
         if schema_version != SCHEMA_VERSION:
             raise WorkspaceSchemaError(
                 f"Unsupported workspace schema version {schema_version}; "
@@ -533,7 +648,7 @@ class Workspace:
             _execute_sql_script(connection, _EVIDENCE_SCHEMA_SQL)
             connection.execute(
                 "UPDATE workspace_meta SET value = ? WHERE key = 'schema_version'",
-                (str(SCHEMA_VERSION),),
+                ("3",),
             )
             connection.execute("COMMIT")
         except Exception:
@@ -543,6 +658,27 @@ class Workspace:
         finally:
             if was_enforcing_foreign_keys:
                 connection.execute("PRAGMA foreign_keys = ON")
+
+        violations = connection.execute("PRAGMA foreign_key_check").fetchall()
+        if violations:
+            raise WorkspaceSchemaError(
+                "Workspace schema migration left foreign key violations"
+            )
+
+    @staticmethod
+    def _migrate_v3_to_v4(connection: sqlite3.Connection) -> None:
+        try:
+            connection.execute("BEGIN")
+            _execute_sql_script(connection, _READING_SESSION_SCHEMA_SQL)
+            connection.execute(
+                "UPDATE workspace_meta SET value = ? WHERE key = 'schema_version'",
+                (str(SCHEMA_VERSION),),
+            )
+            connection.execute("COMMIT")
+        except Exception:
+            if connection.in_transaction:
+                connection.execute("ROLLBACK")
+            raise
 
         violations = connection.execute("PRAGMA foreign_key_check").fetchall()
         if violations:
@@ -1437,6 +1573,183 @@ class Workspace:
             """
         ).fetchall()
         return [_paper_from_row(row) for row in rows]
+
+    @_synchronized
+    def create_reading_session(
+        self,
+        paper_id: str,
+        label: str | None = None,
+        target_result_id: str | None = None,
+    ) -> dict:
+        """Create a persistent reading session for a stored paper."""
+
+        normalized_paper_id = normalize_paper_id(paper_id)
+        self.get_paper(normalized_paper_id)
+        normalized_label = _clean_required_text(
+            label if label is not None else target_result_id or normalized_paper_id,
+            "reading session label",
+        )
+
+        if target_result_id is not None:
+            target = self.get_result(target_result_id)
+            if target["paper_id"] != normalized_paper_id:
+                raise ValueError(
+                    f"Target result {target_result_id!r} does not belong to "
+                    f"paper {normalized_paper_id!r}"
+                )
+
+        timestamp = datetime.now(timezone.utc).isoformat()
+        session_id = self._new_reading_session_id(
+            normalized_label,
+            timestamp,
+        )
+        self._connection.execute(
+            """
+            INSERT INTO reading_sessions (
+                session_id, paper_id, target_result_id, label, status,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, 'active', ?, ?)
+            """,
+            (
+                session_id,
+                normalized_paper_id,
+                target_result_id,
+                normalized_label,
+                timestamp,
+                timestamp,
+            ),
+        )
+        return self._reading_session_payload(session_id)
+
+    @_synchronized
+    def list_reading_sessions(
+        self,
+        paper_id: str | None = None,
+        status: str | None = None,
+    ) -> list[dict]:
+        """List reading sessions ordered for resumption."""
+
+        conditions: list[str] = []
+        parameters: list[str] = []
+        if paper_id is not None:
+            normalized_paper_id = normalize_paper_id(paper_id)
+            self.get_paper(normalized_paper_id)
+            conditions.append("paper_id = ?")
+            parameters.append(normalized_paper_id)
+        if status is not None:
+            _validate_choice(status, _READING_SESSION_STATUSES, "reading session status")
+            conditions.append("status = ?")
+            parameters.append(status)
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        rows = self._connection.execute(
+            f"""
+            SELECT
+                session_id, paper_id, target_result_id, label, status,
+                created_at, updated_at
+            FROM reading_sessions
+            {where_clause}
+            ORDER BY updated_at DESC, session_id DESC
+            """,
+            parameters,
+        ).fetchall()
+        return [self._reading_session_payload_from_row(row) for row in rows]
+
+    @_synchronized
+    def get_reading_session(self, session_id: str) -> dict:
+        """Return one reading session with checkpoints and notes."""
+
+        return {
+            "session": self._reading_session_payload(session_id),
+            "checkpoints": self._reading_checkpoints_for_session(session_id),
+            "notes": self._reading_notes_for_session(session_id),
+        }
+
+    def _new_reading_session_id(self, label: str, timestamp: str) -> str:
+        base = "session:" + _reading_session_slug(label)
+        compact_timestamp = (
+            timestamp.replace("-", "")
+            .replace(":", "")
+            .replace("+", "")
+            .replace(".", "")
+        )
+        candidate = f"{base}:{compact_timestamp[:14]}"
+        suffix = 2
+        while self._connection.execute(
+            "SELECT 1 FROM reading_sessions WHERE session_id = ?",
+            (candidate,),
+        ).fetchone():
+            candidate = f"{base}:{compact_timestamp[:14]}-{suffix}"
+            suffix += 1
+        return candidate
+
+    def _reading_session_payload(self, session_id: str) -> dict:
+        row = self._connection.execute(
+            """
+            SELECT
+                session_id, paper_id, target_result_id, label, status,
+                created_at, updated_at
+            FROM reading_sessions
+            WHERE session_id = ?
+            """,
+            (session_id,),
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"Unknown reading session id: {session_id}")
+        return self._reading_session_payload_from_row(row)
+
+    def _reading_session_payload_from_row(self, row: tuple) -> dict:
+        session_id = row[0]
+        checkpoint_count = self._connection.execute(
+            "SELECT COUNT(*) FROM reading_checkpoints WHERE session_id = ?",
+            (session_id,),
+        ).fetchone()[0]
+        note_count = self._connection.execute(
+            "SELECT COUNT(*) FROM reading_notes WHERE session_id = ?",
+            (session_id,),
+        ).fetchone()[0]
+        return {
+            "session_id": session_id,
+            "paper_id": row[1],
+            "target_result_id": row[2],
+            "label": row[3],
+            "status": row[4],
+            "created_at": row[5],
+            "updated_at": row[6],
+            "counts": {
+                "checkpoints": checkpoint_count,
+                "notes": note_count,
+            },
+        }
+
+    def _reading_checkpoints_for_session(self, session_id: str) -> list[dict]:
+        self._reading_session_payload(session_id)
+        rows = self._connection.execute(
+            """
+            SELECT
+                checkpoint_id, session_id, target_kind, target_id, status,
+                summary, evidence_json, created_at, updated_at
+            FROM reading_checkpoints
+            WHERE session_id = ?
+            ORDER BY updated_at, checkpoint_id
+            """,
+            (session_id,),
+        ).fetchall()
+        return [_reading_checkpoint_from_row(row) for row in rows]
+
+    def _reading_notes_for_session(self, session_id: str) -> list[dict]:
+        self._reading_session_payload(session_id)
+        rows = self._connection.execute(
+            """
+            SELECT
+                note_id, session_id, target_kind, target_id, note_type, text,
+                created_at
+            FROM reading_notes
+            WHERE session_id = ?
+            ORDER BY created_at, note_id
+            """,
+            (session_id,),
+        ).fetchall()
+        return [_reading_note_from_row(row) for row in rows]
 
     @_synchronized
     def get_paper(self, paper_id: str) -> dict:
@@ -2910,6 +3223,51 @@ def _mention_value(mention, key: str):
 
 def _is_resolved(resolution_status: str) -> bool:
     return resolution_status in _RESOLVED_RESOLUTION_STATUSES
+
+
+def _clean_required_text(value: str | None, field_name: str) -> str:
+    if value is None:
+        raise ValueError(f"{field_name} is required")
+    cleaned = str(value).strip()
+    if not cleaned:
+        raise ValueError(f"{field_name} cannot be empty")
+    return cleaned
+
+
+def _reading_session_slug(value: str) -> str:
+    return slug_fragment(value).replace(".", "-")
+
+
+def _validate_choice(value: str, allowed: set[str], field_name: str) -> None:
+    if value not in allowed:
+        choices = ", ".join(sorted(allowed))
+        raise ValueError(f"Invalid {field_name}: {value!r}; expected one of {choices}")
+
+
+def _reading_checkpoint_from_row(row: tuple) -> dict:
+    return {
+        "checkpoint_id": row[0],
+        "session_id": row[1],
+        "target_kind": row[2],
+        "target_id": row[3],
+        "status": row[4],
+        "summary": row[5],
+        "evidence": json.loads(row[6]),
+        "created_at": row[7],
+        "updated_at": row[8],
+    }
+
+
+def _reading_note_from_row(row: tuple) -> dict:
+    return {
+        "note_id": row[0],
+        "session_id": row[1],
+        "target_kind": row[2],
+        "target_id": row[3],
+        "note_type": row[4],
+        "text": row[5],
+        "created_at": row[6],
+    }
 
 
 def _paper_from_row(row: tuple) -> dict:

@@ -227,10 +227,10 @@ def document_with_direct_span_backed_bibliography_edge() -> EvidenceDocument:
     )
 
 
-def test_schema_v3_initializes_evidence_tables(tmp_path: Path):
+def test_schema_v4_initializes_evidence_tables(tmp_path: Path):
     workspace = Workspace.open(tmp_path / "workspace.sqlite3")
     try:
-        assert SCHEMA_VERSION == 3
+        assert SCHEMA_VERSION == 4
         tables = {
             row[0]
             for row in workspace._connection.execute(
@@ -246,7 +246,7 @@ def test_schema_v3_initializes_evidence_tables(tmp_path: Path):
         } <= tables
         assert workspace._connection.execute(
             "SELECT value FROM workspace_meta WHERE key = 'schema_version'"
-        ).fetchone() == ("3",)
+        ).fetchone() == ("4",)
     finally:
         workspace.close()
 
@@ -447,7 +447,7 @@ def test_v2_workspace_migrates_without_losing_legacy_tables(tmp_path: Path):
     try:
         assert workspace._connection.execute(
             "SELECT value FROM workspace_meta WHERE key = 'schema_version'"
-        ).fetchone() == ("3",)
+        ).fetchone() == ("4",)
         assert workspace.get_paper("local:old")["paper_id"] == "local:old"
     finally:
         workspace.close()

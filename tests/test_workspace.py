@@ -163,7 +163,7 @@ def test_workspace_rejects_partial_current_schema(tmp_path: Path):
             "CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
         )
         connection.execute(
-            "INSERT INTO workspace_meta VALUES ('schema_version', '3')"
+            "INSERT INTO workspace_meta VALUES ('schema_version', '4')"
         )
 
     with pytest.raises(WorkspaceSchemaError, match="missing required tables.*papers"):

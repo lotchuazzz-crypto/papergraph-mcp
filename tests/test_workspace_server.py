@@ -60,7 +60,7 @@ def test_open_workspace_returns_exact_payload(tmp_path: Path):
 
     assert server.open_workspace(str(database)) == {
         "path": str(database.resolve()),
-        "schema_version": 3,
+        "schema_version": 4,
         "papers": 0,
         "theorems": 0,
     }

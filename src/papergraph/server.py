@@ -444,6 +444,112 @@ def workspace_get_result_reading_path(
 
 
 @mcp.tool()
+@_serialized_workspace_tool
+def workspace_create_reading_session(
+    paper_id: str,
+    label: str | None = None,
+    target_result_id: str | None = None,
+) -> dict:
+    """Create a persistent reading session in the active workspace."""
+
+    try:
+        return require_workspace().create_reading_session(
+            paper_id,
+            label=label,
+            target_result_id=target_result_id,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_list_reading_sessions(
+    paper_id: str | None = None,
+    status: str | None = None,
+) -> list[dict]:
+    """List persistent reading sessions in the active workspace."""
+
+    try:
+        return require_workspace().list_reading_sessions(
+            paper_id=paper_id,
+            status=status,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_get_reading_session(session_id: str) -> dict:
+    """Return one persistent reading session with checkpoints and notes."""
+
+    try:
+        return require_workspace().get_reading_session(session_id)
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_record_reading_checkpoint(
+    session_id: str,
+    target_kind: str,
+    target_id: str,
+    status: str,
+    summary: str = "",
+    evidence: dict | None = None,
+) -> dict:
+    """Create or update a reading checkpoint in the active workspace."""
+
+    try:
+        return require_workspace().record_reading_checkpoint(
+            session_id,
+            target_kind,
+            target_id,
+            status,
+            summary=summary,
+            evidence=evidence,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_add_reading_note(
+    session_id: str,
+    text: str,
+    note_type: str = "note",
+    target_kind: str | None = None,
+    target_id: str | None = None,
+) -> dict:
+    """Add a note or question to a reading session."""
+
+    try:
+        return require_workspace().add_reading_note(
+            session_id,
+            text,
+            note_type=note_type,
+            target_kind=target_kind,
+            target_id=target_id,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_export_reading_session_summary(session_id: str) -> dict:
+    """Export a deterministic recovery summary for a reading session."""
+
+    try:
+        return require_workspace().export_reading_session_summary(session_id)
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
 def load_paper(path: str) -> dict:
     """Load a local LaTeX paper and build its theorem graph."""
 

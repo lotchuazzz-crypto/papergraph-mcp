@@ -796,6 +796,16 @@ def _run_workspace_cli_command(command: str, workspace_path: str, callback) -> N
             workspace.close()
 
 
+def _parse_json_argument(raw_json: str) -> dict:
+    try:
+        payload = json.loads(raw_json)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"--evidence-json must be valid JSON: {exc.msg}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("--evidence-json must decode to a JSON object")
+    return payload
+
+
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="papergraph-mcp",
@@ -861,6 +871,54 @@ def main(argv: Sequence[str] | None = None) -> None:
         action="store_true",
         help="Return only direct dependencies instead of recursive traversal.",
     )
+    create_session_parser = subparsers.add_parser(
+        "create-reading-session",
+        help="Create a persistent reading session in a workspace.",
+    )
+    create_session_parser.add_argument("--workspace", required=True)
+    create_session_parser.add_argument("--paper-id", required=True)
+    create_session_parser.add_argument("--label")
+    create_session_parser.add_argument("--target-result-id")
+    list_sessions_parser = subparsers.add_parser(
+        "list-reading-sessions",
+        help="List persistent reading sessions in a workspace.",
+    )
+    list_sessions_parser.add_argument("--workspace", required=True)
+    list_sessions_parser.add_argument("--paper-id")
+    list_sessions_parser.add_argument("--status")
+    get_session_parser = subparsers.add_parser(
+        "get-reading-session",
+        help="Return one reading session with checkpoints and notes.",
+    )
+    get_session_parser.add_argument("--workspace", required=True)
+    get_session_parser.add_argument("--session-id", required=True)
+    checkpoint_parser = subparsers.add_parser(
+        "record-reading-checkpoint",
+        help="Create or update a reading checkpoint.",
+    )
+    checkpoint_parser.add_argument("--workspace", required=True)
+    checkpoint_parser.add_argument("--session-id", required=True)
+    checkpoint_parser.add_argument("--target-kind", required=True)
+    checkpoint_parser.add_argument("--target-id", required=True)
+    checkpoint_parser.add_argument("--status", required=True)
+    checkpoint_parser.add_argument("--summary", default="")
+    checkpoint_parser.add_argument("--evidence-json", default="{}")
+    note_parser = subparsers.add_parser(
+        "add-reading-note",
+        help="Add a note or question to a reading session.",
+    )
+    note_parser.add_argument("--workspace", required=True)
+    note_parser.add_argument("--session-id", required=True)
+    note_parser.add_argument("--text", required=True)
+    note_parser.add_argument("--note-type", default="note")
+    note_parser.add_argument("--target-kind")
+    note_parser.add_argument("--target-id")
+    session_summary_parser = subparsers.add_parser(
+        "export-reading-session-summary",
+        help="Export a reading-session recovery summary.",
+    )
+    session_summary_parser.add_argument("--workspace", required=True)
+    session_summary_parser.add_argument("--session-id", required=True)
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -935,6 +993,70 @@ def main(argv: Sequence[str] | None = None) -> None:
             lambda workspace: workspace.get_result_reading_path(
                 args.result_id,
                 recursive=not args.direct,
+            ),
+        )
+        return
+    if args.command == "create-reading-session":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.create_reading_session(
+                args.paper_id,
+                label=args.label,
+                target_result_id=args.target_result_id,
+            ),
+        )
+        return
+    if args.command == "list-reading-sessions":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.list_reading_sessions(
+                paper_id=args.paper_id,
+                status=args.status,
+            ),
+        )
+        return
+    if args.command == "get-reading-session":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.get_reading_session(args.session_id),
+        )
+        return
+    if args.command == "record-reading-checkpoint":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.record_reading_checkpoint(
+                args.session_id,
+                args.target_kind,
+                args.target_id,
+                args.status,
+                summary=args.summary,
+                evidence=_parse_json_argument(args.evidence_json),
+            ),
+        )
+        return
+    if args.command == "add-reading-note":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.add_reading_note(
+                args.session_id,
+                args.text,
+                note_type=args.note_type,
+                target_kind=args.target_kind,
+                target_id=args.target_id,
+            ),
+        )
+        return
+    if args.command == "export-reading-session-summary":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.export_reading_session_summary(
+                args.session_id,
             ),
         )
         return

@@ -1619,6 +1619,7 @@ class Workspace:
                 timestamp,
             ),
         )
+        self._connection.commit()
         return self._reading_session_payload(session_id)
 
     @_synchronized
@@ -1731,6 +1732,7 @@ class Workspace:
             )
 
         self._touch_reading_session(session_id, timestamp)
+        self._connection.commit()
         return self._reading_checkpoint_payload(checkpoint_id)
 
     @_synchronized
@@ -1777,6 +1779,7 @@ class Workspace:
             ),
         )
         self._touch_reading_session(session_id, timestamp)
+        self._connection.commit()
         return self._reading_note_payload(note_id)
 
     @_synchronized

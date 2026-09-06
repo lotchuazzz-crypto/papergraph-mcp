@@ -45,7 +45,7 @@ from papergraph.reading import (
 )
 
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 _RESOLVED_RESOLUTION_STATUSES = (
     "resolved",
     "resolved_bibliography_entry",
@@ -63,6 +63,8 @@ _READING_TARGET_KINDS = {
 }
 _READING_NOTE_TARGET_KINDS = {*_READING_TARGET_KINDS, "session"}
 _READING_NOTE_TYPES = {"note", "question", "warning", "decision"}
+_READING_QUEUE_STATUSES = {"active", "archived"}
+_READING_QUEUE_ITEM_PRIORITIES = {"required", "recommended", "caution"}
 _REQUIRED_TABLES = {
     "workspace_meta",
     "papers",
@@ -83,6 +85,8 @@ _REQUIRED_TABLES = {
     "reading_sessions",
     "reading_checkpoints",
     "reading_notes",
+    "reading_queues",
+    "reading_queue_items",
 }
 _REQUIRED_THEOREM_COLUMNS = {
     "global_id",
@@ -233,6 +237,26 @@ _REQUIRED_TABLE_COLUMNS = {
         "target_id",
         "note_type",
         "text",
+        "created_at",
+    },
+    "reading_queues": {
+        "queue_id",
+        "paper_id",
+        "target_result_id",
+        "label",
+        "status",
+        "created_at",
+        "updated_at",
+    },
+    "reading_queue_items": {
+        "item_id",
+        "queue_id",
+        "position",
+        "target_kind",
+        "target_id",
+        "priority",
+        "reason",
+        "evidence_json",
         "created_at",
     },
 }
@@ -450,6 +474,45 @@ CREATE INDEX reading_notes_session
     ON reading_notes(session_id, created_at, note_id);
 """
 
+_READING_QUEUE_SCHEMA_SQL = """
+CREATE TABLE reading_queues (
+    queue_id TEXT PRIMARY KEY,
+    paper_id TEXT NOT NULL REFERENCES papers(paper_id) ON DELETE CASCADE,
+    target_result_id TEXT REFERENCES results(result_id) ON DELETE SET NULL,
+    label TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('active', 'archived')),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE TABLE reading_queue_items (
+    item_id TEXT PRIMARY KEY,
+    queue_id TEXT NOT NULL REFERENCES reading_queues(queue_id)
+        ON DELETE CASCADE,
+    position INTEGER NOT NULL,
+    target_kind TEXT NOT NULL CHECK (
+        target_kind IN (
+            'result_id',
+            'proof_id',
+            'span_id',
+            'external_stop',
+            'unresolved_stop'
+        )
+    ),
+    target_id TEXT NOT NULL,
+    priority TEXT NOT NULL CHECK (
+        priority IN ('required', 'recommended', 'caution')
+    ),
+    reason TEXT NOT NULL,
+    evidence_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (queue_id, target_kind, target_id)
+);
+CREATE INDEX reading_queues_paper_status
+    ON reading_queues(paper_id, status, updated_at, queue_id);
+CREATE INDEX reading_queue_items_queue
+    ON reading_queue_items(queue_id, position, item_id);
+"""
+
 _SCHEMA_SQL = """
 CREATE TABLE workspace_meta (
     key TEXT PRIMARY KEY,
@@ -494,8 +557,8 @@ CREATE INDEX theorems_paper_kind ON theorems(paper_id, normalized_kind);
 CREATE INDEX citations_source ON citation_evidence(source_paper_id);
 CREATE INDEX citations_target ON citation_evidence(target_paper_id);
 CREATE INDEX citations_arxiv ON citation_evidence(cited_arxiv_id);
-""" + _EVIDENCE_SCHEMA_SQL + _READING_SESSION_SCHEMA_SQL + """
-INSERT INTO workspace_meta (key, value) VALUES ('schema_version', '4');
+""" + _EVIDENCE_SCHEMA_SQL + _READING_SESSION_SCHEMA_SQL + _READING_QUEUE_SCHEMA_SQL + """
+INSERT INTO workspace_meta (key, value) VALUES ('schema_version', '5');
 """
 
 
@@ -599,6 +662,15 @@ class Workspace:
                 )
             }
             schema_version = 4
+        if schema_version == 4:
+            Workspace._migrate_v4_to_v5(connection)
+            tables = {
+                row[0]
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                )
+            }
+            schema_version = 5
         if schema_version != SCHEMA_VERSION:
             raise WorkspaceSchemaError(
                 f"Unsupported workspace schema version {schema_version}; "
@@ -670,6 +742,27 @@ class Workspace:
         try:
             connection.execute("BEGIN")
             _execute_sql_script(connection, _READING_SESSION_SCHEMA_SQL)
+            connection.execute(
+                "UPDATE workspace_meta SET value = ? WHERE key = 'schema_version'",
+                (str(SCHEMA_VERSION),),
+            )
+            connection.execute("COMMIT")
+        except Exception:
+            if connection.in_transaction:
+                connection.execute("ROLLBACK")
+            raise
+
+        violations = connection.execute("PRAGMA foreign_key_check").fetchall()
+        if violations:
+            raise WorkspaceSchemaError(
+                "Workspace schema migration left foreign key violations"
+            )
+
+    @staticmethod
+    def _migrate_v4_to_v5(connection: sqlite3.Connection) -> None:
+        try:
+            connection.execute("BEGIN")
+            _execute_sql_script(connection, _READING_QUEUE_SCHEMA_SQL)
             connection.execute(
                 "UPDATE workspace_meta SET value = ? WHERE key = 'schema_version'",
                 (str(SCHEMA_VERSION),),
@@ -1535,6 +1628,148 @@ class Workspace:
         }
 
     @_synchronized
+    def create_reading_queue(
+        self,
+        result_id: str,
+        label: str | None = None,
+        recursive: bool = True,
+    ) -> dict:
+        """Create a persistent reading queue for one stored result."""
+
+        result = self.get_result(result_id)
+        normalized_label = _clean_required_text(
+            label if label is not None else result_id,
+            "reading queue label",
+        )
+        timestamp = datetime.now(timezone.utc).isoformat()
+        queue_id = self._new_reading_queue_id(normalized_label, timestamp)
+        items = self._planned_reading_queue_items(result_id, recursive)
+
+        self._connection.execute(
+            """
+            INSERT INTO reading_queues (
+                queue_id, paper_id, target_result_id, label, status,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, 'active', ?, ?)
+            """,
+            (
+                queue_id,
+                result["paper_id"],
+                result_id,
+                normalized_label,
+                timestamp,
+                timestamp,
+            ),
+        )
+        for position, item in enumerate(items, start=1):
+            self._connection.execute(
+                """
+                INSERT INTO reading_queue_items (
+                    item_id, queue_id, position, target_kind, target_id,
+                    priority, reason, evidence_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    self._new_reading_queue_item_id(queue_id, position),
+                    queue_id,
+                    position,
+                    item["target_kind"],
+                    item["target_id"],
+                    item["priority"],
+                    item["reason"],
+                    _json_payload(item["evidence"], "reading queue item evidence"),
+                    timestamp,
+                ),
+            )
+        self._connection.commit()
+        return self._reading_queue_payload(queue_id)
+
+    @_synchronized
+    def list_reading_queues(
+        self,
+        paper_id: str | None = None,
+        status: str | None = None,
+    ) -> list[dict]:
+        """List reading queues ordered for resumption."""
+
+        conditions: list[str] = []
+        parameters: list[str] = []
+        if paper_id is not None:
+            normalized_paper_id = normalize_paper_id(paper_id)
+            self.get_paper(normalized_paper_id)
+            conditions.append("paper_id = ?")
+            parameters.append(normalized_paper_id)
+        if status is not None:
+            _validate_choice(status, _READING_QUEUE_STATUSES, "reading queue status")
+            conditions.append("status = ?")
+            parameters.append(status)
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        rows = self._connection.execute(
+            f"""
+            SELECT
+                queue_id, paper_id, target_result_id, label, status,
+                created_at, updated_at
+            FROM reading_queues
+            {where_clause}
+            ORDER BY updated_at DESC, queue_id DESC
+            """,
+            parameters,
+        ).fetchall()
+        return [self._reading_queue_payload_from_row(row) for row in rows]
+
+    @_synchronized
+    def get_reading_queue(self, queue_id: str) -> dict:
+        """Return one reading queue with deterministic item ordering."""
+
+        return {
+            "queue": self._reading_queue_payload(queue_id),
+            "items": self._reading_queue_items(queue_id),
+        }
+
+    @_synchronized
+    def apply_reading_queue_to_session(
+        self,
+        queue_id: str,
+        session_id: str,
+        status: str = "queued",
+    ) -> dict:
+        """Create session checkpoints from one reading queue."""
+
+        _validate_choice(status, _READING_CHECKPOINT_STATUSES, "reading checkpoint status")
+        queue = self._reading_queue_payload(queue_id)
+        session = self._reading_session_payload(session_id)
+        if queue["paper_id"] != session["paper_id"]:
+            raise ValueError(
+                f"Reading queue {queue_id!r} does not belong to the same paper "
+                f"as reading session {session_id!r}"
+            )
+
+        applied = []
+        for item in self._reading_queue_items(queue_id):
+            applied.append(
+                self.record_reading_checkpoint(
+                    session_id,
+                    item["target_kind"],
+                    item["target_id"],
+                    status,
+                    summary=item["reason"],
+                    evidence={
+                        "source": "reading_queue",
+                        "queue_id": queue_id,
+                        "item_id": item["item_id"],
+                        "priority": item["priority"],
+                        "reason": item["reason"],
+                        "item_evidence": item["evidence"],
+                    },
+                )
+            )
+        return {
+            "queue": self._reading_queue_payload(queue_id),
+            "session": self._reading_session_payload(session_id),
+            "applied": applied,
+        }
+
+    @_synchronized
     def counts(self) -> dict[str, int]:
         """Return the total paper and theorem counts."""
 
@@ -2000,6 +2235,190 @@ class Workspace:
             (session_id,),
         ).fetchall()
         return [_reading_note_from_row(row) for row in rows]
+
+    def _new_reading_queue_id(self, label: str, timestamp: str) -> str:
+        base = "queue:" + _reading_session_slug(label)
+        compact_timestamp = (
+            timestamp.replace("-", "")
+            .replace(":", "")
+            .replace("+", "")
+            .replace(".", "")
+        )
+        candidate = f"{base}:{compact_timestamp[:14]}"
+        suffix = 2
+        while self._connection.execute(
+            "SELECT 1 FROM reading_queues WHERE queue_id = ?",
+            (candidate,),
+        ).fetchone():
+            candidate = f"{base}:{compact_timestamp[:14]}-{suffix}"
+            suffix += 1
+        return candidate
+
+    def _new_reading_queue_item_id(self, queue_id: str, position: int) -> str:
+        return f"{queue_id}::item:{position}"
+
+    def _reading_queue_payload(self, queue_id: str) -> dict:
+        row = self._connection.execute(
+            """
+            SELECT
+                queue_id, paper_id, target_result_id, label, status,
+                created_at, updated_at
+            FROM reading_queues
+            WHERE queue_id = ?
+            """,
+            (queue_id,),
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"Unknown reading queue id: {queue_id}")
+        return self._reading_queue_payload_from_row(row)
+
+    def _reading_queue_payload_from_row(self, row: tuple) -> dict:
+        queue_id = row[0]
+        item_count = self._connection.execute(
+            "SELECT COUNT(*) FROM reading_queue_items WHERE queue_id = ?",
+            (queue_id,),
+        ).fetchone()[0]
+        return {
+            "queue_id": queue_id,
+            "paper_id": row[1],
+            "target_result_id": row[2],
+            "label": row[3],
+            "status": row[4],
+            "created_at": row[5],
+            "updated_at": row[6],
+            "counts": {"items": item_count},
+        }
+
+    def _reading_queue_items(self, queue_id: str) -> list[dict]:
+        self._reading_queue_payload(queue_id)
+        rows = self._connection.execute(
+            """
+            SELECT
+                item_id, queue_id, position, target_kind, target_id, priority,
+                reason, evidence_json, created_at
+            FROM reading_queue_items
+            WHERE queue_id = ?
+            ORDER BY position, item_id
+            """,
+            (queue_id,),
+        ).fetchall()
+        return [_reading_queue_item_from_row(row) for row in rows]
+
+    def _planned_reading_queue_items(
+        self,
+        result_id: str,
+        recursive: bool,
+    ) -> list[dict]:
+        path = self.get_result_reading_path(result_id, recursive=recursive)
+        planned: list[dict] = []
+        seen: set[tuple[str, str]] = set()
+
+        def add(
+            target_kind: str,
+            target_id: str,
+            priority: str,
+            reason: str,
+            evidence: dict,
+        ) -> None:
+            key = (target_kind, target_id)
+            if key in seen:
+                return
+            seen.add(key)
+            planned.append(
+                {
+                    "target_kind": target_kind,
+                    "target_id": target_id,
+                    "priority": priority,
+                    "reason": reason,
+                    "evidence": evidence,
+                }
+            )
+
+        add(
+            "result_id",
+            result_id,
+            "required",
+            "selected_result",
+            {
+                "source": "reading_path.result_id",
+                "result_id": result_id,
+                "recursive": recursive,
+            },
+        )
+        selected_proof = self._proof_for_result(result_id)
+        if selected_proof is not None:
+            add(
+                "proof_id",
+                selected_proof["proof_id"],
+                "required",
+                "selected_result_proof",
+                {
+                    "source": "result_proof",
+                    "result_id": result_id,
+                    "proof_id": selected_proof["proof_id"],
+                },
+            )
+
+        for dependency in path["top_down"]:
+            dependency_id = dependency["result_id"]
+            if dependency_id == result_id:
+                continue
+            add(
+                "result_id",
+                dependency_id,
+                "recommended",
+                "local_dependency_result",
+                {
+                    "source": "reading_path.top_down",
+                    "result_id": result_id,
+                    "dependency_result_id": dependency_id,
+                },
+            )
+            proof = self._proof_for_result(dependency_id)
+            if proof is not None:
+                add(
+                    "proof_id",
+                    proof["proof_id"],
+                    "recommended",
+                    "local_dependency_proof",
+                    {
+                        "source": "result_proof",
+                        "result_id": dependency_id,
+                        "proof_id": proof["proof_id"],
+                    },
+                )
+
+        for mention in path["external_stops"]:
+            add(
+                "external_stop",
+                mention["mention_id"],
+                "caution",
+                "external_dependency_stop",
+                {
+                    "source": "reading_path.external_stops",
+                    "mention_id": mention["mention_id"],
+                    "raw_text": mention.get("raw_text"),
+                    "resolution_status": mention.get("resolution_status"),
+                },
+            )
+
+        for stop in path["unresolved_stops"]:
+            stop_id = f"{stop['result_id']}:{stop['kind']}"
+            add(
+                "unresolved_stop",
+                stop_id,
+                "caution",
+                "unresolved_dependency_stop",
+                {
+                    "source": "reading_path.unresolved_stops",
+                    "result_id": stop["result_id"],
+                    "kind": stop["kind"],
+                    "mention_count": len(stop["mentions"]),
+                    "mentions": stop["mentions"],
+                },
+            )
+
+        return planned
 
     @_synchronized
     def get_paper(self, paper_id: str) -> dict:
@@ -3540,6 +3959,20 @@ def _reading_note_from_row(row: tuple) -> dict:
         "note_type": row[4],
         "text": row[5],
         "created_at": row[6],
+    }
+
+
+def _reading_queue_item_from_row(row: tuple) -> dict:
+    return {
+        "item_id": row[0],
+        "queue_id": row[1],
+        "position": row[2],
+        "target_kind": row[3],
+        "target_id": row[4],
+        "priority": row[5],
+        "reason": row[6],
+        "evidence": json.loads(row[7]),
+        "created_at": row[8],
     }
 
 

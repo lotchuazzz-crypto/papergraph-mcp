@@ -60,7 +60,7 @@ def test_open_workspace_returns_exact_payload(tmp_path: Path):
 
     assert server.open_workspace(str(database)) == {
         "path": str(database.resolve()),
-        "schema_version": 4,
+        "schema_version": 5,
         "papers": 0,
         "theorems": 0,
     }
@@ -166,10 +166,10 @@ def test_failed_workspace_open_preserves_active_workspace(tmp_path: Path):
             "CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
         )
         connection.execute(
-            "INSERT INTO workspace_meta VALUES ('schema_version', '5')"
+            "INSERT INTO workspace_meta VALUES ('schema_version', '6')"
         )
 
-    with pytest.raises(ToolError, match="schema version 5"):
+    with pytest.raises(ToolError, match="schema version 6"):
         server.open_workspace(str(future))
 
     assert server.workspace_list_papers() == []

@@ -550,6 +550,72 @@ def workspace_export_reading_session_summary(session_id: str) -> dict:
 
 
 @mcp.tool()
+@_serialized_workspace_tool
+def workspace_create_reading_queue(
+    result_id: str,
+    label: str | None = None,
+    recursive: bool = True,
+) -> dict:
+    """Create a persistent reading queue for one stored result."""
+
+    try:
+        return require_workspace().create_reading_queue(
+            result_id,
+            label=label,
+            recursive=recursive,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_list_reading_queues(
+    paper_id: str | None = None,
+    status: str | None = None,
+) -> list[dict]:
+    """List persistent reading queues in the active workspace."""
+
+    try:
+        return require_workspace().list_reading_queues(
+            paper_id=paper_id,
+            status=status,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_get_reading_queue(queue_id: str) -> dict:
+    """Return one persistent reading queue with ordered items."""
+
+    try:
+        return require_workspace().get_reading_queue(queue_id)
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_apply_reading_queue_to_session(
+    queue_id: str,
+    session_id: str,
+    status: str = "queued",
+) -> dict:
+    """Apply reading queue items as checkpoints in a reading session."""
+
+    try:
+        return require_workspace().apply_reading_queue_to_session(
+            queue_id,
+            session_id,
+            status=status,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
 def load_paper(path: str) -> dict:
     """Load a local LaTeX paper and build its theorem graph."""
 
@@ -919,6 +985,39 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     session_summary_parser.add_argument("--workspace", required=True)
     session_summary_parser.add_argument("--session-id", required=True)
+    create_queue_parser = subparsers.add_parser(
+        "create-reading-queue",
+        help="Create a persistent reading queue for one result.",
+    )
+    create_queue_parser.add_argument("--workspace", required=True)
+    create_queue_parser.add_argument("--result-id", required=True)
+    create_queue_parser.add_argument("--label")
+    create_queue_parser.add_argument(
+        "--direct",
+        action="store_true",
+        help="Queue only direct local dependencies instead of recursive traversal.",
+    )
+    list_queues_parser = subparsers.add_parser(
+        "list-reading-queues",
+        help="List persistent reading queues in a workspace.",
+    )
+    list_queues_parser.add_argument("--workspace", required=True)
+    list_queues_parser.add_argument("--paper-id")
+    list_queues_parser.add_argument("--status")
+    get_queue_parser = subparsers.add_parser(
+        "get-reading-queue",
+        help="Return one reading queue with ordered items.",
+    )
+    get_queue_parser.add_argument("--workspace", required=True)
+    get_queue_parser.add_argument("--queue-id", required=True)
+    apply_queue_parser = subparsers.add_parser(
+        "apply-reading-queue-to-session",
+        help="Apply queue items as reading session checkpoints.",
+    )
+    apply_queue_parser.add_argument("--workspace", required=True)
+    apply_queue_parser.add_argument("--queue-id", required=True)
+    apply_queue_parser.add_argument("--session-id", required=True)
+    apply_queue_parser.add_argument("--status", default="queued")
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -1057,6 +1156,45 @@ def main(argv: Sequence[str] | None = None) -> None:
             args.workspace,
             lambda workspace: workspace.export_reading_session_summary(
                 args.session_id,
+            ),
+        )
+        return
+    if args.command == "create-reading-queue":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.create_reading_queue(
+                args.result_id,
+                label=args.label,
+                recursive=not args.direct,
+            ),
+        )
+        return
+    if args.command == "list-reading-queues":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.list_reading_queues(
+                paper_id=args.paper_id,
+                status=args.status,
+            ),
+        )
+        return
+    if args.command == "get-reading-queue":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.get_reading_queue(args.queue_id),
+        )
+        return
+    if args.command == "apply-reading-queue-to-session":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.apply_reading_queue_to_session(
+                args.queue_id,
+                args.session_id,
+                status=args.status,
             ),
         )
         return

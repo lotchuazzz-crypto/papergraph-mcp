@@ -109,14 +109,16 @@ def test_workspace_creates_versioned_schema_and_only_the_parent(tmp_path: Path):
         "external_result_mentions",
         "evidence_edges",
         "evidence_edge_source_spans",
-        "reading_sessions",
-        "reading_checkpoints",
-        "reading_notes",
-    }
+            "reading_sessions",
+            "reading_checkpoints",
+            "reading_notes",
+            "reading_queues",
+            "reading_queue_items",
+        }
     assert fetch_all(
         path,
         "SELECT value FROM workspace_meta WHERE key = 'schema_version'",
-    ) == [("4",)]
+    ) == [("5",)]
 
 
 def test_workspace_rejects_a_directory_path(tmp_path: Path):
@@ -137,7 +139,7 @@ def test_workspace_rejects_newer_schema_and_closes_connection(
             "CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
         )
         connection.execute(
-            "INSERT INTO workspace_meta VALUES ('schema_version', '5')"
+            "INSERT INTO workspace_meta VALUES ('schema_version', '6')"
         )
 
     import papergraph.workspace as workspace_module
@@ -152,7 +154,7 @@ def test_workspace_rejects_newer_schema_and_closes_connection(
 
     monkeypatch.setattr(workspace_module.sqlite3, "connect", tracking_connect)
 
-    with pytest.raises(WorkspaceSchemaError, match="schema version 5"):
+    with pytest.raises(WorkspaceSchemaError, match="schema version 6"):
         Workspace.open(path)
 
     with pytest.raises(sqlite3.ProgrammingError, match="closed"):
@@ -166,7 +168,7 @@ def test_workspace_rejects_partial_current_schema(tmp_path: Path):
             "CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
         )
         connection.execute(
-            "INSERT INTO workspace_meta VALUES ('schema_version', '4')"
+            "INSERT INTO workspace_meta VALUES ('schema_version', '5')"
         )
 
     with pytest.raises(WorkspaceSchemaError, match="missing required tables.*papers"):

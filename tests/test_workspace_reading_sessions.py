@@ -37,7 +37,7 @@ def import_session_pdf(tmp_path: Path) -> tuple[Path, str]:
 def test_schema_v4_initializes_reading_session_tables(tmp_path: Path):
     workspace = Workspace.open(tmp_path / "workspace.sqlite3")
     try:
-        assert SCHEMA_VERSION == 4
+        assert SCHEMA_VERSION == 5
         tables = {
             row[0]
             for row in workspace._connection.execute(
@@ -51,7 +51,7 @@ def test_schema_v4_initializes_reading_session_tables(tmp_path: Path):
         } <= tables
         assert workspace._connection.execute(
             "SELECT value FROM workspace_meta WHERE key = 'schema_version'"
-        ).fetchone() == ("4",)
+        ).fetchone() == ("5",)
     finally:
         workspace.close()
 
@@ -59,6 +59,8 @@ def test_schema_v4_initializes_reading_session_tables(tmp_path: Path):
 def test_v3_workspace_migrates_to_v4_without_losing_evidence(tmp_path: Path):
     workspace_path, result_id = import_session_pdf(tmp_path)
     with sqlite3.connect(workspace_path) as connection:
+        connection.execute("DROP TABLE reading_queue_items")
+        connection.execute("DROP TABLE reading_queues")
         connection.execute("DROP TABLE reading_notes")
         connection.execute("DROP TABLE reading_checkpoints")
         connection.execute("DROP TABLE reading_sessions")
@@ -70,7 +72,7 @@ def test_v3_workspace_migrates_to_v4_without_losing_evidence(tmp_path: Path):
     try:
         assert workspace._connection.execute(
             "SELECT value FROM workspace_meta WHERE key = 'schema_version'"
-        ).fetchone() == ("4",)
+        ).fetchone() == ("5",)
         assert workspace.get_result(result_id)["result_id"] == result_id
         assert workspace.list_reading_sessions() == []
     finally:

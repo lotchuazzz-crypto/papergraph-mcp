@@ -74,11 +74,11 @@ def test_doctor_prints_json_without_starting_mcp(
         "environment_diagnostics",
         lambda: {
             "package_name": "papergraph-mcp",
-            "version": "0.7.0",
-            "release_tag": "v0.7.0",
+            "version": "0.8.0",
+            "release_tag": "v0.8.0",
             "recommended_source": (
                 "git+https://github.com/lotchuazzz-crypto/"
-                "papergraph-mcp.git@v0.7.0"
+                "papergraph-mcp.git@v0.8.0"
             ),
             "dependency_extraction_basis": "statement_explicit_latex_refs_only",
             "git": None,
@@ -88,7 +88,7 @@ def test_doctor_prints_json_without_starting_mcp(
 
     server.main(["doctor"])
 
-    assert json.loads(capsys.readouterr().out)["version"] == "0.7.0"
+    assert json.loads(capsys.readouterr().out)["version"] == "0.8.0"
 
 
 def test_validate_arxiv_cli_prints_conflict_json_without_starting_mcp(

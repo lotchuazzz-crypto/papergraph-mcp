@@ -5,7 +5,9 @@
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/lotchuazzz-crypto/papergraph-mcp)](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases)
 
-PaperGraph turns local or arXiv LaTeX papers and born-digital PDFs into evidence-first theorem, result, proof, and reading-session state that AI agents can query through MCP. PaperGraph v0.7.0 adds persistent Reading Session State so agents can resume which evidence targets were reviewed, blocked, queued, or left as open questions.
+PaperGraph turns local or arXiv LaTeX papers and born-digital PDFs into evidence-first theorem, result, proof, reading-session, and reading-queue state that AI agents can query through MCP. PaperGraph v0.8.0 adds a persistent Reading Queue Planner so agents can turn local proof-dependency paths into required, recommended, and caution reading targets, then apply those targets to resumable reading sessions.
+
+PaperGraph v0.7.0 added persistent Reading Session State so agents can resume which evidence targets were reviewed, blocked, queued, or left as open questions.
 
 PaperGraph v0.6.1 added command-line Reading Bridge exports so terminal workflows and CI scripts can inspect bridge payloads from an existing workspace without starting MCP.
 
@@ -25,6 +27,7 @@ Single-paper tools expose theorem-like environments, labels, and `\ref` relation
 - Import born-digital PDFs into the same local workspace and inspect extracted result and proof evidence.
 - Export reading bridge bundles, result contexts, source slices, and reading paths for explanation-focused consumers.
 - Persist reading sessions, checkpoints, notes, open questions, and recovery summaries in the local workspace.
+- Plan deterministic reading queues from proof-dependency evidence and apply them to reading sessions.
 - Keep theorem, reference, and citation records in a local SQLite workspace.
 - Search theorem titles and bodies across papers, with stable global IDs.
 - Traverse direct or recursive theorem dependencies and inspect incoming or outgoing citation evidence, including unresolved citations.
@@ -58,11 +61,11 @@ the decision without loading, call `validate_arxiv_request` or
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the GitHub release without cloning the repository:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.7.0 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.8.0 papergraph-mcp --version
 papergraph-mcp doctor
 ```
 
-The pinned command becomes available after the `v0.7.0` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
+The pinned command becomes available after the `v0.8.0` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
 
 To validate a raw arXiv request before loading a paper, run:
 
@@ -79,7 +82,7 @@ For an MCP client that accepts JSON-style stdio server configuration, add:
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.7.0", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.8.0", "papergraph-mcp"]
     }
   }
 }
@@ -91,7 +94,7 @@ Restart the MCP client after changing its configuration. The server uses stdio, 
 
 The original single-paper tools remain available: `get_environment_diagnostics`, `validate_arxiv_request`, `load_arxiv_request`, `validate_arxiv_input`, `load_paper`, `load_arxiv_paper`, `list_theorems`, `get_theorem`, `get_dependencies`, `get_dependency_diagnostics`, and `where_used`. Their signatures are `get_environment_diagnostics()`, `validate_arxiv_request(input: str)`, `load_arxiv_request(input: str, main_file: str | None = None, refresh: bool = False)`, `validate_arxiv_input(text_id: str | None = None, url: str | None = None)`, `load_paper(path: str)`, `load_arxiv_paper(arxiv_id: str, main_file: str | None = None, refresh: bool = False)`, `list_theorems(kind: str | None = None)`, `get_theorem(theorem_id: str)`, `get_dependencies(theorem_id: str, recursive: bool = False)`, `get_dependency_diagnostics(theorem_id: str, recursive: bool = False)`, and `where_used(theorem_id: str)`.
 
-Workspace tools operate on the active database. Call `open_workspace` first: `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_add_pdf_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, `workspace_get_dependency_diagnostics`, `workspace_get_citations`, `workspace_list_results`, `workspace_get_result`, `workspace_get_result_proof`, `workspace_get_proof_dependencies`, `workspace_get_external_result_mentions`, `workspace_get_evidence`, `workspace_export_reading_bundle`, `workspace_export_result_reading_context`, `workspace_get_source_slice`, `workspace_get_result_reading_path`, `workspace_create_reading_session`, `workspace_list_reading_sessions`, `workspace_get_reading_session`, `workspace_record_reading_checkpoint`, `workspace_add_reading_note`, and `workspace_export_reading_session_summary` require that active workspace. Their exact MCP signatures and return summaries are:
+Workspace tools operate on the active database. Call `open_workspace` first: `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_add_pdf_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, `workspace_get_dependency_diagnostics`, `workspace_get_citations`, `workspace_list_results`, `workspace_get_result`, `workspace_get_result_proof`, `workspace_get_proof_dependencies`, `workspace_get_external_result_mentions`, `workspace_get_evidence`, `workspace_export_reading_bundle`, `workspace_export_result_reading_context`, `workspace_get_source_slice`, `workspace_get_result_reading_path`, `workspace_create_reading_session`, `workspace_list_reading_sessions`, `workspace_get_reading_session`, `workspace_record_reading_checkpoint`, `workspace_add_reading_note`, `workspace_export_reading_session_summary`, `workspace_create_reading_queue`, `workspace_list_reading_queues`, `workspace_get_reading_queue`, and `workspace_apply_reading_queue_to_session` require that active workspace. Their exact MCP signatures and return summaries are:
 
 | Tool signature | Returns |
 | --- | --- |
@@ -122,6 +125,10 @@ Workspace tools operate on the active database. Call `open_workspace` first: `wo
 | `workspace_record_reading_checkpoint(session_id: str, target_kind: str, target_id: str, status: str, summary: str = "", evidence: dict | None = None) -> dict` | Creates or updates a reviewed, blocked, queued, or skipped reading checkpoint for one explicit target. |
 | `workspace_add_reading_note(session_id: str, text: str, note_type: str = "note", target_kind: str | None = None, target_id: str | None = None) -> dict` | Adds a note, question, warning, or decision to a session and optional target. |
 | `workspace_export_reading_session_summary(session_id: str) -> dict` | Exports recovery progress, reviewed targets, blocked targets, open questions, latest notes, and deterministic next-action hints. |
+| `workspace_create_reading_queue(result_id: str, label: str | None = None, recursive: bool = True) -> dict` | Creates a persistent reading queue from a result's local reading path, proof evidence, external stops, and unresolved stops. |
+| `workspace_list_reading_queues(paper_id: str | None = None, status: str | None = None) -> list[dict]` | Lists queues ordered for resumption, optionally filtered by paper or active/archived status. |
+| `workspace_get_reading_queue(queue_id: str) -> dict` | Returns one queue with deterministic required, recommended, and caution item ordering. |
+| `workspace_apply_reading_queue_to_session(queue_id: str, session_id: str, status: str = "queued") -> dict` | Applies queue items as reading-session checkpoints with queue provenance. |
 
 For a compact single-paper check with an already-disambiguated ID, call `load_arxiv_paper(arxiv_id="math/0307200")`. For ordinary user text, call `load_arxiv_request(input="math/0307200")`. PaperGraph selects `main.tex`; a representative first response has `"path": "main.tex"`, `"cached": false`, and `"nodes": 7`.
 
@@ -201,6 +208,30 @@ papergraph-mcp export-reading-session-summary --workspace C:/Temp/papergraph-rea
 ```
 
 Session summaries include progress counts, reviewed targets, blocked targets, open questions, latest notes, and deterministic next-action hints such as `review_blocked_targets` or `continue_queued_targets`. The hints are reading-state cues, not mathematical advice.
+
+## Reading queue workflow
+
+Use the Reading Queue Planner when a paper-reading agent should start from a selected result and receive an explicit, ordered set of reading targets. Queue items are deterministic: the selected result and its proof are `required`, local proof dependencies and their proofs are `recommended`, and external or unresolved stops are `caution`.
+
+```text
+open_workspace(path="C:/Temp/papergraph-reading.sqlite3")
+workspace_create_reading_queue(result_id="local:example::pdf:theorem:1.1", label="Main theorem queue")
+workspace_get_reading_queue(queue_id="queue:...")
+workspace_create_reading_session(paper_id="local:example", label="Main theorem pass", target_result_id="local:example::pdf:theorem:1.1")
+workspace_apply_reading_queue_to_session(queue_id="queue:...", session_id="session:...")
+workspace_export_reading_session_summary(session_id="session:...")
+```
+
+The same queue workflow can be used from a shell against an existing workspace:
+
+```powershell
+papergraph-mcp create-reading-queue --workspace C:/Temp/papergraph-reading.sqlite3 --result-id local:example::pdf:theorem:1.1 --label "Main theorem queue"
+papergraph-mcp list-reading-queues --workspace C:/Temp/papergraph-reading.sqlite3 --paper-id local:example
+papergraph-mcp get-reading-queue --workspace C:/Temp/papergraph-reading.sqlite3 --queue-id queue:...
+papergraph-mcp apply-reading-queue-to-session --workspace C:/Temp/papergraph-reading.sqlite3 --queue-id queue:... --session-id session:...
+```
+
+Reading queues do not verify proofs or generate theorem explanations. They preserve the evidence-derived order and stop reasons so a reading agent can inspect, explain, or defer each target without silently inventing missing dependencies.
 
 ## Three-paper local walkthrough
 

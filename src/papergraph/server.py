@@ -550,6 +550,72 @@ def workspace_export_reading_session_summary(session_id: str) -> dict:
 
 
 @mcp.tool()
+@_serialized_workspace_tool
+def workspace_create_reading_queue(
+    result_id: str,
+    label: str | None = None,
+    recursive: bool = True,
+) -> dict:
+    """Create a persistent reading queue for one stored result."""
+
+    try:
+        return require_workspace().create_reading_queue(
+            result_id,
+            label=label,
+            recursive=recursive,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_list_reading_queues(
+    paper_id: str | None = None,
+    status: str | None = None,
+) -> list[dict]:
+    """List persistent reading queues in the active workspace."""
+
+    try:
+        return require_workspace().list_reading_queues(
+            paper_id=paper_id,
+            status=status,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_get_reading_queue(queue_id: str) -> dict:
+    """Return one persistent reading queue with ordered items."""
+
+    try:
+        return require_workspace().get_reading_queue(queue_id)
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_apply_reading_queue_to_session(
+    queue_id: str,
+    session_id: str,
+    status: str = "queued",
+) -> dict:
+    """Apply reading queue items as checkpoints in a reading session."""
+
+    try:
+        return require_workspace().apply_reading_queue_to_session(
+            queue_id,
+            session_id,
+            status=status,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
 def load_paper(path: str) -> dict:
     """Load a local LaTeX paper and build its theorem graph."""
 

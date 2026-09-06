@@ -1664,6 +1664,182 @@ class Workspace:
             "notes": self._reading_notes_for_session(session_id),
         }
 
+    @_synchronized
+    def record_reading_checkpoint(
+        self,
+        session_id: str,
+        target_kind: str,
+        target_id: str,
+        status: str,
+        summary: str = "",
+        evidence: dict | None = None,
+    ) -> dict:
+        """Create or update one reading checkpoint for a session target."""
+
+        self._reading_session_payload(session_id)
+        _validate_choice(status, _READING_CHECKPOINT_STATUSES, "reading checkpoint status")
+        _validate_choice(target_kind, _READING_TARGET_KINDS, "reading target kind")
+        cleaned_target_id = _clean_required_text(target_id, "target_id")
+        cleaned_summary = "" if summary is None else str(summary).strip()
+        evidence_json = _json_payload(evidence or {}, "checkpoint evidence")
+        self._validate_reading_target(target_kind, cleaned_target_id)
+
+        timestamp = datetime.now(timezone.utc).isoformat()
+        existing = self._connection.execute(
+            """
+            SELECT checkpoint_id, created_at
+            FROM reading_checkpoints
+            WHERE session_id = ? AND target_kind = ? AND target_id = ?
+            """,
+            (session_id, target_kind, cleaned_target_id),
+        ).fetchone()
+        if existing is None:
+            checkpoint_id = self._new_checkpoint_id(
+                session_id,
+                target_kind,
+                cleaned_target_id,
+            )
+            created_at = timestamp
+            self._connection.execute(
+                """
+                INSERT INTO reading_checkpoints (
+                    checkpoint_id, session_id, target_kind, target_id, status,
+                    summary, evidence_json, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    checkpoint_id,
+                    session_id,
+                    target_kind,
+                    cleaned_target_id,
+                    status,
+                    cleaned_summary,
+                    evidence_json,
+                    created_at,
+                    timestamp,
+                ),
+            )
+        else:
+            checkpoint_id = existing[0]
+            self._connection.execute(
+                """
+                UPDATE reading_checkpoints
+                SET status = ?, summary = ?, evidence_json = ?, updated_at = ?
+                WHERE checkpoint_id = ?
+                """,
+                (status, cleaned_summary, evidence_json, timestamp, checkpoint_id),
+            )
+
+        self._touch_reading_session(session_id, timestamp)
+        return self._reading_checkpoint_payload(checkpoint_id)
+
+    @_synchronized
+    def add_reading_note(
+        self,
+        session_id: str,
+        text: str,
+        note_type: str = "note",
+        target_kind: str | None = None,
+        target_id: str | None = None,
+    ) -> dict:
+        """Add a note or question to a reading session."""
+
+        self._reading_session_payload(session_id)
+        _validate_choice(note_type, _READING_NOTE_TYPES, "reading note type")
+        cleaned_text = _clean_required_text(text, "reading note text")
+        if target_kind is None and target_id is not None:
+            raise ValueError("target_kind is required when target_id is provided")
+        if target_kind is not None:
+            _validate_choice(target_kind, _READING_NOTE_TARGET_KINDS, "reading note target kind")
+            cleaned_target_id = _clean_required_text(target_id, "target_id")
+            if target_kind != "session":
+                self._validate_reading_target(target_kind, cleaned_target_id)
+        else:
+            cleaned_target_id = None
+
+        timestamp = datetime.now(timezone.utc).isoformat()
+        note_id = self._new_note_id(session_id, timestamp)
+        self._connection.execute(
+            """
+            INSERT INTO reading_notes (
+                note_id, session_id, target_kind, target_id, note_type, text,
+                created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                note_id,
+                session_id,
+                target_kind,
+                cleaned_target_id,
+                note_type,
+                cleaned_text,
+                timestamp,
+            ),
+        )
+        self._touch_reading_session(session_id, timestamp)
+        return self._reading_note_payload(note_id)
+
+    @_synchronized
+    def export_reading_session_summary(self, session_id: str) -> dict:
+        """Return a deterministic recovery summary for a reading session."""
+
+        session = self._reading_session_payload(session_id)
+        checkpoints = self._reading_checkpoints_for_session(session_id)
+        notes = self._reading_notes_for_session(session_id)
+        progress = {
+            "total_checkpoints": len(checkpoints),
+            "reviewed": 0,
+            "blocked": 0,
+            "queued": 0,
+            "skipped": 0,
+        }
+        for checkpoint in checkpoints:
+            progress[checkpoint["status"]] += 1
+
+        reviewed_targets = [
+            checkpoint for checkpoint in checkpoints if checkpoint["status"] == "reviewed"
+        ]
+        blocked_targets = [
+            checkpoint for checkpoint in checkpoints if checkpoint["status"] == "blocked"
+        ]
+        queued_targets = [
+            checkpoint for checkpoint in checkpoints if checkpoint["status"] == "queued"
+        ]
+        open_questions = [
+            note for note in notes if note["note_type"] == "question"
+        ]
+        next_actions = []
+        if blocked_targets:
+            next_actions.append("review_blocked_targets")
+        if queued_targets:
+            next_actions.append("continue_queued_targets")
+        if session["target_result_id"] and not any(
+            checkpoint["target_kind"] == "result_id"
+            and checkpoint["target_id"] == session["target_result_id"]
+            for checkpoint in checkpoints
+        ):
+            next_actions.append("review_target_result")
+        if open_questions:
+            next_actions.append("answer_or_retire_open_questions")
+
+        target_result = (
+            self.get_result(session["target_result_id"])
+            if session["target_result_id"]
+            else None
+        )
+        return {
+            "session": session,
+            "paper": self.get_paper(session["paper_id"]),
+            "target_result": target_result,
+            "progress": progress,
+            "reviewed_targets": reviewed_targets,
+            "blocked_targets": blocked_targets,
+            "open_questions": open_questions,
+            "latest_notes": list(reversed(notes[-5:])),
+            "next_actions": next_actions,
+            "source_policy": base_bridge_payload(_parser_version())["source_policy"],
+        }
+
     def _new_reading_session_id(self, label: str, timestamp: str) -> str:
         base = "session:" + _reading_session_slug(label)
         compact_timestamp = (
@@ -1696,6 +1872,77 @@ class Workspace:
         if row is None:
             raise KeyError(f"Unknown reading session id: {session_id}")
         return self._reading_session_payload_from_row(row)
+
+    def _reading_checkpoint_payload(self, checkpoint_id: str) -> dict:
+        row = self._connection.execute(
+            """
+            SELECT
+                checkpoint_id, session_id, target_kind, target_id, status,
+                summary, evidence_json, created_at, updated_at
+            FROM reading_checkpoints
+            WHERE checkpoint_id = ?
+            """,
+            (checkpoint_id,),
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"Unknown reading checkpoint id: {checkpoint_id}")
+        return _reading_checkpoint_from_row(row)
+
+    def _reading_note_payload(self, note_id: str) -> dict:
+        row = self._connection.execute(
+            """
+            SELECT
+                note_id, session_id, target_kind, target_id, note_type, text,
+                created_at
+            FROM reading_notes
+            WHERE note_id = ?
+            """,
+            (note_id,),
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"Unknown reading note id: {note_id}")
+        return _reading_note_from_row(row)
+
+    def _new_checkpoint_id(
+        self,
+        session_id: str,
+        target_kind: str,
+        target_id: str,
+    ) -> str:
+        return f"{session_id}::checkpoint:{target_kind}:{_reading_session_slug(target_id)}"
+
+    def _new_note_id(self, session_id: str, timestamp: str) -> str:
+        compact_timestamp = (
+            timestamp.replace("-", "")
+            .replace(":", "")
+            .replace("+", "")
+            .replace(".", "")
+        )
+        candidate = f"{session_id}::note:{compact_timestamp[:20]}"
+        suffix = 2
+        while self._connection.execute(
+            "SELECT 1 FROM reading_notes WHERE note_id = ?",
+            (candidate,),
+        ).fetchone():
+            candidate = f"{session_id}::note:{compact_timestamp[:20]}-{suffix}"
+            suffix += 1
+        return candidate
+
+    def _touch_reading_session(self, session_id: str, timestamp: str) -> None:
+        self._connection.execute(
+            "UPDATE reading_sessions SET updated_at = ? WHERE session_id = ?",
+            (timestamp, session_id),
+        )
+
+    def _validate_reading_target(self, target_kind: str, target_id: str) -> None:
+        if target_kind == "result_id":
+            self._ensure_result_exists(target_id)
+            return
+        if target_kind == "proof_id":
+            self._ensure_proof_exists(target_id)
+            return
+        if target_kind == "span_id":
+            self._ensure_source_span_exists(target_id)
 
     def _reading_session_payload_from_row(self, row: tuple) -> dict:
         session_id = row[0]
@@ -2015,6 +2262,22 @@ class Workspace:
             (result_id,),
         ).fetchone() is None:
             raise KeyError(f"Unknown result id: {result_id}")
+
+    @_synchronized
+    def _ensure_proof_exists(self, proof_id: str) -> None:
+        if self._connection.execute(
+            "SELECT 1 FROM proofs WHERE proof_id = ?",
+            (proof_id,),
+        ).fetchone() is None:
+            raise KeyError(f"Unknown proof id: {proof_id}")
+
+    @_synchronized
+    def _ensure_source_span_exists(self, span_id: str) -> None:
+        if self._connection.execute(
+            "SELECT 1 FROM source_spans WHERE span_id = ? OR CAST(id AS TEXT) = ?",
+            (span_id, span_id),
+        ).fetchone() is None:
+            raise KeyError(f"Unknown source span id: {span_id}")
 
     @_synchronized
     def _first_result_location(self, result_id: str) -> dict | None:
@@ -3236,6 +3499,13 @@ def _clean_required_text(value: str | None, field_name: str) -> str:
 
 def _reading_session_slug(value: str) -> str:
     return slug_fragment(value).replace(".", "-")
+
+
+def _json_payload(value: dict, field_name: str) -> str:
+    try:
+        return json.dumps(value, sort_keys=True)
+    except TypeError as error:
+        raise ValueError(f"{field_name} must be JSON-serializable") from error
 
 
 def _validate_choice(value: str, allowed: set[str], field_name: str) -> None:

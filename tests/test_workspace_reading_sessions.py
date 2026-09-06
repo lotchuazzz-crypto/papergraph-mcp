@@ -136,3 +136,157 @@ def test_list_and_get_reading_sessions_are_deterministic(tmp_path: Path):
         assert full["notes"] == []
     finally:
         workspace.close()
+
+
+def test_record_reading_checkpoint_updates_unique_target(tmp_path: Path):
+    workspace_path, result_id = import_session_pdf(tmp_path)
+    workspace = Workspace.open(workspace_path)
+    try:
+        session = workspace.create_reading_session(
+            "local:paper",
+            target_result_id=result_id,
+        )
+
+        first = workspace.record_reading_checkpoint(
+            session["session_id"],
+            "result_id",
+            result_id,
+            "queued",
+            summary="Queued for L3 reading.",
+            evidence={"source": "reading_path"},
+        )
+        second = workspace.record_reading_checkpoint(
+            session["session_id"],
+            "result_id",
+            result_id,
+            "reviewed",
+            summary="Statement and proof source slice reviewed.",
+            evidence={"source_handles": [{"kind": "result_id", "value": result_id}]},
+        )
+
+        assert first["checkpoint_id"] == second["checkpoint_id"]
+        assert second["status"] == "reviewed"
+        assert second["summary"] == "Statement and proof source slice reviewed."
+        assert second["evidence"]["source_handles"][0]["value"] == result_id
+        full = workspace.get_reading_session(session["session_id"])
+        assert full["session"]["counts"] == {"checkpoints": 1, "notes": 0}
+        assert full["checkpoints"] == [second]
+    finally:
+        workspace.close()
+
+
+def test_record_reading_checkpoint_validates_inputs(tmp_path: Path):
+    workspace_path, result_id = import_session_pdf(tmp_path)
+    workspace = Workspace.open(workspace_path)
+    try:
+        session = workspace.create_reading_session("local:paper")
+
+        with pytest.raises(ValueError, match="Invalid reading checkpoint status"):
+            workspace.record_reading_checkpoint(
+                session["session_id"],
+                "result_id",
+                result_id,
+                "done",
+            )
+        with pytest.raises(ValueError, match="Invalid reading target kind"):
+            workspace.record_reading_checkpoint(
+                session["session_id"],
+                "citation",
+                result_id,
+                "queued",
+            )
+        with pytest.raises(KeyError, match="Unknown result id"):
+            workspace.record_reading_checkpoint(
+                session["session_id"],
+                "result_id",
+                "local:paper::pdf:theorem:9.9",
+                "queued",
+            )
+    finally:
+        workspace.close()
+
+
+def test_add_reading_note_validates_and_updates_session(tmp_path: Path):
+    workspace_path, result_id = import_session_pdf(tmp_path)
+    workspace = Workspace.open(workspace_path)
+    try:
+        session = workspace.create_reading_session("local:paper")
+
+        note = workspace.add_reading_note(
+            session["session_id"],
+            "Does Lemma 1.2 need an external estimate?",
+            note_type="question",
+            target_kind="result_id",
+            target_id=result_id,
+        )
+
+        assert note["note_type"] == "question"
+        assert note["target_id"] == result_id
+        assert note["text"].startswith("Does Lemma 1.2")
+        full = workspace.get_reading_session(session["session_id"])
+        assert full["session"]["counts"] == {"checkpoints": 0, "notes": 1}
+        assert full["notes"] == [note]
+
+        with pytest.raises(ValueError, match="reading note text cannot be empty"):
+            workspace.add_reading_note(session["session_id"], " ")
+        with pytest.raises(ValueError, match="target_id is required"):
+            workspace.add_reading_note(
+                session["session_id"],
+                "Missing target id.",
+                target_kind="result_id",
+            )
+    finally:
+        workspace.close()
+
+
+def test_export_reading_session_summary_reports_recovery_state(tmp_path: Path):
+    workspace_path, result_id = import_session_pdf(tmp_path)
+    workspace = Workspace.open(workspace_path)
+    try:
+        session = workspace.create_reading_session(
+            "local:paper",
+            label="Main theorem pass",
+            target_result_id=result_id,
+        )
+        workspace.record_reading_checkpoint(
+            session["session_id"],
+            "result_id",
+            result_id,
+            "blocked",
+            summary="Need to inspect Lemma 1.2 proof.",
+        )
+        workspace.record_reading_checkpoint(
+            session["session_id"],
+            "unresolved_stop",
+            "local:paper::unresolved:lemma-1.2",
+            "queued",
+            summary="Resolve local mention.",
+        )
+        question = workspace.add_reading_note(
+            session["session_id"],
+            "Is the bootstrap estimate stated before the theorem?",
+            note_type="question",
+        )
+
+        summary = workspace.export_reading_session_summary(session["session_id"])
+
+        assert summary["session"]["session_id"] == session["session_id"]
+        assert summary["paper"]["paper_id"] == "local:paper"
+        assert summary["target_result"]["result_id"] == result_id
+        assert summary["progress"] == {
+            "total_checkpoints": 2,
+            "reviewed": 0,
+            "blocked": 1,
+            "queued": 1,
+            "skipped": 0,
+        }
+        assert summary["blocked_targets"][0]["target_id"] == result_id
+        assert summary["open_questions"] == [question]
+        assert summary["next_actions"] == [
+            "review_blocked_targets",
+            "continue_queued_targets",
+            "answer_or_retire_open_questions",
+        ]
+        assert summary["source_policy"]["proof_verification"] is False
+    finally:
+        workspace.close()

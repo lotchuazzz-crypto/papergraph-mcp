@@ -470,6 +470,7 @@ def _roadmap_normalized_kind(raw_kind: str) -> str:
 
 def _local_mention_excluded_ranges(text: str) -> tuple[tuple[int, int], ...]:
     ranges: list[tuple[int, int]] = [match.span() for match in _CITATION_RE.finditer(text)]
+    ranges.extend(_roadmap_result_group_ranges(text))
     proof_match = PROOF_RE.match(text)
     if (
         proof_match is not None
@@ -486,6 +487,21 @@ def _overlaps_any_range(
 ) -> bool:
     start, end = target
     return any(start < range_end and range_start < end for range_start, range_end in ranges)
+
+
+def _roadmap_result_group_ranges(text: str) -> tuple[tuple[int, int], ...]:
+    ranges: list[tuple[int, int]] = []
+    for trigger_match in _ROADMAP_TRIGGER_RE.finditer(text):
+        window_start = trigger_match.end()
+        window = _roadmap_window(text, window_start)
+        for group_match in _ROADMAP_RESULT_GROUP_RE.finditer(window):
+            ranges.append(
+                (
+                    window_start + group_match.start(),
+                    window_start + group_match.end(),
+                )
+            )
+    return tuple(ranges)
 
 
 def _bibliography_lookup(

@@ -3,6 +3,7 @@ from pathlib import Path
 import fitz
 import pytest
 
+from papergraph.project import load_project
 from papergraph.workspace import Workspace
 
 
@@ -159,6 +160,59 @@ def test_get_result_reading_path_returns_top_down_and_bottom_up(tmp_path: Path):
         ]
         assert path["external_stops"] == []
         assert path["cycles"] == []
+    finally:
+        workspace.close()
+
+
+def test_get_result_reading_path_uses_proof_roadmap_dependencies(tmp_path: Path):
+    main = tmp_path / "main.tex"
+    main.write_text(
+        "\n".join(
+            [
+                r"\documentclass{article}",
+                r"\newtheorem{theorem}{Theorem}",
+                r"\newtheorem{lemma}{Lemma}",
+                r"\begin{document}",
+                r"\begin{lemma}\label{lem:base}",
+                "Base lemma.",
+                r"\end{lemma}",
+                r"\begin{lemma}\label{lem:bootstrap}",
+                "Bootstrap lemma.",
+                r"\end{lemma}",
+                r"\begin{theorem}\label{th:main}",
+                "Main theorem.",
+                r"\end{theorem}",
+                r"\begin{proof}",
+                "It remains to prove Lemmas 1 and 2.",
+                r"\end{proof}",
+                r"\end{document}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        workspace.import_project("local:paper", "local", "main.tex", None, load_project(main))
+
+        path = workspace.get_result_reading_path("local:paper::th:main")
+
+        assert [node["result_id"] for node in path["top_down"]] == [
+            "local:paper::th:main",
+            "local:paper::lem:base",
+            "local:paper::lem:bootstrap",
+        ]
+        assert path["edges"] == [
+            {
+                "source_result_id": "local:paper::th:main",
+                "target_result_id": "local:paper::lem:base",
+                "relation": "uses_local_result",
+            },
+            {
+                "source_result_id": "local:paper::th:main",
+                "target_result_id": "local:paper::lem:bootstrap",
+                "relation": "uses_local_result",
+            },
+        ]
     finally:
         workspace.close()
 

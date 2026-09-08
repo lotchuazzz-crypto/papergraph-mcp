@@ -92,6 +92,24 @@ def test_extracts_grouped_proof_roadmap_mentions():
     ]
 
 
+def test_unresolved_proof_roadmap_mentions_remain_visible():
+    document = build_pdf_evidence_document(
+        "local:paper-a",
+        "paper.pdf",
+        (
+            span(0, "Theorem 1.3. Main result."),
+            span(1, "Proof. The proof reduces to Proposition 2.4."),
+        ),
+    )
+
+    mention = document.local_result_mentions[0]
+
+    assert mention.raw_text == "Proposition 2.4"
+    assert mention.method == "proof_roadmap_result_regex"
+    assert mention.target_result_id is None
+    assert mention.resolution_status == "unresolved"
+
+
 def test_ambiguous_local_mentions_remain_visible():
     document = build_pdf_evidence_document(
         "local:paper-a",

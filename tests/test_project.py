@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from papergraph.loader import load_latex_project
-from papergraph.parser import parse_project
+from papergraph.parser import latex_project_to_evidence_document, parse_project
 from papergraph.project import load_project
 
 
@@ -228,3 +228,126 @@ def test_load_project_deduplicates_bibliographies_and_repeated_includes(
         for span in shared_spans
     )
     assert project.bibliography_files == (bibliography.resolve(),)
+
+
+def test_latex_project_evidence_associates_adjacent_proof_environment(
+    tmp_path: Path,
+):
+    main = tmp_path / "main.tex"
+    main.write_text(
+        "\n".join(
+            [
+                r"\documentclass{article}",
+                r"\newtheorem{theorem}{Theorem}",
+                r"\begin{document}",
+                r"\begin{theorem}\label{th:main}",
+                "Main theorem.",
+                r"\end{theorem}",
+                r"\begin{proof}",
+                "The proof is direct.",
+                r"\end{proof}",
+                r"\end{document}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    document = latex_project_to_evidence_document(
+        "local:paper",
+        "local",
+        str(main),
+        None,
+        load_project(main),
+    )
+
+    assert len(document.proofs) == 1
+    proof = document.proofs[0]
+    assert proof.result_id == "local:paper::th:main"
+    assert proof.association_basis == "immediately_follows_result"
+    assert proof.association_confidence == 0.8
+    assert proof.method == "latex_proof_environment"
+    assert proof.text == "The proof is direct."
+    assert document.spans[proof.span_indices[0]].source_type == "tex"
+
+
+def test_latex_project_evidence_leaves_repeated_adjacent_proof_unresolved(
+    tmp_path: Path,
+):
+    main = tmp_path / "main.tex"
+    main.write_text(
+        "\n".join(
+            [
+                r"\documentclass{article}",
+                r"\newtheorem{theorem}{Theorem}",
+                r"\begin{document}",
+                r"\begin{theorem}\label{th:main}",
+                "Main theorem.",
+                r"\end{theorem}",
+                r"\begin{proof}",
+                "First proof.",
+                r"\end{proof}",
+                r"\begin{proof}",
+                "Second proof should not steal the theorem.",
+                r"\end{proof}",
+                r"\end{document}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    document = latex_project_to_evidence_document(
+        "local:paper",
+        "local",
+        str(main),
+        None,
+        load_project(main),
+    )
+
+    assert [proof.result_id for proof in document.proofs] == [
+        "local:paper::th:main",
+        None,
+    ]
+    assert document.proofs[1].association_basis == "unresolved"
+    assert document.proofs[1].association_confidence == 0.0
+
+
+def test_latex_project_evidence_extracts_proof_label_references(
+    tmp_path: Path,
+):
+    main = tmp_path / "main.tex"
+    main.write_text(
+        "\n".join(
+            [
+                r"\documentclass{article}",
+                r"\newtheorem{theorem}{Theorem}",
+                r"\newtheorem{lemma}{Lemma}",
+                r"\begin{document}",
+                r"\begin{lemma}\label{lem:base}",
+                "Base lemma.",
+                r"\end{lemma}",
+                r"\begin{theorem}\label{th:main}",
+                "Main theorem.",
+                r"\end{theorem}",
+                r"\begin{proof}",
+                r"By \cref{lem:base}.",
+                r"\end{proof}",
+                r"\end{document}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    document = latex_project_to_evidence_document(
+        "local:paper",
+        "local",
+        str(main),
+        None,
+        load_project(main),
+    )
+
+    assert len(document.local_result_mentions) == 1
+    mention = document.local_result_mentions[0]
+    assert mention.raw_text == r"\cref{lem:base}"
+    assert mention.target_result_id == "local:paper::lem:base"
+    assert mention.resolution_status == "resolved_unique"
+    assert mention.method == "proof_latex_ref"

@@ -54,6 +54,27 @@ _CITATION_RE = re.compile(
 _LATEX_REF_RE = re.compile(
     r"\\(?:ref|eqref|autoref|cref|Cref)\{(?P<labels>[^}]+)\}"
 )
+_ROADMAP_TRIGGER_RE = re.compile(
+    r"\b(?:"
+    r"it\s+remains\s+to\s+prove|"
+    r"we\s+(?:first\s+|next\s+|now\s+|shall\s+)?prove|"
+    r"the\s+proof\s+(?:is\s+)?(?:divided\s+into|reduces\s+to)|"
+    r"it\s+suffices\s+to\s+prove"
+    r")\b",
+    re.I,
+)
+_ROADMAP_RESULT_GROUP_RE = re.compile(
+    r"\b(?P<kind>"
+    r"Theorems?|Lemmas?|Propositions?|Corollaries?|Claims?"
+    r")\s+"
+    r"(?P<numbers>"
+    r"[A-Za-z]?(?:\d+(?:\.\d+)*|[A-Z])"
+    r"(?:\s*(?:,|and)\s*[A-Za-z]?(?:\d+(?:\.\d+)*|[A-Z]))*"
+    r")\b",
+    re.I,
+)
+_ROADMAP_NUMBER_RE = re.compile(r"[A-Za-z]?(?:\d+(?:\.\d+)*|[A-Z])")
+_ROADMAP_WINDOW_BOUNDARY_RE = re.compile(r"(?<!\d)[.;]|[.;](?!\d)")
 
 
 def _normalized_text(text: str) -> str:
@@ -363,11 +384,93 @@ def extract_local_result_mentions(
                 )
             )
 
+        mentions.extend(
+            _extract_roadmap_result_mentions(
+                paper_id,
+                proof,
+                lookup,
+                len(mentions),
+                {
+                    mention.target_result_id
+                    for mention in mentions
+                    if mention.proof_id == proof.proof_id
+                    and mention.target_result_id is not None
+                    and mention.resolution_status == "resolved_unique"
+                },
+            )
+        )
+
     return tuple(mentions)
+
+
+def _extract_roadmap_result_mentions(
+    paper_id: str,
+    proof: ProofEvidence,
+    lookup: dict[tuple[str, str], list[ResultEvidence]],
+    start_index: int,
+    resolved_targets_to_skip: set[str],
+) -> tuple[LocalResultMentionEvidence, ...]:
+    mentions: list[LocalResultMentionEvidence] = []
+    for trigger_match in _ROADMAP_TRIGGER_RE.finditer(proof.text):
+        window = _roadmap_window(proof.text, trigger_match.end())
+        for group_match in _ROADMAP_RESULT_GROUP_RE.finditer(window):
+            kind = _roadmap_normalized_kind(group_match.group("kind"))
+            for number_match in _ROADMAP_NUMBER_RE.finditer(group_match.group("numbers")):
+                visible_number = number_match.group(0)
+                matches = lookup.get((kind, visible_number.casefold()), [])
+                target_result_id = matches[0].result_id if len(matches) == 1 else None
+                if len(matches) == 1:
+                    resolution_status = "resolved_unique"
+                elif len(matches) > 1:
+                    resolution_status = "ambiguous"
+                else:
+                    resolution_status = "unresolved"
+                if target_result_id in resolved_targets_to_skip:
+                    continue
+
+                raw_text = f"{_display_kind(kind)} {visible_number}"
+                mentions.append(
+                    LocalResultMentionEvidence(
+                        mention_id=(
+                            f"{paper_id}::local-mention:"
+                            f"{start_index + len(mentions) + 1}"
+                        ),
+                        paper_id=paper_id,
+                        proof_id=proof.proof_id,
+                        raw_text=raw_text,
+                        kind=kind,
+                        visible_number=visible_number,
+                        target_result_id=target_result_id,
+                        resolution_status=resolution_status,
+                        method="proof_roadmap_result_regex",
+                        confidence=0.72,
+                    )
+                )
+                if target_result_id is not None and resolution_status == "resolved_unique":
+                    resolved_targets_to_skip.add(target_result_id)
+    return tuple(mentions)
+
+
+def _roadmap_window(text: str, start: int) -> str:
+    suffix = text[start : start + 240]
+    boundary = _ROADMAP_WINDOW_BOUNDARY_RE.search(suffix)
+    if boundary is not None:
+        return suffix[: boundary.start()]
+    return suffix
+
+
+def _roadmap_normalized_kind(raw_kind: str) -> str:
+    lowered = raw_kind.casefold()
+    if lowered.endswith("ies"):
+        lowered = lowered[:-3] + "y"
+    elif lowered.endswith("s"):
+        lowered = lowered[:-1]
+    return _normalized_kind(lowered)
 
 
 def _local_mention_excluded_ranges(text: str) -> tuple[tuple[int, int], ...]:
     ranges: list[tuple[int, int]] = [match.span() for match in _CITATION_RE.finditer(text)]
+    ranges.extend(_roadmap_result_group_ranges(text))
     proof_match = PROOF_RE.match(text)
     if (
         proof_match is not None
@@ -384,6 +487,21 @@ def _overlaps_any_range(
 ) -> bool:
     start, end = target
     return any(start < range_end and range_start < end for range_start, range_end in ranges)
+
+
+def _roadmap_result_group_ranges(text: str) -> tuple[tuple[int, int], ...]:
+    ranges: list[tuple[int, int]] = []
+    for trigger_match in _ROADMAP_TRIGGER_RE.finditer(text):
+        window_start = trigger_match.end()
+        window = _roadmap_window(text, window_start)
+        for group_match in _ROADMAP_RESULT_GROUP_RE.finditer(window):
+            ranges.append(
+                (
+                    window_start + group_match.start(),
+                    window_start + group_match.end(),
+                )
+            )
+    return tuple(ranges)
 
 
 def _bibliography_lookup(

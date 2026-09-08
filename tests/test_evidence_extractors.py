@@ -65,6 +65,51 @@ def test_extracts_explicit_proof_of_number_association():
     ]
 
 
+def test_extracts_grouped_proof_roadmap_mentions():
+    document = build_pdf_evidence_document(
+        "local:paper-a",
+        "paper.pdf",
+        (
+            span(0, "Lemma 1.1. Base estimate."),
+            span(1, "Lemma 1.2. Bootstrap estimate."),
+            span(2, "Theorem 1.3. Main result."),
+            span(3, "Proof. It remains to prove Lemmas 1.1 and 1.2."),
+        ),
+    )
+
+    roadmap_mentions = [
+        mention
+        for mention in document.local_result_mentions
+        if mention.method == "proof_roadmap_result_regex"
+    ]
+
+    assert [
+        (mention.kind, mention.visible_number, mention.target_result_id)
+        for mention in roadmap_mentions
+    ] == [
+        ("lemma", "1.1", "local:paper-a::pdf:lemma:1.1"),
+        ("lemma", "1.2", "local:paper-a::pdf:lemma:1.2"),
+    ]
+
+
+def test_unresolved_proof_roadmap_mentions_remain_visible():
+    document = build_pdf_evidence_document(
+        "local:paper-a",
+        "paper.pdf",
+        (
+            span(0, "Theorem 1.3. Main result."),
+            span(1, "Proof. The proof reduces to Proposition 2.4."),
+        ),
+    )
+
+    mention = document.local_result_mentions[0]
+
+    assert mention.raw_text == "Proposition 2.4"
+    assert mention.method == "proof_roadmap_result_regex"
+    assert mention.target_result_id is None
+    assert mention.resolution_status == "unresolved"
+
+
 def test_ambiguous_local_mentions_remain_visible():
     document = build_pdf_evidence_document(
         "local:paper-a",

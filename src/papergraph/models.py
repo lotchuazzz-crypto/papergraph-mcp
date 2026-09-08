@@ -20,6 +20,7 @@ class TheoremNode:
     raw_kind: str | None = None
     display_kind: str | None = None
     normalized_kind: str | None = None
+    visible_number: str | None = None
     source_file: str | None = None
 
     def __post_init__(self) -> None:
@@ -37,6 +38,7 @@ class TheoremNode:
             "raw_kind": self.raw_kind,
             "display_kind": self.display_kind,
             "normalized_kind": self.normalized_kind,
+            "visible_number": self.visible_number,
             "title": self.title,
             "label": self.label,
             "refs": list(self.refs),

@@ -350,7 +350,7 @@ def test_readme_exposes_agent_guided_setup():
     assert ".agents/skills/setting-up-papergraph/SKILL.md" in text
 
 
-def test_all_onboarding_source_pins_match_v090():
+def test_all_onboarding_source_pins_match_v091():
     import re
 
     combined = "\n".join(

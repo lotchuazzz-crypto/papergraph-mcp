@@ -51,6 +51,9 @@ _CITATION_RE = re.compile(
     r"(?P<number>[A-Za-z]?(?:\d+(?:\.\d+)*|[A-Z])?))?\]",
     re.I,
 )
+_LATEX_REF_RE = re.compile(
+    r"\\(?:ref|eqref|autoref|cref|Cref)\{(?P<labels>[^}]+)\}"
+)
 
 
 def _normalized_text(text: str) -> str:
@@ -291,10 +294,44 @@ def extract_local_result_mentions(
     """Extract proof-local references to results in the same paper."""
 
     lookup = _result_lookup(results)
+    label_lookup: dict[str, list[ResultEvidence]] = {}
+    for result in results:
+        if result.label is not None:
+            label_lookup.setdefault(result.label, []).append(result)
     mentions: list[LocalResultMentionEvidence] = []
 
     for proof in proofs:
         excluded_ranges = _local_mention_excluded_ranges(proof.text)
+        for match in _LATEX_REF_RE.finditer(proof.text):
+            raw_text = match.group(0)
+            labels = [
+                label.strip()
+                for label in match.group("labels").split(",")
+                if label.strip()
+            ]
+            for label in labels:
+                matches = label_lookup.get(label, [])
+                result = matches[0] if len(matches) == 1 else None
+                if len(matches) == 1:
+                    resolution_status = "resolved_unique"
+                elif len(matches) > 1:
+                    resolution_status = "ambiguous"
+                else:
+                    resolution_status = "unresolved"
+                mentions.append(
+                    LocalResultMentionEvidence(
+                        mention_id=f"{paper_id}::local-mention:{len(mentions) + 1}",
+                        paper_id=paper_id,
+                        proof_id=proof.proof_id,
+                        raw_text=raw_text,
+                        kind=result.normalized_kind if result is not None else "label",
+                        visible_number=None,
+                        target_result_id=result.result_id if result is not None else None,
+                        resolution_status=resolution_status,
+                        method="proof_latex_ref",
+                        confidence=0.9,
+                    )
+                )
         for match in _LOCAL_RESULT_MENTION_RE.finditer(proof.text):
             if _overlaps_any_range(match.span(), excluded_ranges):
                 continue

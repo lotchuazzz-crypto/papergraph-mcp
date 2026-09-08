@@ -1,10 +1,17 @@
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 from papergraph.evidence import (
     EvidenceDocument,
+    ProofEvidence,
     ResultEvidence,
     SourceSpanEvidence,
+)
+from papergraph.evidence_extractors import (
+    extract_citation_mentions,
+    extract_external_result_mentions,
+    extract_local_result_mentions,
 )
 from papergraph.identity import global_theorem_id
 from papergraph.models import TheoremNode
@@ -33,6 +40,15 @@ LABEL_RE = re.compile(
 REF_RE = re.compile(
     r"\\(?:ref|eqref|autoref|cref|Cref)\{(?P<labels>[^}]+)\}"
 )
+PROOF_ENVIRONMENT_RE = re.compile(
+    r"""
+    \\begin\{proof\}
+    (?:\[(?P<title>[^\]]*)\])?
+    (?P<body>.*?)
+    \\end\{proof\}
+    """,
+    re.DOTALL | re.VERBOSE,
+)
 
 KIND_ALIASES = {
     "theorem": "theorem",
@@ -43,6 +59,14 @@ KIND_ALIASES = {
     "claim": "claim",
     "conjecture": "conjecture",
 }
+
+
+@dataclass(frozen=True, slots=True)
+class LatexProofBlock:
+    position: int
+    body_start: int
+    body_end: int
+    body: str
 
 
 def extract_refs(text: str) -> tuple[str, ...]:
@@ -173,6 +197,24 @@ def parse_project(project: LoadedProject) -> list[TheoremNode]:
     return nodes
 
 
+def parse_latex_proofs(text: str) -> list[LatexProofBlock]:
+    proofs: list[LatexProofBlock] = []
+    for match in PROOF_ENVIRONMENT_RE.finditer(text):
+        body = match.group("body")
+        stripped_body = body.strip()
+        leading_whitespace = len(body) - len(body.lstrip())
+        trailing_whitespace = len(body) - len(body.rstrip())
+        proofs.append(
+            LatexProofBlock(
+                position=match.start(),
+                body_start=match.start("body") + leading_whitespace,
+                body_end=match.end("body") - trailing_whitespace,
+                body=stripped_body,
+            )
+        )
+    return proofs
+
+
 def latex_project_to_evidence_document(
     paper_id: str,
     source_type: str,
@@ -181,6 +223,7 @@ def latex_project_to_evidence_document(
     project: LoadedProject,
 ) -> EvidenceDocument:
     nodes = parse_project(project)
+    proof_blocks = parse_latex_proofs(project.text)
     spans: list[SourceSpanEvidence] = []
     results: list[ResultEvidence] = []
 
@@ -232,6 +275,102 @@ def latex_project_to_evidence_document(
             )
         )
 
+    result_by_position = {
+        node.position: result
+        for node, result in zip(nodes, results)
+    }
+    associated_result_ids: set[str] = set()
+    previous_kind_by_proof_position: dict[int, str | None] = {}
+    previous_result_by_proof_position: dict[int, ResultEvidence | None] = {}
+    previous_kind: str | None = None
+    previous_result: ResultEvidence | None = None
+    events = [
+        *[("result", node.position) for node in nodes],
+        *[("proof", proof.position) for proof in proof_blocks],
+    ]
+    for kind, position in sorted(events, key=lambda event: event[1]):
+        if kind == "proof":
+            previous_kind_by_proof_position[position] = previous_kind
+            previous_result_by_proof_position[position] = previous_result
+        else:
+            previous_result = result_by_position[position]
+        previous_kind = kind
+
+    proofs: list[ProofEvidence] = []
+    for proof in proof_blocks:
+        project_span = next(
+            (
+                item
+                for item in project.spans
+                if item.start <= proof.position < item.end
+            ),
+            None,
+        )
+        if project_span is None:
+            raise ValueError("No source span contains proof environment")
+
+        span_index = len(spans)
+        spans.append(
+            SourceSpanEvidence(
+                paper_id=paper_id,
+                source_type="tex",
+                source_ref=project_span.path.relative_to(
+                    project.project_root
+                ).as_posix(),
+                page=None,
+                block_index=None,
+                start_offset=proof.body_start,
+                end_offset=proof.body_end,
+                bbox=None,
+                text=proof.body,
+                method="latex_proof_environment",
+                confidence=1.0,
+            )
+        )
+
+        previous_result = previous_result_by_proof_position[proof.position]
+        result_id = None
+        association_basis = "unresolved"
+        association_confidence = 0.0
+        if (
+            previous_kind_by_proof_position[proof.position] == "result"
+            and previous_result is not None
+            and previous_result.result_id not in associated_result_ids
+        ):
+            result_id = previous_result.result_id
+            associated_result_ids.add(result_id)
+            association_basis = "immediately_follows_result"
+            association_confidence = 0.8
+
+        proofs.append(
+            ProofEvidence(
+                proof_id=f"{paper_id}::proof:{len(proofs) + 1}",
+                paper_id=paper_id,
+                result_id=result_id,
+                text=proof.body,
+                span_indices=(span_index,),
+                association_basis=association_basis,
+                association_confidence=association_confidence,
+                method="latex_proof_environment",
+                confidence=1.0,
+            )
+        )
+
+    local_result_mentions = extract_local_result_mentions(
+        paper_id,
+        tuple(proofs),
+        tuple(results),
+    )
+    citation_mentions = extract_citation_mentions(
+        paper_id,
+        tuple(proofs),
+        (),
+    )
+    external_result_mentions = extract_external_result_mentions(
+        paper_id,
+        citation_mentions,
+    )
+
     return EvidenceDocument(
         paper_id=paper_id,
         source_type=source_type,
@@ -242,11 +381,11 @@ def latex_project_to_evidence_document(
         main_file=project.root_file.relative_to(project.project_root).as_posix(),
         spans=tuple(spans),
         results=tuple(results),
-        proofs=(),
+        proofs=tuple(proofs),
         bibliography_entries=(),
-        local_result_mentions=(),
-        citation_mentions=(),
-        external_result_mentions=(),
+        local_result_mentions=local_result_mentions,
+        citation_mentions=citation_mentions,
+        external_result_mentions=external_result_mentions,
         edges=(),
         warnings=(),
     )

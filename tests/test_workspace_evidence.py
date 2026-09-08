@@ -350,6 +350,99 @@ def test_latex_import_populates_source_agnostic_results(workspace, loaded_projec
     assert results[0]["source_type"] == "local"
 
 
+def test_latex_import_populates_proof_dependencies(workspace, tmp_path: Path):
+    main = tmp_path / "main.tex"
+    main.write_text(
+        "\n".join(
+            [
+                r"\documentclass{article}",
+                r"\newtheorem{theorem}{Theorem}",
+                r"\newtheorem{lemma}{Lemma}",
+                r"\begin{document}",
+                r"\begin{lemma}\label{lem:base}",
+                "Base lemma.",
+                r"\end{lemma}",
+                r"\begin{theorem}\label{th:main}",
+                "Main theorem.",
+                r"\end{theorem}",
+                r"\begin{proof}",
+                r"By \cref{lem:base}.",
+                r"\end{proof}",
+                r"\end{document}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    workspace.import_project("local:paper", "local", "main.tex", None, load_project(main))
+
+    proof = workspace.get_result_proof("local:paper::th:main")
+    dependencies = workspace.get_proof_dependencies(
+        "local:paper::th:main",
+        recursive=False,
+    )
+    path = workspace.get_result_reading_path("local:paper::th:main")
+
+    assert proof["known"]["proof"]["result_id"] == "local:paper::th:main"
+    assert proof["known"]["proof"]["method"] == "latex_proof_environment"
+    assert [
+        result["result_id"]
+        for result in dependencies["known"]["resolved_local_results"]
+    ] == ["local:paper::lem:base"]
+    assert path["edges"] == [
+        {
+            "source_result_id": "local:paper::th:main",
+            "target_result_id": "local:paper::lem:base",
+            "relation": "uses_local_result",
+        }
+    ]
+
+
+def test_latex_import_exposes_proof_external_result_stops(
+    workspace,
+    tmp_path: Path,
+):
+    main = tmp_path / "main.tex"
+    main.write_text(
+        "\n".join(
+            [
+                r"\documentclass{article}",
+                r"\newtheorem{theorem}{Theorem}",
+                r"\begin{document}",
+                r"\begin{theorem}\label{th:main}",
+                "Main theorem.",
+                r"\end{theorem}",
+                r"\begin{proof}",
+                "We apply [12, Theorem 3.5].",
+                r"\end{proof}",
+                r"\end{document}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    workspace.import_project("local:paper", "local", "main.tex", None, load_project(main))
+
+    dependencies = workspace.get_proof_dependencies("local:paper::th:main")
+    path = workspace.get_result_reading_path("local:paper::th:main")
+
+    assert dependencies["unresolved"]["external_result_mentions"][0]["raw_text"] == (
+        "[12, Theorem 3.5]"
+    )
+    assert {
+        (
+            stop["result_id"],
+            stop["kind"],
+            stop["mentions"][0]["raw_text"],
+        )
+        for stop in path["unresolved_stops"]
+    } >= {
+        (
+            "local:paper::th:main",
+            "external_result_mentions",
+            "[12, Theorem 3.5]",
+        )
+    }
+
+
 def test_import_rejects_results_without_span_indices(tmp_path: Path):
     workspace = Workspace.open(tmp_path / "workspace.sqlite3")
     try:

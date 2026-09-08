@@ -14,6 +14,7 @@ from threading import RLock
 from papergraph.citations import build_citation_records
 from papergraph.evidence import (
     EVIDENCE_EMPTY_DEPENDENCY_WARNING,
+    bounded_excerpt,
     EvidenceDocument,
     SourceSpanEvidence,
     slug_fragment,
@@ -4270,6 +4271,7 @@ class _ExternalImportPlanCollector:
                 "recommended_paper_id": f"arxiv:{arxiv_id}",
             },
             "evidence": evidence,
+            "review": _external_import_candidate_review(evidence),
             "counts": {
                 "external_mentions": sum(
                     1 for item in evidence if item["kind"] == "external_result_mention"
@@ -4374,6 +4376,61 @@ def _bibliography_entry_evidence(entry: dict, source: str) -> dict:
         entry["raw_text"],
         source,
     )
+
+
+def _external_import_candidate_review(evidence: list[dict]) -> dict:
+    local_result_ids = _sorted_present_values(evidence, "result_id")
+    proof_ids = _sorted_present_values(evidence, "proof_id")
+    citation_keys = _sorted_present_values(evidence, "citation_key")
+    raw_texts = _bounded_raw_texts(evidence)
+    summary_parts = [
+        (
+            f"Needed by {len(local_result_ids)} local result"
+            f"{'' if len(local_result_ids) == 1 else 's'}"
+            f" through {len(proof_ids)} proof"
+            f"{'' if len(proof_ids) == 1 else 's'}"
+        )
+    ]
+    if citation_keys:
+        summary_parts.append(f"citation keys: {', '.join(citation_keys)}")
+    if raw_texts:
+        summary_parts.append(f"cited result evidence: {'; '.join(raw_texts)}")
+    return {
+        "local_result_ids": local_result_ids,
+        "proof_ids": proof_ids,
+        "citation_keys": citation_keys,
+        "raw_texts": raw_texts,
+        "evidence_summary": "; ".join(summary_parts),
+    }
+
+
+def _sorted_present_values(items: list[dict], key: str) -> list[str]:
+    return sorted(
+        {
+            str(item[key])
+            for item in items
+            if item.get(key) not in (None, "")
+        }
+    )
+
+
+def _bounded_raw_texts(items: list[dict], limit: int = 5) -> list[str]:
+    texts = []
+    seen = set()
+    for item in items:
+        if item.get("kind") == "bibliography_entry":
+            continue
+        raw_text = item.get("raw_text")
+        if not raw_text:
+            continue
+        text = bounded_excerpt(str(raw_text), limit=160)
+        if text in seen:
+            continue
+        seen.add(text)
+        texts.append(text)
+        if len(texts) >= limit:
+            break
+    return texts
 
 
 def _dedupe_external_import_evidence(items: list[dict]) -> list[dict]:

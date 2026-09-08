@@ -93,6 +93,29 @@ def test_result_plan_groups_external_mentions_by_arxiv(tmp_path: Path):
         workspace.close()
 
 
+def test_result_plan_candidate_review_summarizes_traceable_evidence(tmp_path: Path):
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        result_id = import_import_plan_pdf(workspace, tmp_path)
+
+        candidate = workspace.plan_external_imports_for_result(result_id)[
+            "candidates"
+        ][0]
+
+        assert candidate["review"] == {
+            "local_result_ids": ["local:paper::pdf:theorem:1.1"],
+            "proof_ids": ["local:paper::proof:2"],
+            "citation_keys": ["12"],
+            "raw_texts": ["[12, Theorem 3.5]"],
+            "evidence_summary": (
+                "Needed by 1 local result through 1 proof; citation keys: 12; "
+                "cited result evidence: [12, Theorem 3.5]"
+            ),
+        }
+    finally:
+        workspace.close()
+
+
 def test_result_plan_marks_imported_arxiv_candidates(tmp_path: Path):
     workspace = Workspace.open(tmp_path / "workspace.sqlite3")
     try:
@@ -130,6 +153,10 @@ def test_queue_plan_uses_saved_queue_caution_items(tmp_path: Path):
             for candidate in plan["candidates"]
             for evidence in candidate["evidence"]
         )
+        assert plan["candidates"][0]["review"]["local_result_ids"] == [
+            "local:paper::pdf:theorem:1.1"
+        ]
+        assert plan["candidates"][0]["review"]["citation_keys"] == ["12"]
     finally:
         workspace.close()
 
@@ -148,7 +175,28 @@ def test_paper_plan_includes_citation_evidence_without_queue(tmp_path: Path):
             "recursive": None,
         }
         assert plan["candidates"][0]["source"]["arxiv_id"] == "2401.12345"
+        assert plan["candidates"][0]["review"]["citation_keys"] == ["12"]
+        assert plan["candidates"][0]["review"]["raw_texts"] == [
+            "[12, Theorem 3.5]"
+        ]
         assert plan["summary"]["import_candidate_count"] == 1
+    finally:
+        workspace.close()
+
+
+def test_candidate_review_deduplicates_repeated_evidence(tmp_path: Path):
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        result_id = import_import_plan_pdf(workspace, tmp_path)
+        queue = workspace.create_reading_queue(result_id)
+
+        plan = workspace.plan_external_imports_for_queue(queue["queue_id"])
+        review = plan["candidates"][0]["review"]
+
+        assert review["local_result_ids"] == ["local:paper::pdf:theorem:1.1"]
+        assert review["proof_ids"] == ["local:paper::proof:2"]
+        assert review["citation_keys"] == ["12"]
+        assert review["raw_texts"] == ["[12, Theorem 3.5]"]
     finally:
         workspace.close()
 

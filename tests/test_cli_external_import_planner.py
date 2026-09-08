@@ -59,6 +59,11 @@ def test_plan_external_imports_for_result_cli_prints_json(tmp_path: Path, capsys
     payload = read_json(capsys)
     assert payload["scope"]["kind"] == "result_id"
     assert payload["candidates"][0]["source"]["arxiv_id"] == "2401.12345"
+    assert (
+        payload["candidates"][0]["review"]["evidence_summary"]
+        == "Needed by 1 local result through 1 proof; citation keys: 12; "
+        "cited result evidence: [12, Theorem 3.5]"
+    )
 
 
 def test_external_import_planner_cli_round_trip(tmp_path: Path, capsys):

@@ -5,7 +5,9 @@
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/lotchuazzz-crypto/papergraph-mcp)](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases)
 
-PaperGraph turns local or arXiv LaTeX papers and born-digital PDFs into evidence-first theorem, result, proof, reading-session, and reading-queue state that AI agents can query through MCP. PaperGraph v0.8.0 adds a persistent Reading Queue Planner so agents can turn local proof-dependency paths into required, recommended, and caution reading targets, then apply those targets to resumable reading sessions.
+PaperGraph turns local or arXiv LaTeX papers and born-digital PDFs into evidence-first theorem, result, proof, reading-session, reading-queue, and external-import planning state that AI agents can query through MCP. PaperGraph v0.9.0 adds an External Import Planner so agents can turn external proof stops and citation evidence into a deterministic list of arXiv papers to import next.
+
+PaperGraph v0.8.0 added a persistent Reading Queue Planner so agents can turn local proof-dependency paths into required, recommended, and caution reading targets, then apply those targets to resumable reading sessions.
 
 PaperGraph v0.7.0 added persistent Reading Session State so agents can resume which evidence targets were reviewed, blocked, queued, or left as open questions.
 
@@ -28,6 +30,7 @@ Single-paper tools expose theorem-like environments, labels, and `\ref` relation
 - Export reading bridge bundles, result contexts, source slices, and reading paths for explanation-focused consumers.
 - Persist reading sessions, checkpoints, notes, open questions, and recovery summaries in the local workspace.
 - Plan deterministic reading queues from proof-dependency evidence and apply them to reading sessions.
+- Plan external arXiv imports from reading-path stops, reading queues, or paper-level citation evidence.
 - Keep theorem, reference, and citation records in a local SQLite workspace.
 - Search theorem titles and bodies across papers, with stable global IDs.
 - Traverse direct or recursive theorem dependencies and inspect incoming or outgoing citation evidence, including unresolved citations.
@@ -61,11 +64,11 @@ the decision without loading, call `validate_arxiv_request` or
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the GitHub release without cloning the repository:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.8.0 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.9.0 papergraph-mcp --version
 papergraph-mcp doctor
 ```
 
-The pinned command becomes available after the `v0.8.0` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
+The pinned command becomes available after the `v0.9.0` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
 
 To validate a raw arXiv request before loading a paper, run:
 
@@ -82,7 +85,7 @@ For an MCP client that accepts JSON-style stdio server configuration, add:
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.8.0", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.9.0", "papergraph-mcp"]
     }
   }
 }
@@ -94,7 +97,7 @@ Restart the MCP client after changing its configuration. The server uses stdio, 
 
 The original single-paper tools remain available: `get_environment_diagnostics`, `validate_arxiv_request`, `load_arxiv_request`, `validate_arxiv_input`, `load_paper`, `load_arxiv_paper`, `list_theorems`, `get_theorem`, `get_dependencies`, `get_dependency_diagnostics`, and `where_used`. Their signatures are `get_environment_diagnostics()`, `validate_arxiv_request(input: str)`, `load_arxiv_request(input: str, main_file: str | None = None, refresh: bool = False)`, `validate_arxiv_input(text_id: str | None = None, url: str | None = None)`, `load_paper(path: str)`, `load_arxiv_paper(arxiv_id: str, main_file: str | None = None, refresh: bool = False)`, `list_theorems(kind: str | None = None)`, `get_theorem(theorem_id: str)`, `get_dependencies(theorem_id: str, recursive: bool = False)`, `get_dependency_diagnostics(theorem_id: str, recursive: bool = False)`, and `where_used(theorem_id: str)`.
 
-Workspace tools operate on the active database. Call `open_workspace` first: `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_add_pdf_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, `workspace_get_dependency_diagnostics`, `workspace_get_citations`, `workspace_list_results`, `workspace_get_result`, `workspace_get_result_proof`, `workspace_get_proof_dependencies`, `workspace_get_external_result_mentions`, `workspace_get_evidence`, `workspace_export_reading_bundle`, `workspace_export_result_reading_context`, `workspace_get_source_slice`, `workspace_get_result_reading_path`, `workspace_create_reading_session`, `workspace_list_reading_sessions`, `workspace_get_reading_session`, `workspace_record_reading_checkpoint`, `workspace_add_reading_note`, `workspace_export_reading_session_summary`, `workspace_create_reading_queue`, `workspace_list_reading_queues`, `workspace_get_reading_queue`, and `workspace_apply_reading_queue_to_session` require that active workspace. Their exact MCP signatures and return summaries are:
+Workspace tools operate on the active database. Call `open_workspace` first: `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_add_pdf_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, `workspace_get_dependency_diagnostics`, `workspace_get_citations`, `workspace_list_results`, `workspace_get_result`, `workspace_get_result_proof`, `workspace_get_proof_dependencies`, `workspace_get_external_result_mentions`, `workspace_get_evidence`, `workspace_export_reading_bundle`, `workspace_export_result_reading_context`, `workspace_get_source_slice`, `workspace_get_result_reading_path`, `workspace_create_reading_session`, `workspace_list_reading_sessions`, `workspace_get_reading_session`, `workspace_record_reading_checkpoint`, `workspace_add_reading_note`, `workspace_export_reading_session_summary`, `workspace_create_reading_queue`, `workspace_list_reading_queues`, `workspace_get_reading_queue`, `workspace_apply_reading_queue_to_session`, `workspace_plan_external_imports_for_result`, `workspace_plan_external_imports_for_queue`, and `workspace_plan_external_imports_for_paper` require that active workspace. Their exact MCP signatures and return summaries are:
 
 | Tool signature | Returns |
 | --- | --- |
@@ -129,6 +132,9 @@ Workspace tools operate on the active database. Call `open_workspace` first: `wo
 | `workspace_list_reading_queues(paper_id: str | None = None, status: str | None = None) -> list[dict]` | Lists queues ordered for resumption, optionally filtered by paper or active/archived status. |
 | `workspace_get_reading_queue(queue_id: str) -> dict` | Returns one queue with deterministic required, recommended, and caution item ordering. |
 | `workspace_apply_reading_queue_to_session(queue_id: str, session_id: str, status: str = "queued") -> dict` | Applies queue items as reading-session checkpoints with queue provenance. |
+| `workspace_plan_external_imports_for_result(result_id: str, recursive: bool = True) -> dict` | Plans external arXiv imports from one result's reading path, preserving blocked stops without arXiv IDs. |
+| `workspace_plan_external_imports_for_queue(queue_id: str) -> dict` | Plans external arXiv imports from saved reading queue caution items. |
+| `workspace_plan_external_imports_for_paper(paper_id: str) -> dict` | Plans external arXiv imports from paper-level citation and external mention evidence. |
 
 For a compact single-paper check with an already-disambiguated ID, call `load_arxiv_paper(arxiv_id="math/0307200")`. For ordinary user text, call `load_arxiv_request(input="math/0307200")`. PaperGraph selects `main.tex`; a representative first response has `"path": "main.tex"`, `"cached": false`, and `"nodes": 7`.
 
@@ -232,6 +238,29 @@ papergraph-mcp apply-reading-queue-to-session --workspace C:/Temp/papergraph-rea
 ```
 
 Reading queues do not verify proofs or generate theorem explanations. They preserve the evidence-derived order and stop reasons so a reading agent can inspect, explain, or defer each target without silently inventing missing dependencies.
+
+## External import planner workflow
+
+Use the External Import Planner when a reading path or queue reaches external stops and the next question is which cited arXiv papers should be imported into the workspace. The planner is read-only: it groups stored external mentions, citation mentions, and bibliography entries into `import_candidate` or `already_imported` arXiv candidates, and keeps non-actionable evidence in `blocked`.
+
+```text
+open_workspace(path="C:/Temp/papergraph-reading.sqlite3")
+workspace_plan_external_imports_for_result(result_id="local:example::pdf:theorem:1.1")
+workspace_create_reading_queue(result_id="local:example::pdf:theorem:1.1")
+workspace_plan_external_imports_for_queue(queue_id="queue:...")
+workspace_plan_external_imports_for_paper(paper_id="local:example")
+```
+
+The same planner can be used from a shell against an existing workspace:
+
+```powershell
+papergraph-mcp plan-external-imports-for-result --workspace C:/Temp/papergraph-reading.sqlite3 --result-id local:example::pdf:theorem:1.1
+papergraph-mcp plan-external-imports-for-result --workspace C:/Temp/papergraph-reading.sqlite3 --result-id local:example::pdf:theorem:1.1 --direct
+papergraph-mcp plan-external-imports-for-queue --workspace C:/Temp/papergraph-reading.sqlite3 --queue-id queue:...
+papergraph-mcp plan-external-imports-for-paper --workspace C:/Temp/papergraph-reading.sqlite3 --paper-id local:example
+```
+
+External import plans do not download papers, call live arXiv, resolve DOI-only references, or match external theorem numbers to local theorem statements. They only make the next import decision auditable.
 
 ## Three-paper local walkthrough
 

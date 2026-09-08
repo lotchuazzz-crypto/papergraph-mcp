@@ -1770,6 +1770,131 @@ class Workspace:
         }
 
     @_synchronized
+    def plan_external_imports_for_result(
+        self,
+        result_id: str,
+        recursive: bool = True,
+    ) -> dict:
+        """Plan external arXiv imports needed by one result's reading path."""
+
+        if not isinstance(recursive, bool):
+            raise ValueError("recursive must be a boolean")
+        result = self.get_result(result_id)
+        collector = _ExternalImportPlanCollector(self)
+        path = self.get_result_reading_path(result_id, recursive=recursive)
+
+        for mention in path["external_stops"]:
+            collector.add_external_mention(
+                mention["mention_id"],
+                "reading_path.external_stops",
+            )
+        for stop in path["unresolved_stops"]:
+            stop_result = self.get_result(stop["result_id"])
+            collector.add_blocked(
+                "missing_arxiv_id",
+                [
+                    {
+                        "kind": "unresolved_stop",
+                        "id": f"{stop['result_id']}:{stop['kind']}",
+                        "paper_id": stop_result["paper_id"],
+                        "result_id": stop["result_id"],
+                        "proof_id": None,
+                        "citation_key": None,
+                        "raw_text": stop["kind"],
+                        "source": "reading_path.unresolved_stops",
+                    }
+                ],
+            )
+
+        return collector.payload(
+            {
+                "kind": "result_id",
+                "value": result_id,
+                "paper_id": result["paper_id"],
+                "recursive": recursive,
+            }
+        )
+
+    @_synchronized
+    def plan_external_imports_for_queue(self, queue_id: str) -> dict:
+        """Plan external arXiv imports referenced by a saved reading queue."""
+
+        queue_payload = self._reading_queue_payload(queue_id)
+        collector = _ExternalImportPlanCollector(self)
+        for item in self._reading_queue_items(queue_id):
+            if item["target_kind"] == "external_stop":
+                collector.add_external_mention(
+                    item["target_id"],
+                    "reading_queue.external_stop",
+                )
+            elif item["target_kind"] == "unresolved_stop":
+                collector.add_blocked(
+                    "missing_arxiv_id",
+                    [
+                        {
+                            "kind": "unresolved_stop",
+                            "id": item["target_id"],
+                            "paper_id": queue_payload["paper_id"],
+                            "result_id": item["evidence"].get("result_id"),
+                            "proof_id": None,
+                            "citation_key": None,
+                            "raw_text": item["reason"],
+                            "source": "reading_queue.unresolved_stop",
+                        }
+                    ],
+                )
+
+        return collector.payload(
+            {
+                "kind": "queue_id",
+                "value": queue_id,
+                "paper_id": queue_payload["paper_id"],
+                "recursive": None,
+            }
+        )
+
+    @_synchronized
+    def plan_external_imports_for_paper(self, paper_id: str) -> dict:
+        """Plan external arXiv imports visible in one stored paper."""
+
+        normalized_paper_id = normalize_paper_id(paper_id)
+        self.get_paper(normalized_paper_id)
+        collector = _ExternalImportPlanCollector(self)
+
+        external_rows = self._connection.execute(
+            """
+            SELECT mention_id
+            FROM external_result_mentions
+            WHERE paper_id = ?
+            ORDER BY mention_id
+            """,
+            (normalized_paper_id,),
+        ).fetchall()
+        for row in external_rows:
+            collector.add_external_mention(row[0], "paper.external_result_mentions")
+
+        citation_rows = self._connection.execute(
+            """
+            SELECT mention_id
+            FROM citation_mentions
+            WHERE paper_id = ?
+            ORDER BY mention_id
+            """,
+            (normalized_paper_id,),
+        ).fetchall()
+        for row in citation_rows:
+            collector.add_citation_mention(row[0], "paper.citation_mentions")
+
+        return collector.payload(
+            {
+                "kind": "paper_id",
+                "value": normalized_paper_id,
+                "paper_id": normalized_paper_id,
+                "recursive": None,
+            }
+        )
+
+    @_synchronized
     def counts(self) -> dict[str, int]:
         """Return the total paper and theorem counts."""
 
@@ -3974,6 +4099,292 @@ def _reading_queue_item_from_row(row: tuple) -> dict:
         "evidence": json.loads(row[7]),
         "created_at": row[8],
     }
+
+
+class _ExternalImportPlanCollector:
+    def __init__(self, workspace: Workspace):
+        self._workspace = workspace
+        self._candidates: dict[str, dict] = {}
+        self._blocked: dict[str, dict] = {}
+
+    def add_external_mention(self, mention_id: str, source: str) -> None:
+        mention = self._external_mention(mention_id)
+        evidence = [
+            _external_import_evidence(
+                "external_result_mention",
+                mention["mention_id"],
+                mention["paper_id"],
+                self._result_id_for_proof(mention["proof_id"]),
+                mention["proof_id"],
+                None,
+                mention["raw_text"],
+                source,
+            )
+        ]
+        arxiv_id = None
+        arxiv_version = None
+        if mention["citation_mention_id"]:
+            citation = self._citation_mention(mention["citation_mention_id"])
+            evidence.append(
+                _external_import_evidence(
+                    "citation_mention",
+                    citation["mention_id"],
+                    citation["paper_id"],
+                    self._result_id_for_proof(citation["proof_id"]),
+                    citation["proof_id"],
+                    citation["raw_key"],
+                    citation["raw_text"],
+                    "result.citation_mention",
+                )
+            )
+            if citation["entry_id"]:
+                entry = self._bibliography_entry(citation["entry_id"])
+                evidence.append(_bibliography_entry_evidence(entry, "result.bibliography_entry"))
+                arxiv_id = entry["arxiv_id"]
+                arxiv_version = entry["arxiv_version"]
+        if mention["entry_id"] and not arxiv_id:
+            entry = self._bibliography_entry(mention["entry_id"])
+            evidence.append(_bibliography_entry_evidence(entry, "result.bibliography_entry"))
+            arxiv_id = entry["arxiv_id"]
+            arxiv_version = entry["arxiv_version"]
+
+        if arxiv_id:
+            self._add_candidate(arxiv_id, arxiv_version, evidence)
+        else:
+            self.add_blocked("missing_arxiv_id", evidence)
+
+    def add_citation_mention(self, mention_id: str, source: str) -> None:
+        citation = self._citation_mention(mention_id)
+        evidence = [
+            _external_import_evidence(
+                "citation_mention",
+                citation["mention_id"],
+                citation["paper_id"],
+                self._result_id_for_proof(citation["proof_id"]),
+                citation["proof_id"],
+                citation["raw_key"],
+                citation["raw_text"],
+                source,
+            )
+        ]
+        if not citation["entry_id"]:
+            self.add_blocked("missing_arxiv_id", evidence)
+            return
+
+        entry = self._bibliography_entry(citation["entry_id"])
+        evidence.append(_bibliography_entry_evidence(entry, "paper.bibliography_entry"))
+        if entry["arxiv_id"]:
+            self._add_candidate(entry["arxiv_id"], entry["arxiv_version"], evidence)
+        else:
+            self.add_blocked("missing_arxiv_id", evidence)
+
+    def add_blocked(self, reason: str, evidence: list[dict]) -> None:
+        stable = "|".join(f"{item['kind']}:{item['id']}" for item in evidence)
+        blocked_id = f"external-import:blocked:{slug_fragment(stable)}"
+        existing = self._blocked.setdefault(
+            blocked_id,
+            {
+                "blocked_id": blocked_id,
+                "reason": reason,
+                "evidence": [],
+            },
+        )
+        existing["evidence"] = _dedupe_external_import_evidence(
+            [*existing["evidence"], *evidence]
+        )
+
+    def payload(self, scope: dict) -> dict:
+        candidates = [self._candidate_payload(candidate) for candidate in self._candidates.values()]
+        candidates.sort(
+            key=lambda candidate: (
+                0 if candidate["status"] == "import_candidate" else 1,
+                candidate["source"]["arxiv_id"],
+                candidate["candidate_id"],
+            )
+        )
+        blocked = list(self._blocked.values())
+        blocked.sort(key=lambda item: (item["reason"], item["blocked_id"]))
+        for item in blocked:
+            item["evidence"] = _dedupe_external_import_evidence(item["evidence"])
+        return {
+            "plan_schema_version": 1,
+            "scope": scope,
+            "candidates": candidates,
+            "blocked": blocked,
+            "summary": {
+                "candidate_count": len(candidates),
+                "import_candidate_count": sum(
+                    1 for candidate in candidates if candidate["status"] == "import_candidate"
+                ),
+                "already_imported_count": sum(
+                    1 for candidate in candidates if candidate["status"] == "already_imported"
+                ),
+                "blocked_count": len(blocked),
+            },
+            "warnings": _dedupe_strings(
+                warning
+                for candidate in candidates
+                for warning in candidate.get("warnings", [])
+            ),
+        }
+
+    def _add_candidate(
+        self,
+        arxiv_id: str,
+        arxiv_version: str | None,
+        evidence: list[dict],
+    ) -> None:
+        candidate_id = f"external-import:arxiv:{arxiv_id}"
+        candidate = self._candidates.setdefault(
+            arxiv_id,
+            {
+                "candidate_id": candidate_id,
+                "arxiv_id": arxiv_id,
+                "versions": set(),
+                "evidence": [],
+            },
+        )
+        if arxiv_version:
+            candidate["versions"].add(arxiv_version)
+        candidate["evidence"] = _dedupe_external_import_evidence(
+            [*candidate["evidence"], *evidence]
+        )
+
+    def _candidate_payload(self, candidate: dict) -> dict:
+        arxiv_id = candidate["arxiv_id"]
+        versions = sorted(candidate["versions"])
+        status = (
+            "already_imported"
+            if self._workspace._paper_exists(f"arxiv:{arxiv_id}")
+            else "import_candidate"
+        )
+        warnings = ["conflicting_versions"] if len(versions) > 1 else []
+        evidence = _dedupe_external_import_evidence(candidate["evidence"])
+        return {
+            "candidate_id": candidate["candidate_id"],
+            "status": status,
+            "source": {
+                "type": "arxiv",
+                "arxiv_id": arxiv_id,
+                "arxiv_version": versions[-1] if versions else None,
+                "recommended_paper_id": f"arxiv:{arxiv_id}",
+            },
+            "evidence": evidence,
+            "counts": {
+                "external_mentions": sum(
+                    1 for item in evidence if item["kind"] == "external_result_mention"
+                ),
+                "citation_mentions": sum(
+                    1 for item in evidence if item["kind"] == "citation_mention"
+                ),
+                "bibliography_entries": sum(
+                    1 for item in evidence if item["kind"] == "bibliography_entry"
+                ),
+            },
+            "warnings": warnings,
+        }
+
+    def _external_mention(self, mention_id: str) -> dict:
+        row = self._workspace._connection.execute(
+            """
+            SELECT
+                mention_id, paper_id, proof_id, citation_mention_id,
+                raw_text, external_kind, external_number, entry_id,
+                target_paper_id, resolution_status, method, confidence
+            FROM external_result_mentions
+            WHERE mention_id = ?
+            """,
+            (mention_id,),
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"Unknown external result mention id: {mention_id}")
+        return _external_result_mention_from_row(row)
+
+    def _citation_mention(self, mention_id: str) -> dict:
+        row = self._workspace._connection.execute(
+            """
+            SELECT
+                mention_id, paper_id, proof_id, raw_text, raw_key, entry_id,
+                resolution_status, method, confidence
+            FROM citation_mentions
+            WHERE mention_id = ?
+            """,
+            (mention_id,),
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"Unknown citation mention id: {mention_id}")
+        return _citation_mention_from_row(row)
+
+    def _bibliography_entry(self, entry_id: str) -> dict:
+        row = self._workspace._connection.execute(
+            """
+            SELECT
+                entry_id, paper_id, raw_label, raw_text, entry_type, title,
+                authors_json, year, arxiv_id, arxiv_version, doi, url,
+                method, confidence
+            FROM bibliography_entries
+            WHERE entry_id = ?
+            """,
+            (entry_id,),
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"Unknown bibliography entry id: {entry_id}")
+        return _bibliography_entry_from_row(row)
+
+    def _result_id_for_proof(self, proof_id: str | None) -> str | None:
+        if proof_id is None:
+            return None
+        row = self._workspace._connection.execute(
+            "SELECT result_id FROM proofs WHERE proof_id = ?",
+            (proof_id,),
+        ).fetchone()
+        return row[0] if row else None
+
+
+def _external_import_evidence(
+    kind: str,
+    evidence_id: str,
+    paper_id: str,
+    result_id: str | None,
+    proof_id: str | None,
+    citation_key: str | None,
+    raw_text: str | None,
+    source: str,
+) -> dict:
+    return {
+        "kind": kind,
+        "id": evidence_id,
+        "paper_id": paper_id,
+        "result_id": result_id,
+        "proof_id": proof_id,
+        "citation_key": citation_key,
+        "raw_text": raw_text,
+        "source": source,
+    }
+
+
+def _bibliography_entry_evidence(entry: dict, source: str) -> dict:
+    return _external_import_evidence(
+        "bibliography_entry",
+        entry["entry_id"],
+        entry["paper_id"],
+        None,
+        None,
+        entry["raw_label"],
+        entry["raw_text"],
+        source,
+    )
+
+
+def _dedupe_external_import_evidence(items: list[dict]) -> list[dict]:
+    deduped = {
+        (item["kind"], item["id"], item["source"]): item
+        for item in items
+    }
+    return [
+        deduped[key]
+        for key in sorted(deduped, key=lambda value: (value[0], value[1], value[2]))
+    ]
 
 
 def _paper_from_row(row: tuple) -> dict:

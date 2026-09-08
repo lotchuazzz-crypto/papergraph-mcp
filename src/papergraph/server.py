@@ -616,6 +616,45 @@ def workspace_apply_reading_queue_to_session(
 
 
 @mcp.tool()
+@_serialized_workspace_tool
+def workspace_plan_external_imports_for_result(
+    result_id: str,
+    recursive: bool = True,
+) -> dict:
+    """Plan external arXiv imports for one result's reading path."""
+
+    try:
+        return require_workspace().plan_external_imports_for_result(
+            result_id,
+            recursive=recursive,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_plan_external_imports_for_queue(queue_id: str) -> dict:
+    """Plan external arXiv imports referenced by one reading queue."""
+
+    try:
+        return require_workspace().plan_external_imports_for_queue(queue_id)
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_plan_external_imports_for_paper(paper_id: str) -> dict:
+    """Plan external arXiv imports visible in one stored paper."""
+
+    try:
+        return require_workspace().plan_external_imports_for_paper(paper_id)
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
 def load_paper(path: str) -> dict:
     """Load a local LaTeX paper and build its theorem graph."""
 
@@ -1018,6 +1057,29 @@ def main(argv: Sequence[str] | None = None) -> None:
     apply_queue_parser.add_argument("--queue-id", required=True)
     apply_queue_parser.add_argument("--session-id", required=True)
     apply_queue_parser.add_argument("--status", default="queued")
+    result_import_plan_parser = subparsers.add_parser(
+        "plan-external-imports-for-result",
+        help="Plan external arXiv imports for one result.",
+    )
+    result_import_plan_parser.add_argument("--workspace", required=True)
+    result_import_plan_parser.add_argument("--result-id", required=True)
+    result_import_plan_parser.add_argument(
+        "--direct",
+        action="store_true",
+        help="Plan only direct dependencies instead of recursive traversal.",
+    )
+    queue_import_plan_parser = subparsers.add_parser(
+        "plan-external-imports-for-queue",
+        help="Plan external arXiv imports referenced by one reading queue.",
+    )
+    queue_import_plan_parser.add_argument("--workspace", required=True)
+    queue_import_plan_parser.add_argument("--queue-id", required=True)
+    paper_import_plan_parser = subparsers.add_parser(
+        "plan-external-imports-for-paper",
+        help="Plan external arXiv imports visible in one stored paper.",
+    )
+    paper_import_plan_parser.add_argument("--workspace", required=True)
+    paper_import_plan_parser.add_argument("--paper-id", required=True)
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -1195,6 +1257,34 @@ def main(argv: Sequence[str] | None = None) -> None:
                 args.queue_id,
                 args.session_id,
                 status=args.status,
+            ),
+        )
+        return
+    if args.command == "plan-external-imports-for-result":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.plan_external_imports_for_result(
+                args.result_id,
+                recursive=not args.direct,
+            ),
+        )
+        return
+    if args.command == "plan-external-imports-for-queue":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.plan_external_imports_for_queue(
+                args.queue_id,
+            ),
+        )
+        return
+    if args.command == "plan-external-imports-for-paper":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.plan_external_imports_for_paper(
+                args.paper_id,
             ),
         )
         return

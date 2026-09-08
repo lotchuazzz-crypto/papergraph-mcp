@@ -24,7 +24,7 @@ def test_project_metadata_is_discoverable_and_keeps_dependencies_separated():
     configuration = read_toml("pyproject.toml")
     project = configuration["project"]
 
-    assert project["version"] == "0.8.0"
+    assert project["version"] == "0.9.0"
     assert project["dependencies"] == [
         "httpx>=0.27,<1",
         "mcp[cli]>=2,<3",
@@ -70,7 +70,7 @@ def test_lockfile_contains_project_package():
     )
 
     assert package["name"] == "papergraph-mcp"
-    assert package["version"] == "0.8.0"
+    assert package["version"] == "0.9.0"
 
 
 def test_validate_arxiv_request_module_stdout_is_json_only():
@@ -102,8 +102,8 @@ def test_runtime_and_issue_template_release_strings_remain_pinned():
         if item.get("id") == "version"
     )
 
-    assert f'PaperGraph/0.8.0 (+{REPOSITORY_URL})' in arxiv_source
-    assert version_field["attributes"]["placeholder"] == "0.8.0"
+    assert f'PaperGraph/0.9.0 (+{REPOSITORY_URL})' in arxiv_source
+    assert version_field["attributes"]["placeholder"] == "0.9.0"
 
 
 def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
@@ -144,7 +144,7 @@ def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
         for token in ('"uv"', '"pip"', '"install"', '"--python"')
     )
     assert "papergraph-mcp --version" in build_steps
-    assert "papergraph-mcp 0.8.0" in build_steps
+    assert "papergraph-mcp 0.9.0" in build_steps
     assert 'version="$(.smoke-venv/bin/papergraph-mcp --version)"' in build_steps
 
 
@@ -252,7 +252,7 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     pinned_source = (
         "git+https://github.com/lotchuazzz-crypto/"
-        "papergraph-mcp.git@v0.8.0"
+        "papergraph-mcp.git@v0.9.0"
     )
 
     for badge in ("CI", "Python", "MIT", "Release"):
@@ -263,7 +263,7 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     )
     assert '"command": "uvx"' in readme
     assert pinned_source in readme
-    assert "PaperGraph v0.8.0" in readme
+    assert "PaperGraph v0.9.0" in readme
 
     for tool_name in (
         "load_paper",
@@ -307,6 +307,9 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
         "workspace_list_reading_queues",
         "workspace_get_reading_queue",
         "workspace_apply_reading_queue_to_session",
+        "workspace_plan_external_imports_for_result",
+        "workspace_plan_external_imports_for_queue",
+        "workspace_plan_external_imports_for_paper",
     ):
         assert f"`{tool_name}`" in readme
 
@@ -330,6 +333,9 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     assert "list-reading-queues" in readme
     assert "get-reading-queue" in readme
     assert "apply-reading-queue-to-session" in readme
+    assert "plan-external-imports-for-result" in readme
+    assert "plan-external-imports-for-queue" in readme
+    assert "plan-external-imports-for-paper" in readme
     assert "--workspace" in readme
     assert "`get_environment_diagnostics`" in readme
     assert "`validate_arxiv_request`" in readme
@@ -388,8 +394,8 @@ def test_onboarding_uses_v061_release_pin_and_mentions_id_url_conflicts():
         ROOT / ".agents/skills/setting-up-papergraph/references/usage-prompt.md"
     ).read_text(encoding="utf-8")
 
-    assert "papergraph-mcp.git@v0.8.0" in skill
-    assert "papergraph-mcp 0.8.0" in skill
+    assert "papergraph-mcp.git@v0.9.0" in skill
+    assert "papergraph-mcp 0.9.0" in skill
     assert "validate_arxiv_request" in skill
     assert "load_arxiv_request" in skill
     assert "If a user provides both an arXiv ID and an arXiv URL" in skill

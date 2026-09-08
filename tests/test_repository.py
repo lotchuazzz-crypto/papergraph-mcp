@@ -364,6 +364,21 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     assert "[MIT License](LICENSE)" in readme
 
 
+def test_readme_presents_researcher_focused_overview_before_reference():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "Read math papers with evidence, not guesses." in readme
+    assert "What PaperGraph Helps You Do" in readme
+    assert "Why Researchers Use It" in readme
+    assert "A Typical Reading Flow" in readme
+    assert "Complete Tool Reference" in readme
+    assert "<details>" in readme
+
+    overview = readme.index("What PaperGraph Helps You Do")
+    reference = readme.index("Complete Tool Reference")
+    assert overview < reference
+
+
 def test_readme_documents_v040_cross_paper_graph_history():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
 

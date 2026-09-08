@@ -267,7 +267,11 @@ def test_latex_project_evidence_associates_adjacent_proof_environment(
     assert proof.association_confidence == 0.8
     assert proof.method == "latex_proof_environment"
     assert proof.text == "The proof is direct."
-    assert document.spans[proof.span_indices[0]].source_type == "tex"
+    proof_span = document.spans[proof.span_indices[0]]
+    assert proof_span.source_type == "tex"
+    assert main.read_text(encoding="utf-8")[
+        proof_span.start_offset:proof_span.end_offset
+    ] == "The proof is direct."
 
 
 def test_latex_project_evidence_leaves_repeated_adjacent_proof_unresolved(

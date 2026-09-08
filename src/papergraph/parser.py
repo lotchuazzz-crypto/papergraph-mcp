@@ -1,6 +1,6 @@
 import re
-from pathlib import Path
 from dataclasses import dataclass
+from pathlib import Path
 
 from papergraph.evidence import (
     EvidenceDocument,
@@ -201,12 +201,15 @@ def parse_latex_proofs(text: str) -> list[LatexProofBlock]:
     proofs: list[LatexProofBlock] = []
     for match in PROOF_ENVIRONMENT_RE.finditer(text):
         body = match.group("body")
+        stripped_body = body.strip()
+        leading_whitespace = len(body) - len(body.lstrip())
+        trailing_whitespace = len(body) - len(body.rstrip())
         proofs.append(
             LatexProofBlock(
                 position=match.start(),
-                body_start=match.start("body"),
-                body_end=match.end("body"),
-                body=body.strip(),
+                body_start=match.start("body") + leading_whitespace,
+                body_end=match.end("body") - trailing_whitespace,
+                body=stripped_body,
             )
         )
     return proofs
@@ -272,10 +275,6 @@ def latex_project_to_evidence_document(
             )
         )
 
-    proof_block_indices = {
-        proof.position: index
-        for index, proof in enumerate(proof_blocks)
-    }
     result_by_position = {
         node.position: result
         for node, result in zip(nodes, results)

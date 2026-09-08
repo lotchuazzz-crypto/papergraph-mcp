@@ -294,11 +294,10 @@ def extract_local_result_mentions(
     """Extract proof-local references to results in the same paper."""
 
     lookup = _result_lookup(results)
-    label_lookup = {
-        result.label: result
-        for result in results
-        if result.label is not None
-    }
+    label_lookup: dict[str, list[ResultEvidence]] = {}
+    for result in results:
+        if result.label is not None:
+            label_lookup.setdefault(result.label, []).append(result)
     mentions: list[LocalResultMentionEvidence] = []
 
     for proof in proofs:
@@ -311,7 +310,14 @@ def extract_local_result_mentions(
                 if label.strip()
             ]
             for label in labels:
-                result = label_lookup.get(label)
+                matches = label_lookup.get(label, [])
+                result = matches[0] if len(matches) == 1 else None
+                if len(matches) == 1:
+                    resolution_status = "resolved_unique"
+                elif len(matches) > 1:
+                    resolution_status = "ambiguous"
+                else:
+                    resolution_status = "unresolved"
                 mentions.append(
                     LocalResultMentionEvidence(
                         mention_id=f"{paper_id}::local-mention:{len(mentions) + 1}",
@@ -321,9 +327,7 @@ def extract_local_result_mentions(
                         kind=result.normalized_kind if result is not None else "label",
                         visible_number=None,
                         target_result_id=result.result_id if result is not None else None,
-                        resolution_status="resolved_unique"
-                        if result is not None
-                        else "unresolved",
+                        resolution_status=resolution_status,
                         method="proof_latex_ref",
                         confidence=0.9,
                     )

@@ -1789,13 +1789,14 @@ class Workspace:
                 "reading_path.external_stops",
             )
         for stop in path["unresolved_stops"]:
+            stop_result = self.get_result(stop["result_id"])
             collector.add_blocked(
                 "missing_arxiv_id",
                 [
                     {
                         "kind": "unresolved_stop",
                         "id": f"{stop['result_id']}:{stop['kind']}",
-                        "paper_id": result["paper_id"],
+                        "paper_id": stop_result["paper_id"],
                         "result_id": stop["result_id"],
                         "proof_id": None,
                         "citation_key": None,

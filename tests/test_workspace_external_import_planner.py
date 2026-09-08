@@ -153,6 +153,44 @@ def test_paper_plan_includes_citation_evidence_without_queue(tmp_path: Path):
         workspace.close()
 
 
+def test_result_plan_preserves_unresolved_stop_paper_id(tmp_path: Path, monkeypatch):
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        result_id = import_import_plan_pdf(workspace, tmp_path)
+        original_get_result = workspace.get_result
+        external_result = {
+            "paper_id": "arxiv:dep",
+            "result_id": "arxiv:dep::tex:theorem:t",
+        }
+
+        def fake_get_result(requested_id: str):
+            if requested_id == external_result["result_id"]:
+                return external_result
+            return original_get_result(requested_id)
+
+        monkeypatch.setattr(workspace, "get_result", fake_get_result)
+        monkeypatch.setattr(
+            workspace,
+            "get_result_reading_path",
+            lambda _result_id, recursive=True: {
+                "external_stops": [],
+                "unresolved_stops": [
+                    {
+                        "result_id": external_result["result_id"],
+                        "kind": "unresolved_local_results",
+                        "mentions": [],
+                    }
+                ],
+            },
+        )
+
+        plan = workspace.plan_external_imports_for_result(result_id)
+
+        assert plan["blocked"][0]["evidence"][0]["paper_id"] == "arxiv:dep"
+    finally:
+        workspace.close()
+
+
 def test_plan_rejects_non_boolean_recursive(tmp_path: Path):
     workspace = Workspace.open(tmp_path / "workspace.sqlite3")
     try:

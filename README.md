@@ -5,7 +5,9 @@
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/lotchuazzz-crypto/papergraph-mcp)](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases)
 
-PaperGraph turns local or arXiv LaTeX papers and born-digital PDFs into evidence-first theorem, result, proof, reading-session, reading-queue, and external-import planning state that AI agents can query through MCP. PaperGraph v0.9.1 associates TeX proof environments to the immediately preceding result, so proof-local label references can feed reading paths instead of reporting `proof: not_found`.
+PaperGraph turns local or arXiv LaTeX papers and born-digital PDFs into evidence-first theorem, result, proof, reading-session, reading-queue, and external-import planning state that AI agents can query through MCP. PaperGraph v0.9.2 extracts conservative proof-roadmap phrases such as "It remains to prove Lemmas 1 and 2," so explicit local subresult plans can feed reading paths without semantic guesswork.
+
+PaperGraph v0.9.1 associated TeX proof environments to the immediately preceding result, so proof-local label references can feed reading paths instead of reporting `proof: not_found`.
 
 PaperGraph v0.9.0 added an External Import Planner so agents can turn external proof stops and citation evidence into a deterministic list of arXiv papers to import next.
 
@@ -29,7 +31,7 @@ Single-paper tools expose theorem-like environments, labels, and `\ref` relation
 
 - Load local single-file or multi-file LaTeX projects, or safely prepare arXiv source projects.
 - Import born-digital PDFs into the same local workspace and inspect extracted result and proof evidence.
-- Associate TeX proof environments with the immediately preceding result and expose proof-local references.
+- Associate TeX proof environments with the immediately preceding result, expose proof-local references, and extract conservative proof-roadmap phrases.
 - Export reading bridge bundles, result contexts, source slices, and reading paths for explanation-focused consumers.
 - Persist reading sessions, checkpoints, notes, open questions, and recovery summaries in the local workspace.
 - Plan deterministic reading queues from proof-dependency evidence and apply them to reading sessions.
@@ -67,11 +69,11 @@ the decision without loading, call `validate_arxiv_request` or
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the GitHub release without cloning the repository:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.9.1 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.9.2 papergraph-mcp --version
 papergraph-mcp doctor
 ```
 
-The pinned command becomes available after the `v0.9.1` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
+The pinned command becomes available after the `v0.9.2` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
 
 To validate a raw arXiv request before loading a paper, run:
 
@@ -88,7 +90,7 @@ For an MCP client that accepts JSON-style stdio server configuration, add:
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.9.1", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.9.2", "papergraph-mcp"]
     }
   }
 }

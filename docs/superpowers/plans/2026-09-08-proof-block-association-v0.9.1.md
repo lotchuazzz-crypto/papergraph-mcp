@@ -4,7 +4,7 @@
 
 **Goal:** Build conservative TeX proof environment extraction and adjacent result association for v0.9.1.
 
-**Architecture:** Extend `papergraph.parser` so LaTeX imports emit proof source spans and `ProofEvidence` records instead of an empty proof tuple. Reuse existing proof-local mention and citation extractors so downstream reading paths and external import planning begin working for TeX projects without schema changes.
+**Architecture:** Extend `papergraph.parser` so LaTeX imports emit proof source spans and `ProofEvidence` records instead of an empty proof tuple. Reuse and extend proof-local mention and citation extractors so downstream reading paths and external import planning begin working for TeX projects without schema changes.
 
 **Tech Stack:** Python 3.10+, existing LaTeX parser regex approach, existing evidence dataclasses, SQLite workspace import path, pytest.
 
@@ -22,6 +22,7 @@
 ## File Structure
 
 - Modify `src/papergraph/parser.py`: parse TeX proof environments, build proof spans, associate proofs to adjacent results, and reuse evidence extractors.
+- Modify `src/papergraph/evidence_extractors.py`: resolve proof-local LaTeX label refs to stored local result labels.
 - Modify `tests/test_project.py`: cover TeX proof extraction at evidence-document level.
 - Modify `tests/test_workspace_evidence.py`: cover workspace proof and dependency behavior for TeX imports.
 - Modify `tests/test_workspace_external_import_planner.py`: cover planner visibility after TeX proof extraction.
@@ -33,6 +34,7 @@
 
 **Files:**
 - Modify: `src/papergraph/parser.py`
+- Modify: `src/papergraph/evidence_extractors.py`
 - Test: `tests/test_project.py`
 
 **Interfaces:**
@@ -59,6 +61,7 @@ Assert:
 - the proof has `result_id == "local:paper::th:main"`
 - the proof has `association_basis == "immediately_follows_result"`
 - the proof uses `method == "latex_proof_environment"`
+- proof-local `\cref{lem:base}` produces a resolved local result mention
 - a second proof after the same theorem remains unresolved with `result_id is None`
 
 - [ ] **Step 2: Run parser tests to verify red**
@@ -80,6 +83,7 @@ In `src/papergraph/parser.py`:
 
 - import `ProofEvidence`
 - import `extract_local_result_mentions`, `extract_citation_mentions`, and `extract_external_result_mentions`
+- extend `extract_local_result_mentions` to parse `\ref`, `\eqref`, `\autoref`, `\cref`, and `\Cref` labels against `ResultEvidence.label`
 - add a `ParsedProofBlock` dataclass or tuple carrying `position`, `body`, and optional title
 - parse `\begin{proof}...\end{proof}` over `project.text`
 - sort result nodes and proof blocks by source offset when associating

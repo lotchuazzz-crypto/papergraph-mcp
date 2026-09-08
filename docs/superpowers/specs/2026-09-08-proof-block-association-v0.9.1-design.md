@@ -30,6 +30,7 @@ produce `proof: not_found` even though the source contains a proof environment. 
 - Associate an unlabeled proof with the nearest preceding unassociated result when no other theorem-like result appears between the result and proof.
 - Preserve the existing `immediately_follows_result` basis for this adjacent association.
 - Store proof spans as TeX source evidence with accurate source file and source offsets.
+- Resolve proof-local LaTeX label references such as `\cref{lem:a}` to stored local result labels.
 - Extract local result mentions, citation mentions, and external result mentions from the newly stored TeX proof evidence by reusing existing evidence extractor functions.
 - Update release pins from `0.9.0`/`v0.9.0` to `0.9.1`/`v0.9.1`.
 
@@ -70,7 +71,7 @@ For a TeX project with adjacent result and proof environments:
 }
 ```
 
-If the proof references another local result with `\ref`, `\cref`, `\Cref`, `\autoref`, or `\eqref`, the existing proof-dependency query should expose that mention when it names a stored result label.
+If the proof references another local result with `\ref`, `\cref`, `\Cref`, `\autoref`, or `\eqref`, the proof-dependency query exposes that mention when it names a stored result label.
 
 If the proof cites an external result with bracket notation already supported by PaperGraph, such as `[12, Theorem 3.5]`, the existing external import planner should see the resulting external mention after import.
 

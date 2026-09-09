@@ -379,6 +379,21 @@ def test_readme_presents_researcher_focused_overview_before_reference():
     assert overview < reference
 
 
+def test_readme_reading_flow_uses_compact_vertical_diagram():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    flow_section = readme[
+        readme.index("### A Typical Reading Flow") :
+        readme.index("### What PaperGraph Does Not Do")
+    ]
+
+    assert "flowchart TD" in flow_section
+    assert "flowchart LR" not in flow_section
+    assert "subgraph Review" in flow_section
+    assert "Review external import plan" in flow_section
+    assert "Resume reading session" in flow_section
+
+
 def test_readme_documents_v040_cross_paper_graph_history():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
 

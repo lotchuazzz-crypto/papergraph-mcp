@@ -79,13 +79,22 @@ For raw user requests, prefer `load_arxiv_request(input=...)` or `papergraph-mcp
 ### A Typical Reading Flow
 
 ```mermaid
-flowchart LR
-    Paper[Paper] --> Results[Extract results]
-    Results --> Evidence[Inspect proof evidence]
-    Evidence --> Path[Build reading path]
-    Path --> Queue[Create reading queue]
-    Queue --> Imports[Review external import plan]
-    Queue --> Session[Resume reading session]
+flowchart TD
+    Paper[Paper]
+    Results[Extract results]
+    Evidence[Inspect proof evidence]
+    Path[Build reading path]
+    Queue[Create reading queue]
+
+    Paper --> Results --> Evidence --> Path --> Queue
+
+    subgraph Review[Review and resume]
+        Imports[Review external import plan]
+        Session[Resume reading session]
+    end
+
+    Queue --> Imports
+    Queue --> Session
 ```
 
 1. Load a paper from arXiv, local LaTeX, or PDF.

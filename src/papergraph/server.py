@@ -1097,6 +1097,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     paper_import_plan_parser.add_argument("--workspace", required=True)
     paper_import_plan_parser.add_argument("--paper-id", required=True)
+    paper_map_parser = subparsers.add_parser(
+        "get-paper-map",
+        help="Return an evidence-first first-load map for one stored paper.",
+    )
+    paper_map_parser.add_argument("--workspace", required=True)
+    paper_map_parser.add_argument("--paper-id", required=True)
+    paper_map_parser.add_argument("--max-candidates", type=int, default=5)
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -1302,6 +1309,16 @@ def main(argv: Sequence[str] | None = None) -> None:
             args.workspace,
             lambda workspace: workspace.plan_external_imports_for_paper(
                 args.paper_id,
+            ),
+        )
+        return
+    if args.command == "get-paper-map":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.get_paper_map(
+                args.paper_id,
+                max_candidates=args.max_candidates,
             ),
         )
         return

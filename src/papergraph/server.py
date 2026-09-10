@@ -655,6 +655,23 @@ def workspace_plan_external_imports_for_paper(paper_id: str) -> dict:
 
 
 @mcp.tool()
+@_serialized_workspace_tool
+def workspace_get_paper_map(
+    paper_id: str,
+    max_candidates: int = 5,
+) -> dict:
+    """Return an evidence-first first-load map for one stored paper."""
+
+    try:
+        return require_workspace().get_paper_map(
+            paper_id,
+            max_candidates=max_candidates,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
 def load_paper(path: str) -> dict:
     """Load a local LaTeX paper and build its theorem graph."""
 
@@ -1080,6 +1097,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     paper_import_plan_parser.add_argument("--workspace", required=True)
     paper_import_plan_parser.add_argument("--paper-id", required=True)
+    paper_map_parser = subparsers.add_parser(
+        "get-paper-map",
+        help="Return an evidence-first first-load map for one stored paper.",
+    )
+    paper_map_parser.add_argument("--workspace", required=True)
+    paper_map_parser.add_argument("--paper-id", required=True)
+    paper_map_parser.add_argument("--max-candidates", type=int, default=5)
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -1285,6 +1309,16 @@ def main(argv: Sequence[str] | None = None) -> None:
             args.workspace,
             lambda workspace: workspace.plan_external_imports_for_paper(
                 args.paper_id,
+            ),
+        )
+        return
+    if args.command == "get-paper-map":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.get_paper_map(
+                args.paper_id,
+                max_candidates=args.max_candidates,
             ),
         )
         return

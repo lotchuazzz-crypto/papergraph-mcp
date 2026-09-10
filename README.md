@@ -9,7 +9,7 @@
 
 **Read math papers with evidence, not guesses.**
 
-PaperGraph helps AI agents turn arXiv papers, local LaTeX projects, and born-digital PDFs into a theorem-centered reading workspace. It extracts results, proof evidence, citation stops, source slices, reading queues, reading sessions, and reviewable import plans so a researcher can inspect where every claim came from.
+PaperGraph helps AI agents turn arXiv papers, local LaTeX projects, and born-digital PDFs into a theorem-centered reading workspace. It extracts Paper Maps, results, proof evidence, citation stops, source slices, reading queues, reading sessions, and reviewable import plans so a researcher can inspect where every claim came from.
 
 [English](#english) | [中文](#中文)
 
@@ -21,11 +21,11 @@ PaperGraph helps AI agents turn arXiv papers, local LaTeX projects, and born-dig
 
 ### What PaperGraph Helps You Do
 
-| Extract the paper's structure | Trace proof evidence | Plan the next reading step |
+| Start with a Paper Map | Trace proof evidence | Plan the next reading step |
 | --- | --- | --- |
-| Find theorem-like results such as theorems, lemmas, propositions, definitions, and PDF-detected result blocks. | Inspect proof-local references, cited stops, source slices, and dependency diagnostics with explicit evidence. | Build reading queues, resume reading sessions, and review external arXiv import candidates before downloading anything. |
+| Identify main-result candidates, result structure, proof-path evidence, and external reading risks before choosing where to read. | Inspect proof-local references, cited stops, source slices, and dependency diagnostics with explicit evidence. | Build reading queues, resume reading sessions, and review external arXiv import candidates before downloading anything. |
 
-PaperGraph v0.9.3 adds review summaries to external import candidates. Before anything is downloaded, an agent can show which local result, proof, citation key, and cited result text justify importing a paper.
+PaperGraph v0.10.0 adds Paper Map, an evidence-first first-load overview for a paper. It highlights likely main-result candidates, local structure, proof-path evidence, and external reading risks without verifying proofs or guessing hidden dependencies.
 
 ### Why Researchers Use It
 
@@ -43,11 +43,11 @@ PaperGraph does not verify proofs, perform semantic theorem matching, or claim t
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the pinned GitHub release without cloning:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.9.3 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.10.0 papergraph-mcp --version
 papergraph-mcp doctor
 ```
 
-The pinned command becomes available after the `v0.9.3` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
+The pinned command becomes available after the `v0.10.0` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
 
 Add PaperGraph to an MCP client that accepts JSON-style stdio configuration:
 
@@ -56,7 +56,7 @@ Add PaperGraph to an MCP client that accepts JSON-style stdio configuration:
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.9.3", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.10.0", "papergraph-mcp"]
     }
   }
 }
@@ -117,11 +117,11 @@ flowchart TD
 
 ### PaperGraph 能帮你做什么
 
-| 抽取论文结构 | 追踪证明证据 | 规划下一步阅读 |
+| 先看 Paper Map | 追踪证明证据 | 规划下一步阅读 |
 | --- | --- | --- |
-| 找出 theorem、lemma、proposition、definition 等 theorem-like results，也支持 born-digital PDF 中的结果块。 | 查看 proof-local references、citation stops、source slices 和 dependency diagnostics，并保留证据来源。 | 生成 reading queues、恢复 reading sessions，并在下载外部论文前生成可审阅的导入计划。 |
+| 在选择阅读目标前，先看到 main-result candidates、结果结构、proof-path evidence 和 external reading risks。 | 查看 proof-local references、citation stops、source slices 和 dependency diagnostics，并保留证据来源。 | 生成 reading queues、恢复 reading sessions，并在下载外部论文前生成可审阅的导入计划。 |
 
-v0.9.3 的重点是 external import review summaries：在下载外部论文之前，agent 可以先说明是哪一个本地结果、哪段 proof、哪个 citation key、哪段 cited result text 支持这次导入建议。
+v0.10.0 的重点是 Paper Map：加载论文后先生成 evidence-first 的首屏概览，帮助你看到可能的主结果、论文结构、证明路径证据和外部阅读风险，同时不验证证明、不猜隐藏依赖。
 
 ### 为什么适合数学论文阅读
 
@@ -139,7 +139,7 @@ PaperGraph does not verify proofs，也不做 semantic theorem matching；它不
 先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，然后验证固定版本：
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.9.3 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.10.0 papergraph-mcp --version
 papergraph-mcp doctor
 ```
 
@@ -150,7 +150,7 @@ papergraph-mcp doctor
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.9.3", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.10.0", "papergraph-mcp"]
     }
   }
 }
@@ -189,6 +189,7 @@ papergraph-mcp doctor
 | Workflow | Main tools |
 | --- | --- |
 | Load papers | `open_workspace`, `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_add_pdf_paper`, `workspace_list_papers`, `workspace_get_paper` |
+| Map a paper | `workspace_get_paper_map` |
 | Inspect results | `workspace_list_results`, `workspace_get_result`, `workspace_get_result_proof`, `workspace_get_proof_dependencies`, `workspace_get_external_result_mentions`, `workspace_get_evidence`, `workspace_get_citations`, `workspace_search_theorems` |
 | Read a proof | `workspace_export_reading_bundle`, `workspace_export_result_reading_context`, `workspace_get_source_slice`, `workspace_get_result_reading_path` |
 | Resume reading | `workspace_create_reading_session`, `workspace_list_reading_sessions`, `workspace_get_reading_session`, `workspace_record_reading_checkpoint`, `workspace_add_reading_note`, `workspace_export_reading_session_summary` |
@@ -197,7 +198,7 @@ papergraph-mcp doctor
 
 Original single-paper tools: `get_environment_diagnostics`, `validate_arxiv_request`, `load_arxiv_request`, `validate_arxiv_input`, `load_paper`, `load_arxiv_paper`, `list_theorems`, `get_theorem`, `get_dependencies`, `get_dependency_diagnostics`, and `where_used`.
 
-Complete workspace tool index: `open_workspace`, `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, `workspace_get_dependency_diagnostics`, `workspace_get_citations`, `workspace_add_pdf_paper`, `workspace_list_results`, `workspace_get_result`, `workspace_get_result_proof`, `workspace_get_proof_dependencies`, `workspace_get_external_result_mentions`, `workspace_get_evidence`, `workspace_export_reading_bundle`, `workspace_export_result_reading_context`, `workspace_get_source_slice`, `workspace_get_result_reading_path`, `workspace_create_reading_session`, `workspace_list_reading_sessions`, `workspace_get_reading_session`, `workspace_record_reading_checkpoint`, `workspace_add_reading_note`, `workspace_export_reading_session_summary`, `workspace_create_reading_queue`, `workspace_list_reading_queues`, `workspace_get_reading_queue`, `workspace_apply_reading_queue_to_session`, `workspace_plan_external_imports_for_result`, `workspace_plan_external_imports_for_queue`, `workspace_plan_external_imports_for_paper`.
+Complete workspace tool index: `open_workspace`, `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, `workspace_get_dependency_diagnostics`, `workspace_get_citations`, `workspace_add_pdf_paper`, `workspace_get_paper_map`, `workspace_list_results`, `workspace_get_result`, `workspace_get_result_proof`, `workspace_get_proof_dependencies`, `workspace_get_external_result_mentions`, `workspace_get_evidence`, `workspace_export_reading_bundle`, `workspace_export_result_reading_context`, `workspace_get_source_slice`, `workspace_get_result_reading_path`, `workspace_create_reading_session`, `workspace_list_reading_sessions`, `workspace_get_reading_session`, `workspace_record_reading_checkpoint`, `workspace_add_reading_note`, `workspace_export_reading_session_summary`, `workspace_create_reading_queue`, `workspace_list_reading_queues`, `workspace_get_reading_queue`, `workspace_apply_reading_queue_to_session`, `workspace_plan_external_imports_for_result`, `workspace_plan_external_imports_for_queue`, `workspace_plan_external_imports_for_paper`.
 
 </details>
 
@@ -208,6 +209,7 @@ Most workspace operations are available from the CLI with `--workspace`:
 
 ```powershell
 papergraph-mcp validate-arxiv-request "[math/0307200](https://arxiv.org/abs/2609.01574)"
+papergraph-mcp --workspace .\papergraph.sqlite3 get-paper-map local:paper-a
 papergraph-mcp --workspace .\papergraph.sqlite3 export-reading-bundle local:paper-a
 papergraph-mcp --workspace .\papergraph.sqlite3 export-result-reading-context local:paper-a::thm:main
 papergraph-mcp --workspace .\papergraph.sqlite3 get-source-slice --result-id local:paper-a::thm:main
@@ -270,6 +272,7 @@ PDF extraction is best for born-digital PDFs; scanned PDFs or OCR-heavy files ma
 <details>
 <summary><strong>Release Highlights</strong></summary>
 
+- v0.10.0 added Paper Map, an evidence-first first-load overview with main-result candidates, structure, reading route, and external-risk evidence.
 - v0.9.3 added external import review summaries.
 - v0.9.2 improved cited-result mention extraction.
 - v0.9.1 added proof-adjacent dependency evidence.

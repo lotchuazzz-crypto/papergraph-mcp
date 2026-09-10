@@ -32,6 +32,7 @@ from papergraph.models import (
     WorkspaceImportResult,
 )
 from papergraph.parser import latex_project_to_evidence_document, parse_project
+from papergraph.paper_map import build_paper_map
 from papergraph.pdf import load_pdf_evidence_spans
 from papergraph.project import LoadedProject
 from papergraph.reading import (
@@ -1893,6 +1894,16 @@ class Workspace:
                 "paper_id": normalized_paper_id,
                 "recursive": None,
             }
+        )
+
+    @_synchronized
+    def get_paper_map(self, paper_id: str, max_candidates: int = 5) -> dict:
+        """Return an evidence-first first-load map for one stored paper."""
+
+        return build_paper_map(
+            self,
+            paper_id,
+            max_candidates=max_candidates,
         )
 
     @_synchronized

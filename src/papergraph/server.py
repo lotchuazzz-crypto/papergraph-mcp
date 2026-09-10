@@ -655,6 +655,23 @@ def workspace_plan_external_imports_for_paper(paper_id: str) -> dict:
 
 
 @mcp.tool()
+@_serialized_workspace_tool
+def workspace_get_paper_map(
+    paper_id: str,
+    max_candidates: int = 5,
+) -> dict:
+    """Return an evidence-first first-load map for one stored paper."""
+
+    try:
+        return require_workspace().get_paper_map(
+            paper_id,
+            max_candidates=max_candidates,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
 def load_paper(path: str) -> dict:
     """Load a local LaTeX paper and build its theorem graph."""
 

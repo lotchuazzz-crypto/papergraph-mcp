@@ -672,6 +672,23 @@ def workspace_get_paper_map(
 
 
 @mcp.tool()
+@_serialized_workspace_tool
+def workspace_export_paper_reading_report(
+    paper_id: str,
+    max_candidates: int = 5,
+) -> dict:
+    """Export a deterministic Markdown reading report for one stored paper."""
+
+    try:
+        return require_workspace().export_paper_reading_report(
+            paper_id,
+            max_candidates=max_candidates,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
 def load_paper(path: str) -> dict:
     """Load a local LaTeX paper and build its theorem graph."""
 

@@ -672,6 +672,23 @@ def workspace_get_paper_map(
 
 
 @mcp.tool()
+@_serialized_workspace_tool
+def workspace_export_paper_reading_report(
+    paper_id: str,
+    max_candidates: int = 5,
+) -> dict:
+    """Export a deterministic Markdown reading report for one stored paper."""
+
+    try:
+        return require_workspace().export_paper_reading_report(
+            paper_id,
+            max_candidates=max_candidates,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
 def load_paper(path: str) -> dict:
     """Load a local LaTeX paper and build its theorem graph."""
 
@@ -918,6 +935,58 @@ def _run_workspace_cli_command(command: str, workspace_path: str, callback) -> N
             workspace.close()
 
 
+def _run_reading_report_cli_command(
+    command: str,
+    workspace_path: str,
+    paper_id: str,
+    max_candidates: int,
+    output: str | None,
+) -> None:
+    workspace = None
+    try:
+        workspace = Workspace.open(workspace_path)
+        report = workspace.export_paper_reading_report(
+            paper_id,
+            max_candidates=max_candidates,
+        )
+        markdown = report["markdown"]
+        if output is None:
+            print(markdown, end="")
+            return
+
+        output_path = Path(output)
+        parent = output_path.parent
+        if parent != Path("") and not parent.exists():
+            raise ValueError(f"Parent directory does not exist: {parent}")
+        if output_path.exists() and output_path.is_dir():
+            raise ValueError(f"Output path is a directory: {output_path}")
+        output_path.write_text(markdown, encoding="utf-8")
+        _print_json(
+            {
+                "status": "written",
+                "command": command,
+                "paper_id": report["paper_id"],
+                "format": report["format"],
+                "output": str(output_path),
+                "bytes": len(output_path.read_bytes()),
+                "report_schema_version": report["report_schema_version"],
+            }
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        _print_json(
+            {
+                "status": "error",
+                "action": "inspect_error",
+                "command": command,
+                "message": str(exc),
+            }
+        )
+        raise SystemExit(1) from exc
+    finally:
+        if workspace is not None:
+            workspace.close()
+
+
 def _parse_json_argument(raw_json: str) -> dict:
     try:
         payload = json.loads(raw_json)
@@ -1104,6 +1173,14 @@ def main(argv: Sequence[str] | None = None) -> None:
     paper_map_parser.add_argument("--workspace", required=True)
     paper_map_parser.add_argument("--paper-id", required=True)
     paper_map_parser.add_argument("--max-candidates", type=int, default=5)
+    reading_report_parser = subparsers.add_parser(
+        "export-paper-reading-report",
+        help="Export a deterministic Markdown reading report for one stored paper.",
+    )
+    reading_report_parser.add_argument("--workspace", required=True)
+    reading_report_parser.add_argument("--paper-id", required=True)
+    reading_report_parser.add_argument("--max-candidates", type=int, default=5)
+    reading_report_parser.add_argument("--output")
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -1320,6 +1397,15 @@ def main(argv: Sequence[str] | None = None) -> None:
                 args.paper_id,
                 max_candidates=args.max_candidates,
             ),
+        )
+        return
+    if args.command == "export-paper-reading-report":
+        _run_reading_report_cli_command(
+            args.command,
+            args.workspace,
+            args.paper_id,
+            args.max_candidates,
+            args.output,
         )
         return
     mcp.run()

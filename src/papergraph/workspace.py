@@ -35,6 +35,7 @@ from papergraph.parser import latex_project_to_evidence_document, parse_project
 from papergraph.paper_map import build_paper_map
 from papergraph.pdf import load_pdf_evidence_spans
 from papergraph.project import LoadedProject
+from papergraph.reading_report import build_paper_reading_report
 from papergraph.reading import (
     base_bridge_payload,
     interpretation_policy,
@@ -1901,6 +1902,20 @@ class Workspace:
         """Return an evidence-first first-load map for one stored paper."""
 
         return build_paper_map(
+            self,
+            paper_id,
+            max_candidates=max_candidates,
+        )
+
+    @_synchronized
+    def export_paper_reading_report(
+        self,
+        paper_id: str,
+        max_candidates: int = 5,
+    ) -> dict:
+        """Export a deterministic Markdown reading report for one stored paper."""
+
+        return build_paper_reading_report(
             self,
             paper_id,
             max_candidates=max_candidates,

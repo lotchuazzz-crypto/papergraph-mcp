@@ -21,9 +21,9 @@ PaperGraph helps AI agents turn arXiv papers, local LaTeX projects, and born-dig
 
 ### What PaperGraph Helps You Do
 
-| Start with a Paper Map | Trace proof evidence | Plan the next reading step |
-| --- | --- | --- |
-| Identify main-result candidates, result structure, proof-path evidence, and external reading risks before choosing where to read. | Inspect proof-local references, cited stops, source slices, and dependency diagnostics with explicit evidence. | Build reading queues, resume reading sessions, and review external arXiv import candidates before downloading anything. |
+| Start with a Paper Map | Trace proof evidence | Save reading artifacts | Plan across papers |
+| --- | --- | --- | --- |
+| Identify main-result candidates, result structure, proof-path evidence, and external reading risks before choosing where to read. | Inspect proof-local references, cited stops, source slices, and dependency diagnostics with explicit evidence. | Export deterministic Markdown reports that can live in Git, notes, or handoff sessions. | Given a small explicit paper set, export a cross-paper reading plan with selected-paper citation evidence and remaining risks. |
 
 PaperGraph v0.12.0 adds Cross-Paper Reading Plan: a deterministic Markdown plan for an explicit set of related papers, with a recommended reading sequence, selected-paper citation evidence, external risks, and evidence boundaries outside the MCP window.
 
@@ -33,7 +33,7 @@ PaperGraph v0.12.0 adds Cross-Paper Reading Plan: a deterministic Markdown plan 
 | --- | --- |
 | "Do not invent dependencies." | PaperGraph reports evidence-backed links and explains empty results as extraction limits, not mathematical facts. |
 | "Show me the exact source." | Results, proofs, dependencies, and citations carry source spans that can be sliced back out of the original paper. |
-| "Let me review external papers first." | External references become import plans. The agent should ask before importing the next cited paper. |
+| "Let me review external papers first." | External references become import plans. Cross-paper plans separate selected-paper citation evidence from unresolved outside risks. |
 | "Keep my reading state." | Workspaces store queues, sessions, checkpoints, notes, blocked targets, and open questions locally. |
 
 PaperGraph does not verify proofs, perform semantic theorem matching, or claim that similarly worded results are equivalent.
@@ -92,8 +92,9 @@ flowchart LR
 2. List theorem-like results and choose a target theorem.
 3. Inspect the theorem statement, proof evidence, source slice, and dependency diagnostics.
 4. Generate a reading queue from local proof evidence.
-5. Review external import candidates instead of letting the agent download cited papers automatically.
-6. Save checkpoints and notes so the next reading session starts from known state.
+5. Export a single-paper Reading Report when you want a durable Markdown handoff.
+6. For a few related papers, export a Cross-Paper Reading Plan to see selected-paper citation evidence and remaining risks.
+7. Save checkpoints and notes so the next reading session starts from known state.
 
 ### What PaperGraph Does Not Do
 
@@ -108,9 +109,9 @@ flowchart LR
 
 ### PaperGraph 能帮你做什么
 
-| 先看 Paper Map | 追踪证明证据 | 规划下一步阅读 |
-| --- | --- | --- |
-| 在选择阅读目标前，先看到 main-result candidates、结果结构、proof-path evidence 和 external reading risks。 | 查看 proof-local references、citation stops、source slices 和 dependency diagnostics，并保留证据来源。 | 生成 reading queues、恢复 reading sessions，并在下载外部论文前生成可审阅的导入计划。 |
+| 先看 Paper Map | 追踪证明证据 | 保存阅读产物 | 跨论文规划 |
+| --- | --- | --- | --- |
+| 在选择阅读目标前，先看到 main-result candidates、结果结构、proof-path evidence 和 external reading risks。 | 查看 proof-local references、citation stops、source slices 和 dependency diagnostics，并保留证据来源。 | 导出确定性的 Markdown report，方便放进 Git、笔记或交接会话。 | 对一组显式给定的小规模相关论文，导出跨论文阅读计划、选中论文之间的 citation evidence 和剩余风险。 |
 
 v0.12.0 的重点是 Cross-Paper Reading Plan：对一组显式给定的相关论文导出确定性的 Markdown 阅读计划，包含推荐阅读顺序、选中论文之间的 citation evidence、外部阅读风险和证据边界，不再局限于单篇论文输出。
 
@@ -120,7 +121,7 @@ v0.12.0 的重点是 Cross-Paper Reading Plan：对一组显式给定的相关�
 | --- | --- |
 | 不要猜依赖。 | 只报告有证据的链接；空依赖结果解释为抽取限制，而不是数学事实。 |
 | 我要看到原文位置。 | result、proof、dependency、citation 都尽量保留 source span，可回到原文片段。 |
-| 外部论文先让我审。 | 外部引用先变成 import plan，agent 不应自动下载。 |
+| 外部论文先让我审。 | 外部引用先变成 import plan；跨论文计划会区分选中论文之间的 citation evidence 和仍在外部的 unresolved risks。 |
 | 阅读项目要能继续。 | workspace 在本地保存 queue、session、checkpoint、note、blocked target 和 open question。 |
 
 PaperGraph does not verify proofs，也不做 semantic theorem matching；它不会声称两个措辞相似的结果数学上等价。
@@ -167,8 +168,9 @@ papergraph-mcp doctor
 2. 列出 theorem-like results，选择目标定理。
 3. 查看 theorem statement、proof evidence、source slice 和 dependency diagnostics。
 4. 根据本地 proof evidence 生成 reading queue。
-5. 先审阅 external import candidates，再决定是否导入外部论文。
-6. 保存 checkpoints 和 notes，下次继续读时不必从头开始。
+5. 需要持久交接时，导出单篇 Reading Report。
+6. 面对几篇相关论文时，导出 Cross-Paper Reading Plan，查看选中论文之间的 citation evidence 和剩余风险。
+7. 保存 checkpoints 和 notes，下次继续读时不必从头开始。
 
 ## Reference
 

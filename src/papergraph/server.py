@@ -689,6 +689,25 @@ def workspace_export_paper_reading_report(
 
 
 @mcp.tool()
+@_serialized_workspace_tool
+def workspace_export_cross_paper_reading_plan(
+    paper_ids: list[str],
+    focus: str | None = None,
+    max_candidates_per_paper: int = 3,
+) -> dict:
+    """Export a deterministic Markdown reading plan for selected papers."""
+
+    try:
+        return require_workspace().export_cross_paper_reading_plan(
+            paper_ids,
+            focus=focus,
+            max_candidates_per_paper=max_candidates_per_paper,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
 def load_paper(path: str) -> dict:
     """Load a local LaTeX paper and build its theorem graph."""
 

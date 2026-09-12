@@ -68,9 +68,11 @@ Restart the MCP client after changing its configuration. The server uses stdio, 
 
 Give a coding agent this request:
 
-> Clone https://github.com/lotchuazzz-crypto/papergraph-mcp and help me set up PaperGraph for my MCP client. Read the repository's onboarding instructions after cloning.
+> I use an MCP-capable agent/client. Clone https://github.com/lotchuazzz-crypto/papergraph-mcp and help me configure PaperGraph for it. After cloning, read .agents/skills/setting-up-papergraph/SKILL.md and follow it.
 
 Compatible agents can follow the repository-local [`setting-up-papergraph`](.agents/skills/setting-up-papergraph/SKILL.md) skill. The agent should show you a reusable PaperGraph prompt, explain why `uv` is needed, and ask before installing software, changing client configuration, or restarting the client.
+
+If you do not use an MCP-capable client yet, PaperGraph can still be run from the CLI with `papergraph-mcp doctor` and the workspace commands below.
 
 If your agent clones into a directory that already exists, ask it to run `git fetch --tags origin` before treating the checkout as current. Existing clones can otherwise remain pinned to an old local `origin/main`.
 
@@ -154,9 +156,11 @@ papergraph-mcp doctor
 
 你可以把这段话发给 coding agent：
 
-> Clone https://github.com/lotchuazzz-crypto/papergraph-mcp and help me set up PaperGraph for my MCP client. Read the repository's onboarding instructions after cloning.
+> 我使用的是支持 MCP 的 agent/client。请克隆 https://github.com/lotchuazzz-crypto/papergraph-mcp，并帮我把 PaperGraph 配置进去。克隆后请先阅读 .agents/skills/setting-up-papergraph/SKILL.md 并按它执行。
 
 支持本仓库 skill 的 agent 会读取 [`setting-up-papergraph`](.agents/skills/setting-up-papergraph/SKILL.md)，展示可复用提示词，解释为什么需要 `uv`，并在安装软件、修改客户端配置或重启客户端前询问你。
+
+如果你暂时没有支持 MCP 的 client，也可以先用 CLI：运行 `papergraph-mcp doctor` 和下方 workspace 命令。
 
 如果目标目录已经存在，请让 agent 先运行 `git fetch --tags origin`，再判断仓库是否是最新。否则已有 clone 可能仍停留在旧的本地 `origin/main`。
 

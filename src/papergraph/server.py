@@ -1006,6 +1006,60 @@ def _run_reading_report_cli_command(
             workspace.close()
 
 
+def _run_cross_paper_reading_plan_cli_command(
+    command: str,
+    workspace_path: str,
+    paper_ids: list[str],
+    focus: str | None,
+    max_candidates_per_paper: int,
+    output: str | None,
+) -> None:
+    workspace = None
+    try:
+        workspace = Workspace.open(workspace_path)
+        plan = workspace.export_cross_paper_reading_plan(
+            paper_ids,
+            focus=focus,
+            max_candidates_per_paper=max_candidates_per_paper,
+        )
+        markdown = plan["markdown"]
+        if output is None:
+            print(markdown, end="")
+            return
+
+        output_path = Path(output)
+        parent = output_path.parent
+        if parent != Path("") and not parent.exists():
+            raise ValueError(f"Parent directory does not exist: {parent}")
+        if output_path.exists() and output_path.is_dir():
+            raise ValueError(f"Output path is a directory: {output_path}")
+        output_path.write_text(markdown, encoding="utf-8")
+        _print_json(
+            {
+                "status": "written",
+                "command": command,
+                "paper_ids": plan["paper_ids"],
+                "format": plan["format"],
+                "output": str(output_path),
+                "bytes": len(output_path.read_bytes()),
+                "plan_schema_version": plan["plan_schema_version"],
+            }
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        _print_json(
+            {
+                "status": "error",
+                "action": "inspect_error",
+                "command": command,
+                "message": str(exc),
+            }
+        )
+        raise SystemExit(1) from exc
+    finally:
+        if workspace is not None:
+            workspace.close()
+
+
 def _parse_json_argument(raw_json: str) -> dict:
     try:
         payload = json.loads(raw_json)
@@ -1200,6 +1254,23 @@ def main(argv: Sequence[str] | None = None) -> None:
     reading_report_parser.add_argument("--paper-id", required=True)
     reading_report_parser.add_argument("--max-candidates", type=int, default=5)
     reading_report_parser.add_argument("--output")
+    cross_paper_plan_parser = subparsers.add_parser(
+        "export-cross-paper-reading-plan",
+        help="Export a deterministic Markdown reading plan for selected papers.",
+    )
+    cross_paper_plan_parser.add_argument("--workspace", required=True)
+    cross_paper_plan_parser.add_argument(
+        "--paper-id",
+        action="append",
+        required=True,
+    )
+    cross_paper_plan_parser.add_argument("--focus")
+    cross_paper_plan_parser.add_argument(
+        "--max-candidates-per-paper",
+        type=int,
+        default=3,
+    )
+    cross_paper_plan_parser.add_argument("--output")
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -1424,6 +1495,16 @@ def main(argv: Sequence[str] | None = None) -> None:
             args.workspace,
             args.paper_id,
             args.max_candidates,
+            args.output,
+        )
+        return
+    if args.command == "export-cross-paper-reading-plan":
+        _run_cross_paper_reading_plan_cli_command(
+            args.command,
+            args.workspace,
+            args.paper_id,
+            args.focus,
+            args.max_candidates_per_paper,
             args.output,
         )
         return

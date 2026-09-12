@@ -12,6 +12,7 @@ from pathlib import Path
 from threading import RLock
 
 from papergraph.citations import build_citation_records
+from papergraph.cross_paper_reading_plan import build_cross_paper_reading_plan
 from papergraph.evidence import (
     EVIDENCE_EMPTY_DEPENDENCY_WARNING,
     bounded_excerpt,
@@ -1919,6 +1920,22 @@ class Workspace:
             self,
             paper_id,
             max_candidates=max_candidates,
+        )
+
+    @_synchronized
+    def export_cross_paper_reading_plan(
+        self,
+        paper_ids: list[str],
+        focus: str | None = None,
+        max_candidates_per_paper: int = 3,
+    ) -> dict:
+        """Export a deterministic Markdown reading plan for selected papers."""
+
+        return build_cross_paper_reading_plan(
+            self,
+            paper_ids,
+            focus=focus,
+            max_candidates_per_paper=max_candidates_per_paper,
         )
 
     @_synchronized

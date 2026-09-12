@@ -19,7 +19,7 @@ def test_version_prints_distribution_version_without_starting_mcp(
         server.main(["--version"])
 
     assert caught.value.code == 0
-    assert capsys.readouterr().out == "papergraph-mcp 0.11.0\n"
+    assert capsys.readouterr().out == "papergraph-mcp 0.12.0\n"
 
 
 def test_help_describes_theorem_dependency_server_without_starting_mcp(
@@ -74,11 +74,11 @@ def test_doctor_prints_json_without_starting_mcp(
         "environment_diagnostics",
         lambda: {
             "package_name": "papergraph-mcp",
-            "version": "0.11.0",
-            "release_tag": "v0.11.0",
+            "version": "0.12.0",
+            "release_tag": "v0.12.0",
             "recommended_source": (
                 "git+https://github.com/lotchuazzz-crypto/"
-                "papergraph-mcp.git@v0.11.0"
+                "papergraph-mcp.git@v0.12.0"
             ),
             "dependency_extraction_basis": "statement_explicit_latex_refs_only",
             "git": None,
@@ -88,7 +88,7 @@ def test_doctor_prints_json_without_starting_mcp(
 
     server.main(["doctor"])
 
-    assert json.loads(capsys.readouterr().out)["version"] == "0.11.0"
+    assert json.loads(capsys.readouterr().out)["version"] == "0.12.0"
 
 
 def test_validate_arxiv_cli_prints_conflict_json_without_starting_mcp(

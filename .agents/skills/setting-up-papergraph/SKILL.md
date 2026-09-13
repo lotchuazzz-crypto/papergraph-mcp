@@ -20,7 +20,7 @@ Briefly explain that PaperGraph lets an MCP client analyze LaTeX papers, build a
 Before loading arXiv papers:
 
 1. If a repository directory already exists, run `git fetch --tags origin` before trusting local `origin/main`.
-2. Verify `papergraph-mcp --version` and run `papergraph-mcp doctor` or call `get_environment_diagnostics`.
+2. Verify the pinned `uvx --from ... papergraph-mcp --version` command and run pinned `uvx --from ... papergraph-mcp doctor` or call `get_environment_diagnostics`.
 3. For raw user wording, Markdown links, URLs, or prose, call `validate_arxiv_request` or `load_arxiv_request`.
 4. If a user provides both an arXiv ID and an arXiv URL, `load_arxiv_request` must stop before loading unless they identify the same paper.
 5. Use `load_arxiv_paper` only after the user has provided one already-disambiguated arXiv ID.
@@ -58,6 +58,12 @@ Only after actions occur, list the executable version checks, the PaperGraph ent
 
 ```text
 uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 papergraph-mcp --version
+```
+
+Also validate the pinned diagnostics command:
+
+```text
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 papergraph-mcp doctor
 ```
 
 The expected output is:

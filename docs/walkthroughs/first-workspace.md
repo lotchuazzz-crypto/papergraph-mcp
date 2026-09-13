@@ -22,7 +22,7 @@ If you do not use an MCP-capable client yet, run PaperGraph from the CLI:
 
 ```powershell
 uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 papergraph-mcp --version
-papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 papergraph-mcp doctor
 ```
 
 ## Workspace Hygiene

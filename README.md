@@ -44,7 +44,7 @@ Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then veri
 
 ```powershell
 uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 papergraph-mcp --version
-papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 papergraph-mcp doctor
 ```
 
 The pinned command becomes available after the `v0.13.0` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
@@ -72,7 +72,7 @@ Give a coding agent this request:
 
 Compatible agents can follow the repository-local [`setting-up-papergraph`](.agents/skills/setting-up-papergraph/SKILL.md) skill. The agent should show you a reusable PaperGraph prompt, explain why `uv` is needed, and ask before installing software, changing client configuration, or restarting the client.
 
-If you do not use an MCP-capable client yet, PaperGraph can still be run from the CLI with `papergraph-mcp doctor` and the workspace commands below.
+If you do not use an MCP-capable client yet, PaperGraph can still be run from the CLI with the pinned `uvx --from ... papergraph-mcp doctor` command above and the workspace commands below.
 
 If your agent clones into a directory that already exists, ask it to run `git fetch --tags origin` before treating the checkout as current. Existing clones can otherwise remain pinned to an old local `origin/main`.
 
@@ -136,7 +136,7 @@ PaperGraph does not verify proofs，也不做 semantic theorem matching；它不
 
 ```powershell
 uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 papergraph-mcp --version
-papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 papergraph-mcp doctor
 ```
 
 如果你的 MCP client 使用 JSON 风格的 stdio server 配置，可以添加：
@@ -162,7 +162,7 @@ papergraph-mcp doctor
 
 支持本仓库 skill 的 agent 会读取 [`setting-up-papergraph`](.agents/skills/setting-up-papergraph/SKILL.md)，展示可复用提示词，解释为什么需要 `uv`，并在安装软件、修改客户端配置或重启客户端前询问你。
 
-如果你暂时没有支持 MCP 的 client，也可以先用 CLI：运行 `papergraph-mcp doctor` 和下方 workspace 命令。
+如果你暂时没有支持 MCP 的 client，也可以先用 CLI：运行上方固定版本的 `uvx --from ... papergraph-mcp doctor` 和下方 workspace 命令。
 
 如果目标目录已经存在，请让 agent 先运行 `git fetch --tags origin`，再判断仓库是否是最新。否则已有 clone 可能仍停留在旧的本地 `origin/main`。
 
@@ -210,25 +210,25 @@ Most workspace operations are available from the CLI with `--workspace`:
 
 ```powershell
 papergraph-mcp validate-arxiv-request "[math/0307200](https://arxiv.org/abs/2609.01574)"
-papergraph-mcp --workspace .\papergraph.sqlite3 get-paper-map local:paper-a
+papergraph-mcp get-paper-map --workspace .\papergraph.sqlite3 --paper-id local:paper-a
 papergraph-mcp export-paper-reading-report --workspace .\papergraph.sqlite3 --paper-id local:paper-a
 papergraph-mcp export-paper-reading-report --workspace .\papergraph.sqlite3 --paper-id local:paper-a --output report.md
 papergraph-mcp export-cross-paper-reading-plan --workspace .\papergraph.sqlite3 --paper-id local:paper-a --paper-id arxiv:2401.12345 --output cross-paper-plan.md
-papergraph-mcp --workspace .\papergraph.sqlite3 export-reading-bundle local:paper-a
-papergraph-mcp --workspace .\papergraph.sqlite3 export-result-reading-context local:paper-a::thm:main
-papergraph-mcp --workspace .\papergraph.sqlite3 get-source-slice --result-id local:paper-a::thm:main
-papergraph-mcp --workspace .\papergraph.sqlite3 get-result-reading-path local:paper-a::thm:main
-papergraph-mcp --workspace .\papergraph.sqlite3 create-reading-session local:paper-a
-papergraph-mcp --workspace .\papergraph.sqlite3 record-reading-checkpoint SESSION result local:paper-a::thm:main reviewed
-papergraph-mcp --workspace .\papergraph.sqlite3 add-reading-note SESSION "Need to check the cited fixed point theorem."
-papergraph-mcp --workspace .\papergraph.sqlite3 export-reading-session-summary SESSION
-papergraph-mcp --workspace .\papergraph.sqlite3 create-reading-queue local:paper-a::thm:main
-papergraph-mcp --workspace .\papergraph.sqlite3 list-reading-queues
-papergraph-mcp --workspace .\papergraph.sqlite3 get-reading-queue QUEUE
-papergraph-mcp --workspace .\papergraph.sqlite3 apply-reading-queue-to-session QUEUE SESSION
-papergraph-mcp --workspace .\papergraph.sqlite3 plan-external-imports-for-result local:paper-a::thm:main
-papergraph-mcp --workspace .\papergraph.sqlite3 plan-external-imports-for-queue QUEUE
-papergraph-mcp --workspace .\papergraph.sqlite3 plan-external-imports-for-paper local:paper-a
+papergraph-mcp export-reading-bundle --workspace .\papergraph.sqlite3 --paper-id local:paper-a
+papergraph-mcp export-result-reading-context --workspace .\papergraph.sqlite3 --result-id local:paper-a::thm:main
+papergraph-mcp get-source-slice --workspace .\papergraph.sqlite3 --result-id local:paper-a::thm:main
+papergraph-mcp get-result-reading-path --workspace .\papergraph.sqlite3 --result-id local:paper-a::thm:main
+papergraph-mcp create-reading-session --workspace .\papergraph.sqlite3 --paper-id local:paper-a
+papergraph-mcp record-reading-checkpoint --workspace .\papergraph.sqlite3 --session-id SESSION --target-kind result --target-id local:paper-a::thm:main --status reviewed
+papergraph-mcp add-reading-note --workspace .\papergraph.sqlite3 --session-id SESSION --text "Need to check the cited fixed point theorem."
+papergraph-mcp export-reading-session-summary --workspace .\papergraph.sqlite3 --session-id SESSION
+papergraph-mcp create-reading-queue --workspace .\papergraph.sqlite3 --result-id local:paper-a::thm:main
+papergraph-mcp list-reading-queues --workspace .\papergraph.sqlite3
+papergraph-mcp get-reading-queue --workspace .\papergraph.sqlite3 --queue-id QUEUE
+papergraph-mcp apply-reading-queue-to-session --workspace .\papergraph.sqlite3 --queue-id QUEUE --session-id SESSION
+papergraph-mcp plan-external-imports-for-result --workspace .\papergraph.sqlite3 --result-id local:paper-a::thm:main
+papergraph-mcp plan-external-imports-for-queue --workspace .\papergraph.sqlite3 --queue-id QUEUE
+papergraph-mcp plan-external-imports-for-paper --workspace .\papergraph.sqlite3 --paper-id local:paper-a
 ```
 
 For a compact single-paper check with an already-disambiguated ID, call `load_arxiv_paper(arxiv_id="math/0307200")`. For ordinary user text, call `load_arxiv_request(input="math/0307200")`. PaperGraph selects `main.tex`; a representative first response has `"path": "main.tex"`, `"cached": false`, and `"nodes": 7`.

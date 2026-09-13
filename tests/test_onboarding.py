@@ -341,6 +341,7 @@ def test_onboarding_requires_refresh_diagnostics_and_conflict_stop():
     assert "load_arxiv_request" in prompt
     assert "ask_user_to_choose" in prompt
     assert "papergraph-mcp doctor" in client_reference
+    assert f"uvx --from {PIN} papergraph-mcp doctor" in client_reference
 
 
 def test_readme_exposes_agent_guided_setup():

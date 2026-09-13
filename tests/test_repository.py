@@ -24,7 +24,7 @@ def test_project_metadata_is_discoverable_and_keeps_dependencies_separated():
     configuration = read_toml("pyproject.toml")
     project = configuration["project"]
 
-    assert project["version"] == "0.13.0"
+    assert project["version"] == "1.0.0"
     assert project["dependencies"] == [
         "httpx>=0.27,<1",
         "mcp[cli]>=2,<3",
@@ -70,7 +70,7 @@ def test_lockfile_contains_project_package():
     )
 
     assert package["name"] == "papergraph-mcp"
-    assert package["version"] == "0.13.0"
+    assert package["version"] == "1.0.0"
 
 
 def test_validate_arxiv_request_module_stdout_is_json_only():
@@ -102,8 +102,8 @@ def test_runtime_and_issue_template_release_strings_remain_pinned():
         if item.get("id") == "version"
     )
 
-    assert f'PaperGraph/0.13.0 (+{REPOSITORY_URL})' in arxiv_source
-    assert version_field["attributes"]["placeholder"] == "0.13.0"
+    assert f'PaperGraph/1.0.0 (+{REPOSITORY_URL})' in arxiv_source
+    assert version_field["attributes"]["placeholder"] == "1.0.0"
 
 
 def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
@@ -144,7 +144,7 @@ def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
         for token in ('"uv"', '"pip"', '"install"', '"--python"')
     )
     assert "papergraph-mcp --version" in build_steps
-    assert "papergraph-mcp 0.13.0" in build_steps
+    assert "papergraph-mcp 1.0.0" in build_steps
     assert 'version="$(.smoke-venv/bin/papergraph-mcp --version)"' in build_steps
 
 
@@ -252,7 +252,7 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     pinned_source = (
         "git+https://github.com/lotchuazzz-crypto/"
-        "papergraph-mcp.git@v0.13.0"
+        "papergraph-mcp.git@v1.0.0"
     )
 
     for badge in ("CI", "Python", "MIT", "Release"):
@@ -264,7 +264,11 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     assert f"uvx --from {pinned_source} papergraph-mcp doctor" in readme
     assert '"command": "uvx"' in readme
     assert pinned_source in readme
-    assert "PaperGraph v0.13.0" in readme
+    assert "PaperGraph v1.0.0" in readme
+    assert (
+        "PaperGraph v1.0.0 is the stable evidence-first reading workflow"
+        in readme
+    )
 
     for tool_name in (
         "load_paper",
@@ -319,13 +323,15 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
 
     assert "Paper Map" in readme
     assert "[PaperGraph v1 Core Contract](docs/reference/v1-core-contract.md)" in readme
+    assert "[v1 Release Checklist](docs/reference/v1-release-checklist.md)" in readme
     assert "[First PaperGraph Workspace](docs/walkthroughs/first-workspace.md)" in readme
     assert "[Reading Report](docs/examples/reading-report-example.md)" in readme
     assert (
         "[Cross-Paper Reading Plan](docs/examples/cross-paper-reading-plan-example.md)"
         in readme
     )
-    assert "v0.13.0 added the v1.0 readiness pass" in readme
+    assert "v1.0.0 released the stable PaperGraph core" in readme
+    assert readme.count("<details>") >= 5
     assert "statement_explicit_latex_refs_only" in readme
     assert "not evidence that the theorem has no mathematical dependencies" in readme
     assert "TeX proof environments" in readme
@@ -441,8 +447,8 @@ def test_onboarding_uses_v061_release_pin_and_mentions_id_url_conflicts():
         ROOT / ".agents/skills/setting-up-papergraph/references/usage-prompt.md"
     ).read_text(encoding="utf-8")
 
-    assert "papergraph-mcp.git@v0.13.0" in skill
-    assert "papergraph-mcp 0.13.0" in skill
+    assert "papergraph-mcp.git@v1.0.0" in skill
+    assert "papergraph-mcp 1.0.0" in skill
     assert "validate_arxiv_request" in skill
     assert "load_arxiv_request" in skill
     assert "If a user provides both an arXiv ID and an arXiv URL" in skill

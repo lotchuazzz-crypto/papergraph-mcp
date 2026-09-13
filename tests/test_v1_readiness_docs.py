@@ -65,7 +65,7 @@ def test_first_workspace_walkthrough_covers_mcp_and_cli_paths():
 
     for command in (
         "papergraph-mcp doctor",
-        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 papergraph-mcp doctor",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 papergraph-mcp doctor",
         "open_workspace",
         "workspace_add_arxiv_paper",
         "workspace_get_paper_map",
@@ -111,4 +111,27 @@ def test_cross_paper_plan_example_is_compact_and_evidence_scoped():
     assert "selected-paper citation evidence" in text
     assert "Citation evidence does not imply logical dependency" in text
     assert "example artifact" in text.lower()
+    assert_no_placeholders(text)
+
+
+def test_v1_release_checklist_is_concrete():
+    text = read("docs/reference/v1-release-checklist.md")
+
+    assert "# PaperGraph v1 Release Checklist" in text
+    for heading in (
+        "## Version Pins",
+        "## Installation Validation",
+        "## Documentation Review",
+        "## Test Commands",
+        "## GitHub Release",
+        "## Post-v1 Scope",
+    ):
+        assert heading in text
+
+    for command in (
+        "uv run pytest -q -p no:cacheprovider --basetemp .pytest-tmp",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 papergraph-mcp --version",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 papergraph-mcp doctor",
+    ):
+        assert command in text
     assert_no_placeholders(text)

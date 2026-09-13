@@ -9,7 +9,9 @@
 
 **Read math papers with evidence, not guesses.**
 
-PaperGraph helps AI agents turn arXiv papers, local LaTeX projects, and born-digital PDFs into a theorem-centered reading workspace. It extracts Paper Maps, results, proof evidence, citation stops, source slices, reading queues, reading sessions, and reviewable import plans so a researcher can inspect where every claim came from.
+PaperGraph v1.0.0 is the stable evidence-first reading workflow for math papers: start with a Paper Map, inspect source-backed proof and citation evidence, then export Markdown Reading Reports or Cross-Paper Reading Plans.
+
+It helps AI agents turn arXiv papers, local LaTeX projects, and born-digital PDFs into a local theorem-centered workspace so a researcher can inspect where every claim came from.
 
 [English](#english) | [中文](#中文)
 
@@ -25,7 +27,7 @@ PaperGraph helps AI agents turn arXiv papers, local LaTeX projects, and born-dig
 | --- | --- | --- | --- |
 | Identify main-result candidates, result structure, proof-path evidence, and external reading risks before choosing where to read. | Inspect proof-local references, cited stops, source slices, and dependency diagnostics with explicit evidence. | Export deterministic Markdown reports that can live in Git, notes, or handoff sessions. | Given a small explicit paper set, export a cross-paper reading plan with selected-paper citation evidence and remaining risks. |
 
-PaperGraph v0.13.0 adds the v1.0 readiness pass: a stable core contract, a first-workspace walkthrough, and example Markdown artifacts for single-paper reports and cross-paper plans.
+PaperGraph v1.0.0 released the stable PaperGraph core: Paper Map, Reading Report, Cross-Paper Reading Plan, local SQLite workspaces, MCP and CLI entry points, and explicit evidence boundaries.
 
 ### Why Researchers Use It
 
@@ -43,11 +45,11 @@ PaperGraph does not verify proofs, perform semantic theorem matching, or claim t
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the pinned GitHub release without cloning:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 papergraph-mcp doctor
 ```
 
-The pinned command becomes available after the `v0.13.0` GitHub Release and tag are published. Pinning the tag keeps MCP client installations reproducible.
+Pinning the `v1.0.0` tag keeps MCP client installations reproducible.
 
 Add PaperGraph to an MCP client that accepts JSON-style stdio configuration:
 
@@ -56,7 +58,7 @@ Add PaperGraph to an MCP client that accepts JSON-style stdio configuration:
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0", "papergraph-mcp"]
     }
   }
 }
@@ -76,7 +78,7 @@ If you do not use an MCP-capable client yet, PaperGraph can still be run from th
 
 If your agent clones into a directory that already exists, ask it to run `git fetch --tags origin` before treating the checkout as current. Existing clones can otherwise remain pinned to an old local `origin/main`.
 
-For a complete first run, follow [First PaperGraph Workspace](docs/walkthroughs/first-workspace.md). For the stable surface before v1.0, see [PaperGraph v1 Core Contract](docs/reference/v1-core-contract.md). Example outputs are available as a [Reading Report](docs/examples/reading-report-example.md) and a [Cross-Paper Reading Plan](docs/examples/cross-paper-reading-plan-example.md).
+For a complete first run, follow [First PaperGraph Workspace](docs/walkthroughs/first-workspace.md). For the stable surface, see [PaperGraph v1 Core Contract](docs/reference/v1-core-contract.md) and the [v1 Release Checklist](docs/reference/v1-release-checklist.md). Example outputs are available as a [Reading Report](docs/examples/reading-report-example.md) and a [Cross-Paper Reading Plan](docs/examples/cross-paper-reading-plan-example.md).
 
 For raw user requests, prefer `load_arxiv_request(input=...)` or `papergraph-mcp load-arxiv-request "..."`. These high-level entry points validate bare IDs, URLs, Markdown links, and prose before loading. To inspect the decision without loading, call `validate_arxiv_request` or `papergraph-mcp validate-arxiv-request "..."`. If validation returns `action: ask_user_to_choose`, ask the user to choose; detecting a conflict and then continuing is a failure. Use `load_arxiv_paper` only after the user has provided one already-disambiguated arXiv ID.
 
@@ -117,7 +119,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | 在选择阅读目标前，先看到 main-result candidates、结果结构、proof-path evidence 和 external reading risks。 | 查看 proof-local references、citation stops、source slices 和 dependency diagnostics，并保留证据来源。 | 导出确定性的 Markdown report，方便放进 Git、笔记或交接会话。 | 对一组显式给定的小规模相关论文，导出跨论文阅读计划、选中论文之间的 citation evidence 和剩余风险。 |
 
-v0.13.0 的重点是 v1.0 readiness pass：补齐稳定核心契约、第一次 workspace walkthrough，以及单篇 Reading Report 和 Cross-Paper Reading Plan 的示例 Markdown 产物。
+PaperGraph v1.0.0 是稳定的 evidence-first 数学论文阅读工作流：先看 Paper Map，再检查 proof 和 citation 证据，最后导出 Markdown Reading Report 或 Cross-Paper Reading Plan。
 
 ### 为什么适合数学论文阅读
 
@@ -135,8 +137,8 @@ PaperGraph does not verify proofs，也不做 semantic theorem matching；它不
 先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，然后验证固定版本：
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 papergraph-mcp doctor
 ```
 
 如果你的 MCP client 使用 JSON 风格的 stdio server 配置，可以添加：
@@ -146,7 +148,7 @@ uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 p
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0", "papergraph-mcp"]
     }
   }
 }
@@ -166,7 +168,7 @@ uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 p
 
 如果目标目录已经存在，请让 agent 先运行 `git fetch --tags origin`，再判断仓库是否是最新。否则已有 clone 可能仍停留在旧的本地 `origin/main`。
 
-第一次完整使用可以跟着 [First PaperGraph Workspace](docs/walkthroughs/first-workspace.md) 走。v1.0 前稳定承诺见 [PaperGraph v1 Core Contract](docs/reference/v1-core-contract.md)。示例输出见 [Reading Report](docs/examples/reading-report-example.md) 和 [Cross-Paper Reading Plan](docs/examples/cross-paper-reading-plan-example.md)。
+第一次完整使用可以跟着 [First PaperGraph Workspace](docs/walkthroughs/first-workspace.md) 走。稳定承诺见 [PaperGraph v1 Core Contract](docs/reference/v1-core-contract.md)，发布前检查见 [v1 Release Checklist](docs/reference/v1-release-checklist.md)。示例输出见 [Reading Report](docs/examples/reading-report-example.md) 和 [Cross-Paper Reading Plan](docs/examples/cross-paper-reading-plan-example.md)。
 
 普通用户请求优先走 `load_arxiv_request(input=...)` 或 `papergraph-mcp load-arxiv-request "..."`。这些入口会在加载前验证 bare IDs、URLs、Markdown links 和自然语言描述。若验证返回 `action: ask_user_to_choose`，必须让用户选择；detecting a conflict and then continuing is a failure。Use `load_arxiv_paper` only after 用户已经给出单一、无歧义的 arXiv ID。
 
@@ -276,6 +278,7 @@ PDF extraction is best for born-digital PDFs; scanned PDFs or OCR-heavy files ma
 <details>
 <summary><strong>Release Highlights</strong></summary>
 
+- v1.0.0 released the stable PaperGraph core: Paper Map, Reading Report, Cross-Paper Reading Plan, first-workspace onboarding, and the v1 evidence contract.
 - v0.13.0 added the v1.0 readiness pass with stable core contract docs, first-workspace walkthroughs, and example Reading Report/Cross-Paper Reading Plan artifacts.
 - v0.12.0 added Cross-Paper Reading Plan, a deterministic Markdown artifact for explicit paper sets with recommended sequence, selected-paper citation evidence, external risks, and evidence boundaries.
 - v0.11.0 added Reading Report Export, a deterministic Markdown artifact with Paper Map context, main-result candidates, reading route, external risks, and evidence boundaries.

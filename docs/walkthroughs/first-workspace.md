@@ -21,8 +21,8 @@ papergraph-mcp doctor
 If you do not use an MCP-capable client yet, run PaperGraph from the CLI:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 papergraph-mcp doctor
 ```
 
 ## Workspace Hygiene
@@ -66,7 +66,7 @@ workspace_get_paper_map(paper_id="arxiv:2401.12345")
 or:
 
 ```powershell
-papergraph-mcp --workspace $env:PAPERGRAPH_WORKSPACE get-paper-map --paper-id arxiv:2401.12345
+papergraph-mcp get-paper-map --workspace $env:PAPERGRAPH_WORKSPACE --paper-id arxiv:2401.12345
 ```
 
 Read `evidence_status`, warnings, main-result candidates, reading route, and external risks before choosing a target theorem.

@@ -65,6 +65,7 @@ def test_first_workspace_walkthrough_covers_mcp_and_cli_paths():
 
     for command in (
         "papergraph-mcp doctor",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v0.13.0 papergraph-mcp doctor",
         "open_workspace",
         "workspace_add_arxiv_paper",
         "workspace_get_paper_map",

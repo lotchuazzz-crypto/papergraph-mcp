@@ -261,6 +261,7 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
         f"uvx --from {pinned_source} papergraph-mcp --version"
         in readme
     )
+    assert f"uvx --from {pinned_source} papergraph-mcp doctor" in readme
     assert '"command": "uvx"' in readme
     assert pinned_source in readme
     assert "PaperGraph v0.13.0" in readme
@@ -354,6 +355,20 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     assert "export-paper-reading-report" in readme
     assert "export-cross-paper-reading-plan" in readme
     assert "--workspace" in readme
+    assert "papergraph-mcp --workspace" not in readme
+    assert (
+        "papergraph-mcp get-paper-map --workspace .\\papergraph.sqlite3 "
+        "--paper-id local:paper-a"
+    ) in readme
+    assert (
+        "papergraph-mcp export-reading-bundle --workspace .\\papergraph.sqlite3 "
+        "--paper-id local:paper-a"
+    ) in readme
+    assert (
+        "papergraph-mcp record-reading-checkpoint --workspace .\\papergraph.sqlite3 "
+        "--session-id SESSION --target-kind result "
+        "--target-id local:paper-a::thm:main --status reviewed"
+    ) in readme
     assert "`get_environment_diagnostics`" in readme
     assert "`validate_arxiv_request`" in readme
     assert "`load_arxiv_request`" in readme

@@ -25,6 +25,7 @@ Before loading arXiv papers:
 4. If a user provides both an arXiv ID and an arXiv URL, `load_arxiv_request` must stop before loading unless they identify the same paper.
 5. Use `load_arxiv_paper` only after the user has provided one already-disambiguated arXiv ID.
 6. If validation returns `action: ask_user_to_choose`, stop and ask which one to analyze. detecting a conflict and then continuing is a failure.
+7. For a user's first real reading project, propose `plan-starter-project` before `bootstrap-reading-project` so they can review the workspace path, artifact directory, explicit paper inputs, and generated manifest path before writes.
 
 ### What is missing
 

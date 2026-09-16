@@ -55,6 +55,56 @@ With CLI, use the validated request path:
 papergraph-mcp load-arxiv-request "2401.12345"
 ```
 
+## Workspace Starter
+
+For a first real project, preview the starter plan before writing artifacts:
+
+```text
+workspace_plan_starter_project(
+  workspace_path=<workspace path outside the Git repository>,
+  artifact_dir=<starter artifact directory>,
+  papers=[{"kind": "pdf", "path": "paper-a.pdf", "paper_id": "local:paper-a"}],
+  create_queue=false,
+  create_session=false
+)
+```
+
+or:
+
+```powershell
+papergraph-mcp plan-starter-project `
+  --workspace $env:PAPERGRAPH_WORKSPACE `
+  --artifact-dir .\papergraph-starter `
+  --pdf .\paper-a.pdf=local:paper-a `
+  --no-queue `
+  --no-session
+```
+
+When the plan looks right, bootstrap the reading project:
+
+```text
+workspace_bootstrap_reading_project(
+  workspace_path=<workspace path outside the Git repository>,
+  artifact_dir=<starter artifact directory>,
+  papers=[{"kind": "pdf", "path": "paper-a.pdf", "paper_id": "local:paper-a"}],
+  create_queue=false,
+  create_session=false
+)
+```
+
+or:
+
+```powershell
+papergraph-mcp bootstrap-reading-project `
+  --workspace $env:PAPERGRAPH_WORKSPACE `
+  --artifact-dir .\papergraph-starter `
+  --pdf .\paper-a.pdf=local:paper-a `
+  --no-queue `
+  --no-session
+```
+
+The starter writes `START_HERE.md`, `papergraph-starter-manifest.json`, per-paper Reading Reports, and a Cross-Paper Reading Plan when two or more papers are loaded.
+
 ## Paper Map
 
 Start with Paper Map:

@@ -78,7 +78,7 @@ If you do not use an MCP-capable client yet, PaperGraph can still be run from th
 
 If your agent clones into a directory that already exists, ask it to run `git fetch --tags origin` before treating the checkout as current. Existing clones can otherwise remain pinned to an old local `origin/main`.
 
-For a complete first run, follow [First PaperGraph Workspace](docs/walkthroughs/first-workspace.md). For the stable surface, see [PaperGraph v1 Core Contract](docs/reference/v1-core-contract.md) and the [v1 Release Checklist](docs/reference/v1-release-checklist.md). Example outputs are available as a [Reading Report](docs/examples/reading-report-example.md) and a [Cross-Paper Reading Plan](docs/examples/cross-paper-reading-plan-example.md).
+For a complete first run, follow [First PaperGraph Workspace](docs/walkthroughs/first-workspace.md). The Workspace Starter commands `plan-starter-project` and `bootstrap-reading-project` create `START_HERE.md`, `papergraph-starter-manifest.json`, Reading Reports, and a Cross-Paper Reading Plan from explicit paper inputs. For the stable surface, see [PaperGraph v1 Core Contract](docs/reference/v1-core-contract.md) and the [v1 Release Checklist](docs/reference/v1-release-checklist.md). Example outputs are available as a [Reading Report](docs/examples/reading-report-example.md), a [Cross-Paper Reading Plan](docs/examples/cross-paper-reading-plan-example.md), a [Starter Summary](docs/examples/starter-summary-example.md), and a [Starter Manifest](docs/examples/papergraph-starter-manifest-example.json).
 
 For raw user requests, prefer `load_arxiv_request(input=...)` or `papergraph-mcp load-arxiv-request "..."`. These high-level entry points validate bare IDs, URLs, Markdown links, and prose before loading. To inspect the decision without loading, call `validate_arxiv_request` or `papergraph-mcp validate-arxiv-request "..."`. If validation returns `action: ask_user_to_choose`, ask the user to choose; detecting a conflict and then continuing is a failure. Use `load_arxiv_paper` only after the user has provided one already-disambiguated arXiv ID.
 
@@ -192,6 +192,7 @@ uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 pa
 | Workflow | Main tools |
 | --- | --- |
 | Load papers | `open_workspace`, `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_add_pdf_paper`, `workspace_list_papers`, `workspace_get_paper` |
+| Start a project | `workspace_plan_starter_project`, `workspace_bootstrap_reading_project` |
 | Map papers | `workspace_get_paper_map`, `workspace_export_paper_reading_report`, `workspace_export_cross_paper_reading_plan` |
 | Inspect results | `workspace_list_results`, `workspace_get_result`, `workspace_get_result_proof`, `workspace_get_proof_dependencies`, `workspace_get_external_result_mentions`, `workspace_get_evidence`, `workspace_get_citations`, `workspace_search_theorems` |
 | Read a proof | `workspace_export_reading_bundle`, `workspace_export_result_reading_context`, `workspace_get_source_slice`, `workspace_get_result_reading_path` |
@@ -201,7 +202,7 @@ uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 pa
 
 Original single-paper tools: `get_environment_diagnostics`, `validate_arxiv_request`, `load_arxiv_request`, `validate_arxiv_input`, `load_paper`, `load_arxiv_paper`, `list_theorems`, `get_theorem`, `get_dependencies`, `get_dependency_diagnostics`, and `where_used`.
 
-Complete workspace tool index: `open_workspace`, `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, `workspace_get_dependency_diagnostics`, `workspace_get_citations`, `workspace_add_pdf_paper`, `workspace_get_paper_map`, `workspace_export_paper_reading_report`, `workspace_export_cross_paper_reading_plan`, `workspace_list_results`, `workspace_get_result`, `workspace_get_result_proof`, `workspace_get_proof_dependencies`, `workspace_get_external_result_mentions`, `workspace_get_evidence`, `workspace_export_reading_bundle`, `workspace_export_result_reading_context`, `workspace_get_source_slice`, `workspace_get_result_reading_path`, `workspace_create_reading_session`, `workspace_list_reading_sessions`, `workspace_get_reading_session`, `workspace_record_reading_checkpoint`, `workspace_add_reading_note`, `workspace_export_reading_session_summary`, `workspace_create_reading_queue`, `workspace_list_reading_queues`, `workspace_get_reading_queue`, `workspace_apply_reading_queue_to_session`, `workspace_plan_external_imports_for_result`, `workspace_plan_external_imports_for_queue`, `workspace_plan_external_imports_for_paper`.
+Complete workspace tool index: `open_workspace`, `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, `workspace_get_dependency_diagnostics`, `workspace_get_citations`, `workspace_add_pdf_paper`, `workspace_get_paper_map`, `workspace_export_paper_reading_report`, `workspace_export_cross_paper_reading_plan`, `workspace_plan_starter_project`, `workspace_bootstrap_reading_project`, `workspace_list_results`, `workspace_get_result`, `workspace_get_result_proof`, `workspace_get_proof_dependencies`, `workspace_get_external_result_mentions`, `workspace_get_evidence`, `workspace_export_reading_bundle`, `workspace_export_result_reading_context`, `workspace_get_source_slice`, `workspace_get_result_reading_path`, `workspace_create_reading_session`, `workspace_list_reading_sessions`, `workspace_get_reading_session`, `workspace_record_reading_checkpoint`, `workspace_add_reading_note`, `workspace_export_reading_session_summary`, `workspace_create_reading_queue`, `workspace_list_reading_queues`, `workspace_get_reading_queue`, `workspace_apply_reading_queue_to_session`, `workspace_plan_external_imports_for_result`, `workspace_plan_external_imports_for_queue`, `workspace_plan_external_imports_for_paper`.
 
 </details>
 
@@ -212,6 +213,8 @@ Most workspace operations are available from the CLI with `--workspace`:
 
 ```powershell
 papergraph-mcp validate-arxiv-request "[math/0307200](https://arxiv.org/abs/2609.01574)"
+papergraph-mcp plan-starter-project --workspace .\papergraph.sqlite3 --artifact-dir .\papergraph-starter --pdf .\paper-a.pdf=local:paper-a
+papergraph-mcp bootstrap-reading-project --workspace .\papergraph.sqlite3 --artifact-dir .\papergraph-starter --pdf .\paper-a.pdf=local:paper-a --no-queue --no-session
 papergraph-mcp get-paper-map --workspace .\papergraph.sqlite3 --paper-id local:paper-a
 papergraph-mcp export-paper-reading-report --workspace .\papergraph.sqlite3 --paper-id local:paper-a
 papergraph-mcp export-paper-reading-report --workspace .\papergraph.sqlite3 --paper-id local:paper-a --output report.md
@@ -278,6 +281,7 @@ PDF extraction is best for born-digital PDFs; scanned PDFs or OCR-heavy files ma
 <details>
 <summary><strong>Release Highlights</strong></summary>
 
+- v1.1.0 adds Workspace Starter planning and bootstrap commands for `START_HERE.md`, `papergraph-starter-manifest.json`, Reading Reports, and Cross-Paper Reading Plans from explicit paper inputs.
 - v1.0.0 released the stable PaperGraph core: Paper Map, Reading Report, Cross-Paper Reading Plan, first-workspace onboarding, and the v1 evidence contract.
 - v0.13.0 added the v1.0 readiness pass with stable core contract docs, first-workspace walkthroughs, and example Reading Report/Cross-Paper Reading Plan artifacts.
 - v0.12.0 added Cross-Paper Reading Plan, a deterministic Markdown artifact for explicit paper sets with recommended sequence, selected-paper citation evidence, external risks, and evidence boundaries.

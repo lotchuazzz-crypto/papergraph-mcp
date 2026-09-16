@@ -708,6 +708,81 @@ def workspace_export_cross_paper_reading_plan(
 
 
 @mcp.tool()
+@_serialized_workspace_tool
+def workspace_plan_starter_project(
+    workspace_path: str,
+    artifact_dir: str | None,
+    papers: list[dict],
+    project_title: str | None = None,
+    focus: str | None = None,
+    target_result_id: str | None = None,
+    create_queue: bool = True,
+    create_session: bool = True,
+    max_candidates: int = 5,
+) -> dict:
+    """Plan a Workspace Starter run without writing files."""
+
+    try:
+        workspace = Workspace.open(workspace_path)
+        try:
+            return workspace.plan_starter_project(
+                workspace_path=workspace_path,
+                artifact_dir=artifact_dir,
+                papers=papers,
+                project_title=project_title,
+                focus=focus,
+                target_result_id=target_result_id,
+                create_queue=create_queue,
+                create_session=create_session,
+                max_candidates=max_candidates,
+            )
+        finally:
+            workspace.close()
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_bootstrap_reading_project(
+    workspace_path: str,
+    artifact_dir: str,
+    papers: list[dict],
+    project_title: str | None = None,
+    focus: str | None = None,
+    target_result_id: str | None = None,
+    create_queue: bool = True,
+    create_session: bool = True,
+    max_candidates: int = 5,
+) -> dict:
+    """Create starter artifacts for a first reading project."""
+
+    global _current_workspace
+
+    try:
+        replacement = Workspace.open(workspace_path)
+        payload = replacement.bootstrap_reading_project(
+            workspace_path=workspace_path,
+            artifact_dir=artifact_dir,
+            papers=papers,
+            project_title=project_title,
+            focus=focus,
+            target_result_id=target_result_id,
+            create_queue=create_queue,
+            create_session=create_session,
+            max_candidates=max_candidates,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+    previous = _current_workspace
+    _current_workspace = replacement
+    if previous is not None:
+        previous.close()
+    return payload
+
+
+@mcp.tool()
 def load_paper(path: str) -> dict:
     """Load a local LaTeX paper and build its theorem graph."""
 
@@ -1070,6 +1145,81 @@ def _parse_json_argument(raw_json: str) -> dict:
     return payload
 
 
+def _parse_starter_papers(
+    arxiv_inputs: list[str] | None,
+    tex_inputs: list[str] | None,
+    pdf_inputs: list[str] | None,
+) -> list[dict]:
+    papers: list[dict] = []
+    for raw in arxiv_inputs or []:
+        papers.append({"kind": "arxiv", "input": raw})
+    for raw in tex_inputs or []:
+        path, paper_id = _parse_path_paper_id(raw, "--tex")
+        papers.append({"kind": "local_tex", "path": path, "paper_id": paper_id})
+    for raw in pdf_inputs or []:
+        path, paper_id = _parse_path_paper_id(raw, "--pdf")
+        papers.append({"kind": "pdf", "path": path, "paper_id": paper_id})
+    return papers
+
+
+def _parse_path_paper_id(raw: str, option_name: str) -> tuple[str, str]:
+    if "=" not in raw:
+        raise ValueError(f"{option_name} expects PATH=PAPER_ID")
+    path, paper_id = raw.split("=", 1)
+    if not path.strip() or not paper_id.strip():
+        raise ValueError(f"{option_name} expects PATH=PAPER_ID")
+    return path.strip(), paper_id.strip()
+
+
+def _run_starter_cli_command(command: str, args) -> None:
+    workspace = None
+    try:
+        papers = _parse_starter_papers(args.arxiv, args.tex, args.pdf)
+        workspace = Workspace.open(args.workspace)
+        if command == "plan-starter-project":
+            _print_json(
+                workspace.plan_starter_project(
+                    workspace_path=args.workspace,
+                    artifact_dir=args.artifact_dir,
+                    papers=papers,
+                    project_title=args.project_title,
+                    focus=args.focus,
+                    target_result_id=args.target_result_id,
+                    create_queue=not args.no_queue,
+                    create_session=not args.no_session,
+                    max_candidates=args.max_candidates,
+                    overwrite=args.overwrite,
+                )
+            )
+            return
+        payload = workspace.bootstrap_reading_project(
+            workspace_path=args.workspace,
+            artifact_dir=args.artifact_dir,
+            papers=papers,
+            project_title=args.project_title,
+            focus=args.focus,
+            target_result_id=args.target_result_id,
+            create_queue=not args.no_queue,
+            create_session=not args.no_session,
+            max_candidates=args.max_candidates,
+            overwrite=args.overwrite,
+        )
+        _print_json({"command": command, **payload})
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        _print_json(
+            {
+                "status": "error",
+                "action": "inspect_error",
+                "command": command,
+                "message": str(exc),
+            }
+        )
+        raise SystemExit(1) from exc
+    finally:
+        if workspace is not None:
+            workspace.close()
+
+
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="papergraph-mcp",
@@ -1103,6 +1253,27 @@ def main(argv: Sequence[str] | None = None) -> None:
     load_request_parser.add_argument("input")
     load_request_parser.add_argument("--main-file")
     load_request_parser.add_argument("--refresh", action="store_true")
+    plan_starter_parser = subparsers.add_parser(
+        "plan-starter-project",
+        help="Plan a Workspace Starter reading project without writing artifacts.",
+    )
+    bootstrap_starter_parser = subparsers.add_parser(
+        "bootstrap-reading-project",
+        help="Create Workspace Starter reading project artifacts.",
+    )
+    for starter_parser in (plan_starter_parser, bootstrap_starter_parser):
+        starter_parser.add_argument("--workspace", required=True)
+        starter_parser.add_argument("--artifact-dir", required=True)
+        starter_parser.add_argument("--project-title")
+        starter_parser.add_argument("--focus")
+        starter_parser.add_argument("--target-result-id")
+        starter_parser.add_argument("--max-candidates", type=int, default=5)
+        starter_parser.add_argument("--arxiv", action="append")
+        starter_parser.add_argument("--tex", action="append")
+        starter_parser.add_argument("--pdf", action="append")
+        starter_parser.add_argument("--no-queue", action="store_true")
+        starter_parser.add_argument("--no-session", action="store_true")
+        starter_parser.add_argument("--overwrite", action="store_true")
     export_bundle_parser = subparsers.add_parser(
         "export-reading-bundle",
         help="Export a paper-level Reading Bridge bundle from a workspace.",
@@ -1311,6 +1482,9 @@ def main(argv: Sequence[str] | None = None) -> None:
                 }
             )
             raise SystemExit(1) from exc
+        return
+    if args.command in {"plan-starter-project", "bootstrap-reading-project"}:
+        _run_starter_cli_command(args.command, args)
         return
     if args.command == "export-reading-bundle":
         _run_workspace_cli_command(

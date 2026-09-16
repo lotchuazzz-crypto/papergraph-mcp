@@ -37,6 +37,10 @@ from papergraph.paper_map import build_paper_map
 from papergraph.pdf import load_pdf_evidence_spans
 from papergraph.project import LoadedProject
 from papergraph.reading_report import build_paper_reading_report
+from papergraph.starter import (
+    bootstrap_reading_project,
+    plan_starter_project,
+)
 from papergraph.reading import (
     base_bridge_payload,
     interpretation_policy,
@@ -1936,6 +1940,65 @@ class Workspace:
             paper_ids,
             focus=focus,
             max_candidates_per_paper=max_candidates_per_paper,
+        )
+
+    @_synchronized
+    def plan_starter_project(
+        self,
+        workspace_path: str | Path,
+        artifact_dir: str | Path | None,
+        papers: list[dict],
+        project_title: str | None = None,
+        focus: str | None = None,
+        target_result_id: str | None = None,
+        create_queue: bool = True,
+        create_session: bool = True,
+        max_candidates: int = 5,
+        overwrite: bool = False,
+    ) -> dict:
+        """Plan a first reading project without writing artifacts."""
+
+        return plan_starter_project(
+            workspace_path=workspace_path,
+            artifact_dir=artifact_dir,
+            papers=papers,
+            project_title=project_title,
+            focus=focus,
+            target_result_id=target_result_id,
+            create_queue=create_queue,
+            create_session=create_session,
+            max_candidates=max_candidates,
+            overwrite=overwrite,
+        )
+
+    @_synchronized
+    def bootstrap_reading_project(
+        self,
+        workspace_path: str | Path,
+        artifact_dir: str | Path,
+        papers: list[dict],
+        project_title: str | None = None,
+        focus: str | None = None,
+        target_result_id: str | None = None,
+        create_queue: bool = True,
+        create_session: bool = True,
+        max_candidates: int = 5,
+        overwrite: bool = False,
+    ) -> dict:
+        """Create starter artifacts for a first reading project."""
+
+        return bootstrap_reading_project(
+            self,
+            workspace_path=workspace_path,
+            artifact_dir=artifact_dir,
+            papers=papers,
+            project_title=project_title,
+            focus=focus,
+            target_result_id=target_result_id,
+            create_queue=create_queue,
+            create_session=create_session,
+            max_candidates=max_candidates,
+            overwrite=overwrite,
         )
 
     @_synchronized

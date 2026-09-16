@@ -13,6 +13,8 @@ The v1 workflow is:
 5. Export a Reading Report for a single paper.
 6. Export a Cross-Paper Reading Plan for a small explicit set of related papers.
 
+v1.1 adds a Workspace Starter layer that composes this workflow: it plans or bootstraps a first reading project from explicit paper inputs and writes starter artifacts without changing extraction semantics.
+
 ## Stable MCP Tools
 
 These MCP tools form the v1 core:
@@ -23,6 +25,8 @@ These MCP tools form the v1 core:
 - `workspace_add_pdf_paper`
 - `workspace_list_papers`
 - `workspace_get_paper`
+- `workspace_plan_starter_project`
+- `workspace_bootstrap_reading_project`
 - `workspace_get_paper_map`
 - `workspace_export_paper_reading_report`
 - `workspace_export_cross_paper_reading_plan`
@@ -46,6 +50,8 @@ The v1 CLI mirrors the same workflow:
 - `papergraph-mcp doctor`
 - `papergraph-mcp validate-arxiv-request`
 - `papergraph-mcp load-arxiv-request`
+- `papergraph-mcp plan-starter-project`
+- `papergraph-mcp bootstrap-reading-project`
 - `papergraph-mcp get-paper-map`
 - `papergraph-mcp export-paper-reading-report`
 - `papergraph-mcp export-cross-paper-reading-plan`
@@ -109,10 +115,12 @@ Stable keys:
 
 ## Durable Markdown Artifacts
 
-PaperGraph v1 has two durable Markdown artifacts:
+PaperGraph v1 has two durable Markdown artifacts and v1.1 starter artifacts:
 
 - Reading Report: one paper, one saved evidence-backed reading route.
 - Cross-Paper Reading Plan: a small explicit paper set, selected-paper citation evidence, recommended sequence, external risks, and boundaries.
+- Starter Summary: `START_HERE.md`, a first-project index of loaded papers, generated artifacts, warnings, and next commands.
+- Starter Manifest: `papergraph-starter-manifest.json`, a deterministic machine-readable handoff with artifact paths and exact follow-up commands.
 
 Markdown artifacts must avoid timestamps, random IDs, and environment-specific absolute paths unless the user explicitly supplies them at the CLI layer.
 

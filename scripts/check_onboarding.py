@@ -9,10 +9,10 @@ from collections.abc import Callable, Sequence
 from typing import Any
 
 
-PAPERGRAPH_VERSION = "1.0.0"
+PAPERGRAPH_VERSION = "1.1.0"
 PAPERGRAPH_SOURCE = (
     "git+https://github.com/lotchuazzz-crypto/"
-    "papergraph-mcp.git@v1.0.0"
+    "papergraph-mcp.git@v1.1.0"
 )
 LAUNCH_COMMAND = [
     "uvx",

@@ -21,8 +21,8 @@ papergraph-mcp doctor
 If you do not use an MCP-capable client yet, run PaperGraph from the CLI:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.0 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.0 papergraph-mcp doctor
 ```
 
 ## Workspace Hygiene

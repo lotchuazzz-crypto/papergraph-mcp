@@ -318,6 +318,8 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
         "workspace_get_paper_map",
         "workspace_export_paper_reading_report",
         "workspace_export_cross_paper_reading_plan",
+        "workspace_plan_starter_project",
+        "workspace_bootstrap_reading_project",
     ):
         assert f"`{tool_name}`" in readme
 
@@ -360,6 +362,9 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     assert "get-paper-map" in readme
     assert "export-paper-reading-report" in readme
     assert "export-cross-paper-reading-plan" in readme
+    assert "plan-starter-project" in readme
+    assert "bootstrap-reading-project" in readme
+    assert "papergraph-starter-manifest.json" in readme
     assert "--workspace" in readme
     assert "papergraph-mcp --workspace" not in readme
     assert (

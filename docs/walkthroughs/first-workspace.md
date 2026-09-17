@@ -21,8 +21,8 @@ papergraph-mcp doctor
 If you do not use an MCP-capable client yet, run PaperGraph from the CLI:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.1 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.1 papergraph-mcp doctor
 ```
 
 ## Workspace Hygiene
@@ -103,7 +103,7 @@ papergraph-mcp bootstrap-reading-project `
   --no-session
 ```
 
-The starter writes `START_HERE.md`, `papergraph-starter-manifest.json`, per-paper Reading Reports, and a Cross-Paper Reading Plan when two or more papers are loaded.
+The starter writes `START_HERE.md`, `papergraph-starter-manifest.json`, per-paper Reading Reports, and a Cross-Paper Reading Plan when two or more papers are loaded. Start with the Evidence Triage entry in `START_HERE.md` before treating any route or dependency output as a reading order.
 
 ## Paper Map
 
@@ -119,7 +119,7 @@ or:
 papergraph-mcp get-paper-map --workspace $env:PAPERGRAPH_WORKSPACE --paper-id arxiv:2401.12345
 ```
 
-Read `evidence_status`, warnings, main-result candidates, reading route, and external risks before choosing a target theorem.
+Read `evidence_status`, warnings, main-result candidates, reading route, and external risks before choosing a target theorem. If a later Reading Report includes Evidence Triage, use it as the higher-level summary of sparse evidence, candidate starts, blockers, and next actions.
 
 ## Single-Paper Reading Report
 
@@ -134,6 +134,8 @@ or:
 ```powershell
 papergraph-mcp export-paper-reading-report --workspace $env:PAPERGRAPH_WORKSPACE --paper-id arxiv:2401.12345 --output reading-report.md
 ```
+
+Open the report's `Evidence Triage` section first. It tells you whether extracted dependencies are sparse, whether proofs are missing or fragmentary, whether external references block interpretation, and what manual checks should happen next. A candidate starting point is only a supported extracted route candidate, not a claim that the paper's main theorem has been identified.
 
 ## Cross-Paper Reading Plan
 
@@ -168,4 +170,4 @@ workspace_create_reading_queue(result_id=<target result id>)
 workspace_create_reading_session(paper_id=<paper id>)
 ```
 
-PaperGraph does not verify proofs, infer hidden prerequisites, or perform semantic theorem matching.
+PaperGraph does not verify proofs, infer hidden prerequisites, perform semantic theorem matching, search the web for ambiguous references, or recursively import newly discovered literature in v1.1.1.

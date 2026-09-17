@@ -15,6 +15,8 @@ The v1 workflow is:
 
 v1.1 adds a Workspace Starter layer that composes this workflow: it plans or bootstraps a first reading project from explicit paper inputs and writes starter artifacts without changing extraction semantics.
 
+v1.1.1 adds Evidence Triage to Reading Reports and Workspace Starter artifacts. Triage summarizes extraction status, supported local chains, candidate starts, external blockers, and next actions before a reader interprets dependency output.
+
 ## Stable MCP Tools
 
 These MCP tools form the v1 core:
@@ -93,6 +95,22 @@ Stable keys:
 
 Consumers should ignore unknown warning kinds gracefully.
 
+## Evidence Triage
+
+Evidence Triage is a stable reader-facing summary layer. It may be present in Reading Report JSON, rendered Reading Reports, Starter Summary, and Starter Manifest artifacts.
+
+Stable triage fields:
+
+- `status`: one of `external_blocked`, `proofs_missing_or_fragmentary`, `sparse_dependencies`, `usable_with_cautions`, or `needs_manual_review`.
+- `counts`: extracted result, theorem-like result, proof, dependency, and external-blocker counts.
+- `supported_local_chains`: local dependency chains that are supported by extracted proof evidence.
+- `candidate_starting_point`: the best available extracted route candidate, if any. This is not a claim that the result is mathematically central.
+- `extraction_limits`: plain-language caveats about missing proofs, fragments, sparse dependencies, and extraction boundaries.
+- `external_blockers`: references that appear relevant but cannot yet be imported automatically.
+- `next_actions`: concrete review steps for the reader.
+
+Evidence Triage describes the state of available evidence, not the state of the mathematics. Empty dependencies mean no supported extraction evidence was found, not that no mathematical dependencies exist.
+
 ## CLI Error Payloads
 
 Workspace CLI failures use this shape:
@@ -132,6 +150,8 @@ PaperGraph does not infer hidden mathematical prerequisites.
 
 PaperGraph does not perform semantic theorem matching.
 
+PaperGraph does not search the web to identify ambiguous references or recursively import newly discovered literature in v1.1.1.
+
 Citation evidence does not imply logical dependency unless supported by reading-path evidence.
 
 Empty dependencies or empty cross-paper edges mean no supported extraction evidence was found, not that no mathematical relationship exists.
@@ -144,5 +164,5 @@ These features are intentionally outside the v1 core contract:
 - semantic theorem equivalence;
 - notation or symbol indexing;
 - PDF rendering of reports;
-- automatic external-paper import;
+- online reference resolution and recursive external-paper import;
 - proof checking.

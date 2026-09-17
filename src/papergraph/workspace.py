@@ -540,7 +540,7 @@ CREATE INDEX reading_queue_items_queue
 """
 
 _REFERENCE_RESOLUTION_SCHEMA_SQL = """
-CREATE TABLE reference_resolutions (
+CREATE TABLE IF NOT EXISTS reference_resolutions (
     resolution_id TEXT PRIMARY KEY,
     source_paper_id TEXT NOT NULL REFERENCES papers(paper_id) ON DELETE CASCADE,
     blocked_id TEXT NOT NULL,
@@ -560,7 +560,7 @@ CREATE TABLE reference_resolutions (
     updated_at TEXT NOT NULL,
     UNIQUE (source_paper_id, blocked_id, target_kind, target_json)
 );
-CREATE INDEX reference_resolutions_source
+CREATE INDEX IF NOT EXISTS reference_resolutions_source
     ON reference_resolutions(source_paper_id, blocked_id, target_kind, resolution_id);
 """
 

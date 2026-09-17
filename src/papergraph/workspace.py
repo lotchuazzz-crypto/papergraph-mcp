@@ -11,6 +11,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from threading import RLock
 
+from papergraph.arxiv import prepare_arxiv_project
 from papergraph.citations import build_citation_records
 from papergraph.cross_paper_reading_plan import build_cross_paper_reading_plan
 from papergraph.evidence import (
@@ -25,6 +26,7 @@ from papergraph.evidence_extractors import build_pdf_evidence_document
 from papergraph.identity import (
     global_theorem_id,
     normalize_paper_id,
+    paper_id_from_arxiv,
     split_global_theorem_id,
 )
 from papergraph.models import (
@@ -35,7 +37,7 @@ from papergraph.models import (
 from papergraph.parser import latex_project_to_evidence_document, parse_project
 from papergraph.paper_map import build_paper_map
 from papergraph.pdf import load_pdf_evidence_spans
-from papergraph.project import LoadedProject
+from papergraph.project import LoadedProject, load_project
 from papergraph.reading_report import build_paper_reading_report
 from papergraph.starter import (
     bootstrap_reading_project,
@@ -2033,6 +2035,19 @@ class Workspace:
                 timestamp,
             ),
         )
+        if import_target and normalized_target["kind"] in {"arxiv", "pdf"}:
+            try:
+                imported_paper_id = self._import_reference_target(normalized_target)
+                status = "resolved_imported"
+            except Exception as exc:
+                status = "failed_import"
+                warnings = [bounded_excerpt(str(exc), limit=240)]
+            self._update_reference_resolution_import(
+                resolution_id,
+                status,
+                imported_paper_id,
+                warnings,
+            )
         return self._reference_resolution_by_id(resolution_id)
 
     @_synchronized
@@ -2084,6 +2099,55 @@ class Workspace:
             (resolution_id,),
         ).fetchone()
         return _reference_resolution_from_row(row) if row else None
+
+    def _import_reference_target(self, target: dict) -> str:
+        if target["kind"] == "pdf":
+            path = Path(str(target["path"])).expanduser().resolve()
+            if not path.is_file():
+                raise ValueError(f"PDF target does not exist: {path}")
+            paper_id = str(
+                target.get("paper_id")
+                or f"local:{slug_fragment(str(path) + ':' + path.stem)}"
+            )
+            return self.import_pdf(path, paper_id).paper_id
+        if target["kind"] == "arxiv":
+            prepared = prepare_arxiv_project(str(target["arxiv_id"]), None, False)
+            paper_id, source_version = paper_id_from_arxiv(prepared.arxiv_id)
+            project = load_project(prepared.main_file)
+            result = self.import_project(
+                paper_id,
+                "arxiv",
+                paper_id.removeprefix("arxiv:"),
+                source_version,
+                project,
+            )
+            return result.paper_id
+        raise ValueError(f"Reference target is not importable: {target['kind']}")
+
+    def _update_reference_resolution_import(
+        self,
+        resolution_id: str,
+        status: str,
+        imported_paper_id: str | None,
+        warnings: list[str],
+    ) -> None:
+        self._connection.execute(
+            """
+            UPDATE reference_resolutions
+            SET status = ?,
+                imported_paper_id = ?,
+                warning_json = ?,
+                updated_at = ?
+            WHERE resolution_id = ?
+            """,
+            (
+                status,
+                imported_paper_id,
+                _canonical_json(warnings),
+                datetime.now(timezone.utc).isoformat(),
+                resolution_id,
+            ),
+        )
 
     @_synchronized
     def get_paper_map(self, paper_id: str, max_candidates: int = 5) -> dict:

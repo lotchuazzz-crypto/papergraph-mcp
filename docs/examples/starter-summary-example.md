@@ -22,7 +22,10 @@ This is a compact example artifact showing the shape of a Workspace Starter summ
 
 ## Start Here
 
-- Open `local-example-a-reading-report.md`.
+- Evidence triage: `sparse_dependencies`.
+- Candidate starting point: `local:example-a::pdf:theorem:1.1` (automatic candidate).
+- Read `local:example-a::pdf:lemma:1.2` before `local:example-a::pdf:theorem:1.1`.
+- Review `Evidence Triage` in each Reading Report before interpreting dependencies.
 - Review `cross-paper-reading-plan.md` before treating citation evidence as a logical dependency.
 
 ## Reading Artifacts

@@ -124,6 +124,8 @@ def test_bootstrap_reading_project_writes_starter_artifacts(tmp_path: Path):
         assert result["starter_schema_version"] == 1
         assert result["status"] == "written"
         assert result["workspace"]["paper_count"] == 1
+        assert result["evidence_triage"][0]["paper_id"] == "local:paper"
+        assert result["evidence_triage"][0]["triage_schema_version"] == 1
         assert [artifact["kind"] for artifact in result["artifacts"]] == [
             "starter_summary",
             "starter_manifest",
@@ -135,12 +137,16 @@ def test_bootstrap_reading_project_writes_starter_artifacts(tmp_path: Path):
         assert manifest_path.exists()
         markdown = start_here.read_text(encoding="utf-8")
         assert markdown.startswith("# PaperGraph Reading Project: Bootstrap example")
+        assert "Evidence triage:" in markdown
+        assert "Candidate starting point" in markdown
         assert "## Papers Loaded" in markdown
         assert "## Evidence Boundaries" in markdown
         assert "PaperGraph does not verify proofs." in markdown
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         assert manifest["starter_schema_version"] == 1
         assert manifest["paper_ids"] == ["local:paper"]
+        assert manifest["evidence_triage"][0]["paper_id"] == "local:paper"
+        assert manifest["evidence_triage"][0]["triage_schema_version"] == 1
         assert all("created_at" not in json.dumps(value) for value in manifest.values())
         assert any(
             command.startswith("papergraph-mcp get-paper-map --workspace")

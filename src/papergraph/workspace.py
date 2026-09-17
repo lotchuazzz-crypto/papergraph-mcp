@@ -2048,6 +2048,8 @@ class Workspace:
                 imported_paper_id,
                 warnings,
             )
+        else:
+            self._connection.commit()
         return self._reference_resolution_by_id(resolution_id)
 
     @_synchronized
@@ -2148,6 +2150,7 @@ class Workspace:
                 resolution_id,
             ),
         )
+        self._connection.commit()
 
     @_synchronized
     def get_paper_map(self, paper_id: str, max_candidates: int = 5) -> dict:

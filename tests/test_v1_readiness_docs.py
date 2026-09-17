@@ -105,8 +105,9 @@ def test_reading_report_example_is_compact_and_evidence_scoped():
     for heading in (
         "## Paper",
         "## Paper Map",
+        "## Evidence Triage",
         "## Main-Result Candidates",
-        "## Recommended Reading Route",
+        "## Candidate Reading Route",
         "## External Reading Risks",
         "## Evidence Boundaries",
     ):

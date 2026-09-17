@@ -15,12 +15,32 @@ This is a compact example artifact showing the shape of a PaperGraph Reading Rep
 
 ## Paper Map
 
-- Recommended start result: `local:example-a::pdf:theorem:1.1`
+- Candidate starting point: `local:example-a::pdf:theorem:1.1`
 - Evidence status: `usable`
 - Main-result candidates: 1
 - Reading route items: 4
 - External risks: 1
 - Unresolved risks: 0
+
+## Evidence Triage
+
+- Status: `usable_with_cautions`
+- Headline: Some local evidence is usable, but PaperGraph evidence boundaries still apply.
+- Supported local dependency chains: 1
+- External import blockers: 0
+- Candidate starting point: `local:example-a::pdf:theorem:1.1` (automatic candidate; This is not a claim that the result is mathematically central.)
+
+### What Is Safe To Use
+
+- PaperGraph found supported local dependency evidence: `local:example-a::pdf:theorem:1.1` -> `local:example-a::pdf:lemma:1.2`.
+
+### What Needs Review
+
+- Review external citation evidence before treating it as a local logical dependency.
+
+### Next Actions
+
+1. Read `local:example-a::pdf:lemma:1.2` before `local:example-a::pdf:theorem:1.1`.
 
 ## Main-Result Candidates
 
@@ -31,14 +51,14 @@ This is a compact example artifact showing the shape of a PaperGraph Reading Rep
      - `title_signal` weight 4: result text contains a main-result cue
      - `proof_dependency_signal` weight 1: reading path evidence is available
 
-## Recommended Reading Route
+## Candidate Reading Route
 
 1. `local:example-a::pdf:theorem:1.1` start - selected_main_candidate
 2. `local:example-a::proof:2` required - proof_evidence
 3. `local:example-a::pdf:lemma:1.2` recommended - local_dependency
 4. `local:example-a::external-mention:1` caution - external_risk
 
-## Local Logic Chain
+## Supported Local Logic Chain
 
 - `local:example-a::pdf:theorem:1.1` uses local evidence involving `local:example-a::pdf:lemma:1.2`.
 

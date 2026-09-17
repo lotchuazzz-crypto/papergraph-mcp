@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from papergraph.workspace import Workspace
+from tests.test_reference_search import provider_result
 from tests.test_workspace_paper_map import import_paper_map_pdf
 from tests.test_workspace_reference_resolution import (
     import_missing_reference_pdf,
@@ -92,6 +93,43 @@ def test_reading_report_includes_resolved_reference_summary(tmp_path: Path):
         assert "### Resolved External References" in report["markdown"]
         assert "Resolved, not imported" in report["markdown"]
         assert "10.1000/example" in report["markdown"]
+    finally:
+        workspace.close()
+
+
+def test_reading_report_includes_scholarly_reference_search_summary(tmp_path: Path):
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        import_missing_reference_pdf(workspace, tmp_path)
+        blocked = workspace.plan_external_imports_for_paper("local:paper")["blocked"][0]
+        workspace.reference_search_provider = lambda query: [
+            provider_result(
+                "openalex",
+                records=[
+                    {
+                        "kind": "metadata",
+                        "title": "Old proceedings note",
+                        "authors": ["D. Classic"],
+                        "year": "1932",
+                        "venue": "Proceedings of the 1932 seminar",
+                    }
+                ],
+            )
+        ]
+        workspace.search_external_reference("local:paper", blocked["blocked_id"])
+
+        report = workspace.export_paper_reading_report("local:paper")
+
+        assert report["reference_searches"]["summary"]["candidate_count"] == 1
+        assert report["evidence_triage"]["scholarly_reference_search"][
+            "boundary_count"
+        ] == 1
+        assert "### Scholarly Reference Candidates" in report["markdown"]
+        assert "Old proceedings note" in report["markdown"]
+        assert "### Search Boundaries" in report["markdown"]
+        assert "The trail stops until the user supplies an importable source" in (
+            report["markdown"]
+        )
     finally:
         workspace.close()
 

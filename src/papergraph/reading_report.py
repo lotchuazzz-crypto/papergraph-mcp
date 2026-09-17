@@ -47,15 +47,20 @@ def build_paper_reading_report(
     reference_resolutions = workspace.list_external_reference_resolutions(
         paper_map["paper"]["paper_id"]
     )
+    reference_searches = workspace.list_external_reference_searches(
+        paper_map["paper"]["paper_id"]
+    )
     evidence_triage = build_evidence_triage(
         paper_map,
         reference_resolutions=reference_resolutions,
+        reference_searches=reference_searches,
     )
     sections = _sections_from_paper_map(
         paper_map,
         summary,
         evidence_triage,
         reference_resolutions,
+        reference_searches,
     )
     report: dict[str, Any] = {
         "report_schema_version": REPORT_SCHEMA_VERSION,
@@ -67,6 +72,7 @@ def build_paper_reading_report(
         "sections": sections,
         "warnings": paper_map["evidence_quality"]["warnings"],
         "reference_resolutions": reference_resolutions,
+        "reference_searches": reference_searches,
         "paper_map": paper_map,
     }
     report["markdown"] = render_paper_reading_report_markdown(report)
@@ -117,6 +123,10 @@ def render_paper_reading_report_markdown(report_model: dict[str, Any]) -> str:
     lines.extend(_render_external_risks(paper_map["external_risks"]))
     lines.extend(["", "### Resolved External References", ""])
     lines.extend(_render_reference_resolutions(report_model["reference_resolutions"]))
+    lines.extend(["", "### Scholarly Reference Candidates", ""])
+    lines.extend(_render_reference_search_candidates(report_model["reference_searches"]))
+    lines.extend(["", "### Search Boundaries", ""])
+    lines.extend(_render_reference_search_boundaries(report_model["reference_searches"]))
     lines.extend(["", "## Evidence Quality", ""])
     lines.extend(_render_warnings(report_model["warnings"]))
     lines.extend(["", "## Evidence Boundaries", ""])
@@ -150,6 +160,7 @@ def _sections_from_paper_map(
     summary: dict[str, Any],
     evidence_triage: dict[str, Any],
     reference_resolutions: dict[str, Any],
+    reference_searches: dict[str, Any],
 ) -> list[dict[str, Any]]:
     return [
         {"id": "paper", "title": "Paper", "items": [paper_map["paper"]]},
@@ -178,6 +189,11 @@ def _sections_from_paper_map(
             "id": "reference-resolutions",
             "title": "Resolved External References",
             "items": reference_resolutions["resolutions"],
+        },
+        {
+            "id": "reference-searches",
+            "title": "Scholarly Reference Searches",
+            "items": reference_searches["searches"],
         },
         {
             "id": "evidence-quality",
@@ -321,6 +337,52 @@ def _render_reference_resolutions(reference_resolutions: dict[str, Any]) -> list
                 f"- Failed import: {target_label}"
                 + (f" ({_text(warnings)})" if warnings else "")
             )
+    return lines
+
+
+def _render_reference_search_candidates(reference_searches: dict[str, Any]) -> list[str]:
+    searches = reference_searches.get("searches", [])
+    candidates = [
+        candidate
+        for search in searches
+        for candidate in search.get("candidates", [])
+    ]
+    if not candidates:
+        return ["No scholarly reference candidates have been searched yet."]
+    lines = []
+    for candidate in candidates:
+        target = candidate.get("target", {})
+        title = _text(target.get("title") or _reference_target_label(target))
+        lines.append(
+            "- "
+            f"{title} "
+            f"({target.get('kind', 'metadata')}; "
+            f"confidence: {candidate.get('confidence')}; "
+            f"score: {candidate.get('score')})"
+        )
+        if target.get("doi"):
+            lines.append(f"  - DOI: `{target['doi']}`")
+        if target.get("arxiv_id"):
+            lines.append(f"  - arXiv: `{target['arxiv_id']}`")
+        evidence = candidate.get("evidence", [])
+        if evidence:
+            lines.append(f"  - Evidence: {', '.join(_text(item) for item in evidence)}")
+    return lines
+
+
+def _render_reference_search_boundaries(reference_searches: dict[str, Any]) -> list[str]:
+    boundaries = [
+        boundary
+        for search in reference_searches.get("searches", [])
+        for boundary in search.get("boundaries", [])
+    ]
+    if not boundaries:
+        return ["No scholarly reference search boundaries have been recorded."]
+    lines = []
+    for boundary in boundaries:
+        lines.append(
+            f"- `{boundary.get('kind', 'boundary')}`: {_text(boundary.get('message', ''))}"
+        )
     return lines
 
 

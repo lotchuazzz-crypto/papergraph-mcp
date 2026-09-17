@@ -22,6 +22,7 @@ def build_evidence_triage(
     paper_map: dict[str, Any],
     external_plan: dict[str, Any] | None = None,
     reference_resolutions: dict[str, Any] | None = None,
+    reference_searches: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a small first-reading triage payload from existing evidence."""
 
@@ -34,6 +35,7 @@ def build_evidence_triage(
     local_edge_count = len(supported_chains)
     blocked_count = int(external_summary.get("blocked_count", 0) or 0)
     resolution_summary = (reference_resolutions or {}).get("summary", {})
+    search_summary = (reference_searches or {}).get("summary", {})
     theorem_like_total = int(paper.get("result_count", 0) or 0)
     status = _status(
         theorem_like_total=theorem_like_total,
@@ -70,6 +72,14 @@ def build_evidence_triage(
                 resolution_summary.get("failed_import_count", 0) or 0
             ),
         },
+        "scholarly_reference_search": {
+            "search_run_count": int(search_summary.get("search_run_count", 0) or 0),
+            "candidate_count": int(search_summary.get("candidate_count", 0) or 0),
+            "ambiguous_candidate_count": int(
+                search_summary.get("ambiguous_candidate_count", 0) or 0
+            ),
+            "boundary_count": int(search_summary.get("boundary_count", 0) or 0),
+        },
         "next_actions": [],
     }
     triage["next_actions"] = _next_actions(triage)
@@ -100,6 +110,24 @@ def render_evidence_triage_markdown(triage: dict[str, Any]) -> list[str]:
         lines.append(
             "- Failed reference imports: "
             f"{resolved.get('failed_import_count', 0)}"
+        )
+    search = triage.get("scholarly_reference_search", {})
+    if any(int(search.get(key, 0) or 0) for key in search):
+        lines.append(
+            "- Scholarly reference searches: "
+            f"{search.get('search_run_count', 0)}"
+        )
+        lines.append(
+            "- Scholarly reference candidates: "
+            f"{search.get('candidate_count', 0)}"
+        )
+        lines.append(
+            "- Ambiguous scholarly candidates: "
+            f"{search.get('ambiguous_candidate_count', 0)}"
+        )
+        lines.append(
+            "- Search boundaries: "
+            f"{search.get('boundary_count', 0)}"
         )
     if candidate:
         lines.append(

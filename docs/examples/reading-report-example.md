@@ -68,6 +68,19 @@ This is a compact example artifact showing the shape of a PaperGraph Reading Rep
   - Citation keys: 12
   - Review summary: Needed by 1 local result through 1 proof.
 
+### Scholarly Reference Candidates
+
+- `candidate:crossref:example` plausible - Published target
+  - Score: 12
+  - DOI: 10.1000/example
+  - Evidence:
+    - `title_similarity`: title matches the bibliography fragment
+    - `year_match`: publication year matches extracted evidence
+
+### Search Boundaries
+
+- PaperGraph found metadata for one older cited source but no DOI, arXiv ID, stable URL, or local PDF. The trail stops until the reader supplies an importable source.
+
 ## Evidence Quality
 
 - `external_dependencies`: External import candidates are visible from stored evidence.

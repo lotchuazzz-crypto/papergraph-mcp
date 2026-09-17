@@ -1,0 +1,37 @@
+{
+  "search_schema_version": 1,
+  "paper_id": "local:example-a",
+  "blocked_id": "external-import:blocked:example",
+  "query": {
+    "title": "Published target",
+    "authors": ["Ada Author"],
+    "year": 1978,
+    "citation_keys": ["12"],
+    "raw_text": "[12] A. Author. Published target."
+  },
+  "candidates": [
+    {
+      "candidate_id": "candidate:crossref:example",
+      "confidence": "plausible",
+      "score": 12,
+      "ambiguous": false,
+      "title": "Published target",
+      "authors": ["Ada Author"],
+      "year": 1978,
+      "doi": "10.1000/example",
+      "arxiv_id": null,
+      "url": "https://doi.org/10.1000/example",
+      "provider": "crossref",
+      "evidence": [
+        {"kind": "title_similarity", "message": "title matches the blocked reference"},
+        {"kind": "year_match", "message": "year matches extracted bibliography evidence"}
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "metadata_only",
+      "message": "PaperGraph found metadata for one older cited source but no DOI, arXiv ID, stable URL, or local PDF. The trail stops until the reader supplies an importable source."
+    }
+  ]
+}

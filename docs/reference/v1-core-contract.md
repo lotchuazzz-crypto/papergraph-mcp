@@ -19,6 +19,8 @@ v1.1.1 adds Evidence Triage to Reading Reports and Workspace Starter artifacts. 
 
 v1.1.2 adds Reference Import Closure: a blocked external reference can be resolved to a user-confirmed arXiv ID, local PDF, DOI, URL, or published metadata target. arXiv and local PDF targets can be imported; DOI, URL, and metadata targets are recorded as resolved but not imported until the user supplies a local source.
 
+v1.1.3 adds Scholarly Reference Resolver: a blocked external reference can be searched against scholarly metadata providers, ranked as candidates, and then applied through the v1.1.2 Reference Import Closure path. Search is allowed to be proactive; durable resolution remains explicit and reviewable.
+
 ## Stable MCP Tools
 
 These MCP tools form the v1 core:
@@ -42,6 +44,9 @@ These MCP tools form the v1 core:
 - `workspace_plan_external_imports_for_paper`
 - `workspace_plan_external_imports_for_result`
 - `workspace_plan_external_imports_for_queue`
+- `workspace_search_external_reference`
+- `workspace_list_external_reference_searches`
+- `workspace_resolve_external_reference_candidate`
 - `workspace_resolve_external_reference`
 - `workspace_list_external_reference_resolutions`
 - `workspace_create_reading_queue`
@@ -62,6 +67,9 @@ The v1 CLI mirrors the same workflow:
 - `papergraph-mcp export-paper-reading-report`
 - `papergraph-mcp export-cross-paper-reading-plan`
 - `papergraph-mcp plan-external-imports-for-paper`
+- `papergraph-mcp search-external-reference`
+- `papergraph-mcp list-external-reference-searches`
+- `papergraph-mcp resolve-external-reference-candidate`
 - `papergraph-mcp resolve-external-reference`
 - `papergraph-mcp list-external-reference-resolutions`
 - `papergraph-mcp create-reading-queue`
@@ -129,6 +137,20 @@ Stable resolution statuses:
 
 Reference resolutions supplement extraction evidence. They do not rewrite original citation, bibliography, or proof evidence.
 
+## Scholarly Reference Resolver
+
+Scholarly Reference Resolver searches public scholarly metadata for blocked external references. Its stable behavior is:
+
+- search runs are stored with provider provenance, warnings, and deterministic run IDs;
+- candidates carry title, authors, year, DOI, arXiv ID, URLs, provider evidence, confidence, and ambiguity flags;
+- candidate confidence is one of `strong`, `plausible`, `ambiguous`, `weak`, or `unavailable`;
+- applying a candidate routes through Reference Import Closure and creates the same durable resolution records as a manual user-confirmed target;
+- an existing conflicting resolution is not overwritten unless overwrite is requested.
+
+A candidate is not a mathematical claim. It is an evidence bundle for a human or agent to inspect. PaperGraph may search without asking the user for every low-risk query, but importing, overwriting, or treating a candidate as the identity of a reference must remain explicit.
+
+Provider coverage is intentionally bounded. PaperGraph can stop at metadata when a reference has no DOI, arXiv ID, stable URL, accessible PDF, or reliable local source. This includes old literature without preserved electronic copies, paywalled publications, ambiguous titles, incomplete bibliography records, and chains such as A cites B, B cites C, C cites D where D is not digitally reachable. In those cases PaperGraph must tell the user that the search boundary was reached instead of guessing.
+
 ## CLI Error Payloads
 
 Workspace CLI failures use this shape:
@@ -168,7 +190,7 @@ PaperGraph does not infer hidden mathematical prerequisites.
 
 PaperGraph does not perform semantic theorem matching.
 
-PaperGraph does not search the web to identify ambiguous references or recursively import newly discovered literature in v1.1.2.
+PaperGraph v1.1.3 can search scholarly metadata for blocked references, but it does not recursively crawl newly discovered literature, bypass paywalls, or assert that an ambiguous metadata candidate is the intended source.
 
 Citation evidence does not imply logical dependency unless supported by reading-path evidence.
 
@@ -182,5 +204,5 @@ These features are intentionally outside the v1 core contract:
 - semantic theorem equivalence;
 - notation or symbol indexing;
 - PDF rendering of reports;
-- online reference search and recursive external-paper import;
+- recursive external-paper import beyond explicitly selected candidates;
 - proof checking.

@@ -24,7 +24,7 @@ def test_project_metadata_is_discoverable_and_keeps_dependencies_separated():
     configuration = read_toml("pyproject.toml")
     project = configuration["project"]
 
-    assert project["version"] == "1.1.2"
+    assert project["version"] == "1.1.3"
     assert project["dependencies"] == [
         "httpx>=0.27,<1",
         "mcp[cli]>=2,<3",
@@ -70,7 +70,7 @@ def test_lockfile_contains_project_package():
     )
 
     assert package["name"] == "papergraph-mcp"
-    assert package["version"] == "1.1.2"
+    assert package["version"] == "1.1.3"
 
 
 def test_validate_arxiv_request_module_stdout_is_json_only():
@@ -102,8 +102,8 @@ def test_runtime_and_issue_template_release_strings_remain_pinned():
         if item.get("id") == "version"
     )
 
-    assert f'PaperGraph/1.1.2 (+{REPOSITORY_URL})' in arxiv_source
-    assert version_field["attributes"]["placeholder"] == "1.1.2"
+    assert f'PaperGraph/1.1.3 (+{REPOSITORY_URL})' in arxiv_source
+    assert version_field["attributes"]["placeholder"] == "1.1.3"
 
 
 def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
@@ -144,7 +144,7 @@ def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
         for token in ('"uv"', '"pip"', '"install"', '"--python"')
     )
     assert "papergraph-mcp --version" in build_steps
-    assert "papergraph-mcp 1.1.2" in build_steps
+    assert "papergraph-mcp 1.1.3" in build_steps
     assert 'version="$(.smoke-venv/bin/papergraph-mcp --version)"' in build_steps
 
 
@@ -252,7 +252,7 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     pinned_source = (
         "git+https://github.com/lotchuazzz-crypto/"
-        "papergraph-mcp.git@v1.1.2"
+        "papergraph-mcp.git@v1.1.3"
     )
 
     for badge in ("CI", "Python", "MIT", "Release"):
@@ -264,9 +264,9 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     assert f"uvx --from {pinned_source} papergraph-mcp doctor" in readme
     assert '"command": "uvx"' in readme
     assert pinned_source in readme
-    assert "PaperGraph v1.1.2" in readme
+    assert "PaperGraph v1.1.3" in readme
     assert (
-        "PaperGraph v1.1.2 is the stable evidence-first reading workflow"
+        "PaperGraph v1.1.3 is the stable evidence-first reading workflow"
         in readme
     )
 
@@ -315,6 +315,9 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
         "workspace_plan_external_imports_for_result",
         "workspace_plan_external_imports_for_queue",
         "workspace_plan_external_imports_for_paper",
+        "workspace_search_external_reference",
+        "workspace_list_external_reference_searches",
+        "workspace_resolve_external_reference_candidate",
         "workspace_resolve_external_reference",
         "workspace_list_external_reference_resolutions",
         "workspace_get_paper_map",
@@ -334,10 +337,15 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
         "[Cross-Paper Reading Plan](docs/examples/cross-paper-reading-plan-example.md)"
         in readme
     )
+    assert "[Reference Search](docs/examples/reference-search-example.json)" in readme
+    assert "v1.1.3 adds Scholarly Reference Resolver" in readme
+    assert "Crossref, OpenAlex, and arXiv" in readme
+    assert "deterministic candidate ranking" in readme
+    assert "metadata-only literature" in readme
     assert "v1.1.2 adds Reference Import Closure" in readme
     assert "user-confirmed arXiv and local PDF imports" in readme
     assert "DOI, URL, and published metadata" in readme
-    assert "No online search is performed in v1.1.2" in readme
+    assert "It does not bypass paywalls" in readme
     assert "v1.1.1 adds Evidence Triage" in readme
     assert "v1.1.0 adds Workspace Starter planning and bootstrap commands" in readme
     assert "v1.0.0 released the stable PaperGraph core" in readme
@@ -367,6 +375,9 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     assert "plan-external-imports-for-result" in readme
     assert "plan-external-imports-for-queue" in readme
     assert "plan-external-imports-for-paper" in readme
+    assert "search-external-reference" in readme
+    assert "list-external-reference-searches" in readme
+    assert "resolve-external-reference-candidate" in readme
     assert "resolve-external-reference" in readme
     assert "list-external-reference-resolutions" in readme
     assert "get-paper-map" in readme
@@ -462,8 +473,8 @@ def test_onboarding_uses_v061_release_pin_and_mentions_id_url_conflicts():
         ROOT / ".agents/skills/setting-up-papergraph/references/usage-prompt.md"
     ).read_text(encoding="utf-8")
 
-    assert "papergraph-mcp.git@v1.1.2" in skill
-    assert "papergraph-mcp 1.1.2" in skill
+    assert "papergraph-mcp.git@v1.1.3" in skill
+    assert "papergraph-mcp 1.1.3" in skill
     assert "validate_arxiv_request" in skill
     assert "load_arxiv_request" in skill
     assert "If a user provides both an arXiv ID and an arXiv URL" in skill

@@ -125,6 +125,28 @@ def test_triage_renders_external_blockers_as_user_actions():
     assert "Resolve blocked citation `3`" in rendered
 
 
+def test_triage_summarizes_resolved_external_references():
+    triage = build_evidence_triage(
+        sparse_paper_map(),
+        reference_resolutions={
+            "summary": {
+                "resolved_imported_count": 1,
+                "resolved_not_imported_count": 2,
+                "failed_import_count": 0,
+            }
+        },
+    )
+
+    assert triage["resolved_external_references"] == {
+        "resolved_imported_count": 1,
+        "resolved_not_imported_count": 2,
+        "failed_import_count": 0,
+    }
+    rendered = "\n".join(render_evidence_triage_markdown(triage))
+    assert "Resolved and imported references: 1" in rendered
+    assert "Resolved but not imported references: 2" in rendered
+
+
 def test_empty_dependencies_keep_scoped_negative_result_warning():
     paper_map = sparse_paper_map()
     paper_map["reading_route"] = []

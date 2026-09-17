@@ -4,6 +4,10 @@ import pytest
 
 from papergraph.workspace import Workspace
 from tests.test_workspace_paper_map import import_paper_map_pdf
+from tests.test_workspace_reference_resolution import (
+    import_missing_reference_pdf,
+    write_target_pdf,
+)
 
 
 def test_reading_report_exports_researcher_markdown(tmp_path: Path):
@@ -58,6 +62,60 @@ def test_reading_report_respects_max_candidates(tmp_path: Path):
 
         assert len(report["paper_map"]["main_result_candidates"]) == 1
         assert report["summary"]["main_candidate_count"] == 1
+    finally:
+        workspace.close()
+
+
+def test_reading_report_includes_resolved_reference_summary(tmp_path: Path):
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        import_missing_reference_pdf(workspace, tmp_path)
+        blocked = workspace.plan_external_imports_for_paper("local:paper")["blocked"][0]
+        workspace.resolve_external_reference(
+            "local:paper",
+            blocked["blocked_id"],
+            {
+                "kind": "doi",
+                "doi": "10.1000/example",
+                "title": "Published target",
+            },
+        )
+
+        report = workspace.export_paper_reading_report("local:paper")
+
+        assert report["reference_resolutions"]["summary"][
+            "resolved_not_imported_count"
+        ] == 1
+        assert report["evidence_triage"]["resolved_external_references"][
+            "resolved_not_imported_count"
+        ] == 1
+        assert "### Resolved External References" in report["markdown"]
+        assert "Resolved, not imported" in report["markdown"]
+        assert "10.1000/example" in report["markdown"]
+    finally:
+        workspace.close()
+
+
+def test_reading_report_includes_imported_reference_summary(tmp_path: Path):
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        import_missing_reference_pdf(workspace, tmp_path)
+        blocked = workspace.plan_external_imports_for_paper("local:paper")["blocked"][0]
+        target_pdf = tmp_path / "target.pdf"
+        write_target_pdf(target_pdf)
+        workspace.resolve_external_reference(
+            "local:paper",
+            blocked["blocked_id"],
+            {"kind": "pdf", "path": str(target_pdf), "paper_id": "local:ref17"},
+        )
+
+        report = workspace.export_paper_reading_report("local:paper")
+
+        assert report["reference_resolutions"]["summary"][
+            "resolved_imported_count"
+        ] == 1
+        assert "Resolved and imported" in report["markdown"]
+        assert "local:ref17" in report["markdown"]
     finally:
         workspace.close()
 

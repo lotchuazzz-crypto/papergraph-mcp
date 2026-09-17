@@ -37,7 +37,7 @@ def import_session_pdf(tmp_path: Path) -> tuple[Path, str]:
 def test_schema_v4_initializes_reading_session_tables(tmp_path: Path):
     workspace = Workspace.open(tmp_path / "workspace.sqlite3")
     try:
-        assert SCHEMA_VERSION == 6
+        assert SCHEMA_VERSION == 7
         tables = {
             row[0]
             for row in workspace._connection.execute(
@@ -51,7 +51,7 @@ def test_schema_v4_initializes_reading_session_tables(tmp_path: Path):
         } <= tables
         assert workspace._connection.execute(
             "SELECT value FROM workspace_meta WHERE key = 'schema_version'"
-        ).fetchone() == ("6",)
+        ).fetchone() == ("7",)
     finally:
         workspace.close()
 
@@ -72,7 +72,7 @@ def test_v3_workspace_migrates_to_v4_without_losing_evidence(tmp_path: Path):
     try:
         assert workspace._connection.execute(
             "SELECT value FROM workspace_meta WHERE key = 'schema_version'"
-        ).fetchone() == ("6",)
+        ).fetchone() == ("7",)
         assert workspace.get_result(result_id)["result_id"] == result_id
         assert workspace.list_reading_sessions() == []
     finally:

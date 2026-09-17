@@ -70,12 +70,17 @@ def test_first_workspace_walkthrough_covers_mcp_and_cli_paths():
 
     for command in (
         "papergraph-mcp doctor",
-        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 papergraph-mcp doctor",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp doctor",
         "open_workspace",
         "workspace_add_arxiv_paper",
         "workspace_get_paper_map",
+        "workspace_search_external_reference",
+        "workspace_resolve_external_reference_candidate",
         "workspace_resolve_external_reference",
         "export-paper-reading-report",
+        "search-external-reference",
+        "list-external-reference-searches",
+        "resolve-external-reference-candidate",
         "resolve-external-reference",
         "list-external-reference-resolutions",
         "export-cross-paper-reading-plan",
@@ -85,7 +90,8 @@ def test_first_workspace_walkthrough_covers_mcp_and_cli_paths():
     ):
         assert command in text
     assert "outside the Git repository" in text
-    assert "No online search is performed" in text
+    assert "metadata boundary" in text
+    assert "only imports or records a target when a candidate is explicitly applied" in text
     assert_no_placeholders(text)
 
 
@@ -120,6 +126,17 @@ def test_reading_report_example_is_compact_and_evidence_scoped():
         assert heading in text
     assert "PaperGraph does not verify proofs." in text
     assert "example artifact" in text.lower()
+    assert_no_placeholders(text)
+
+
+def test_reference_search_example_is_compact_and_boundary_scoped():
+    text = read("docs/examples/reference-search-example.json")
+
+    assert '"search_schema_version": 1' in text
+    assert '"candidates"' in text
+    assert '"boundaries"' in text
+    assert '"metadata_only"' in text
+    assert "trail stops" in text
     assert_no_placeholders(text)
 
 
@@ -158,8 +175,8 @@ def test_v1_release_checklist_is_concrete():
 
     for command in (
         "uv run pytest -q -p no:cacheprovider --basetemp .pytest-tmp",
-        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 papergraph-mcp --version",
-        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 papergraph-mcp doctor",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp --version",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp doctor",
     ):
         assert command in text
     assert_no_placeholders(text)

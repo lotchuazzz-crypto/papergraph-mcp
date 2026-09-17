@@ -692,6 +692,71 @@ def workspace_list_external_reference_resolutions(
 
 @mcp.tool()
 @_serialized_workspace_tool
+def workspace_search_external_reference(
+    paper_id: str,
+    blocked_id: str,
+    providers: list[str] | None = None,
+    max_candidates: int = 10,
+    refresh: bool = False,
+) -> dict:
+    """Search scholarly metadata providers for a blocked external reference."""
+
+    try:
+        return require_workspace().search_external_reference(
+            paper_id,
+            blocked_id,
+            providers=providers,
+            max_candidates=max_candidates,
+            refresh=refresh,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_list_external_reference_searches(
+    paper_id: str | None = None,
+    blocked_id: str | None = None,
+) -> dict:
+    """List scholarly reference search runs and candidates."""
+
+    try:
+        return require_workspace().list_external_reference_searches(
+            paper_id,
+            blocked_id,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_resolve_external_reference_candidate(
+    paper_id: str,
+    blocked_id: str,
+    candidate_id: str,
+    import_target: bool = False,
+    artifact_dir: str | None = None,
+    overwrite: bool = False,
+) -> dict:
+    """Apply a searched candidate as an explicit reference resolution."""
+
+    try:
+        return require_workspace().resolve_external_reference_candidate(
+            paper_id,
+            blocked_id,
+            candidate_id,
+            import_target=import_target,
+            artifact_dir=artifact_dir,
+            overwrite=overwrite,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
 def workspace_get_paper_map(
     paper_id: str,
     max_candidates: int = 5,
@@ -1513,6 +1578,34 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     list_reference_resolutions_parser.add_argument("--workspace", required=True)
     list_reference_resolutions_parser.add_argument("--paper-id")
+    search_reference_parser = subparsers.add_parser(
+        "search-external-reference",
+        help="Search scholarly metadata providers for a blocked reference.",
+    )
+    search_reference_parser.add_argument("--workspace", required=True)
+    search_reference_parser.add_argument("--paper-id", required=True)
+    search_reference_parser.add_argument("--blocked-id", required=True)
+    search_reference_parser.add_argument("--provider", action="append")
+    search_reference_parser.add_argument("--max-candidates", type=int, default=10)
+    search_reference_parser.add_argument("--refresh", action="store_true")
+    list_reference_searches_parser = subparsers.add_parser(
+        "list-external-reference-searches",
+        help="List scholarly reference search runs and candidates.",
+    )
+    list_reference_searches_parser.add_argument("--workspace", required=True)
+    list_reference_searches_parser.add_argument("--paper-id")
+    list_reference_searches_parser.add_argument("--blocked-id")
+    resolve_reference_candidate_parser = subparsers.add_parser(
+        "resolve-external-reference-candidate",
+        help="Apply a searched candidate as an explicit reference resolution.",
+    )
+    resolve_reference_candidate_parser.add_argument("--workspace", required=True)
+    resolve_reference_candidate_parser.add_argument("--paper-id", required=True)
+    resolve_reference_candidate_parser.add_argument("--blocked-id", required=True)
+    resolve_reference_candidate_parser.add_argument("--candidate-id", required=True)
+    resolve_reference_candidate_parser.add_argument("--import-target", action="store_true")
+    resolve_reference_candidate_parser.add_argument("--artifact-dir")
+    resolve_reference_candidate_parser.add_argument("--overwrite", action="store_true")
     paper_map_parser = subparsers.add_parser(
         "get-paper-map",
         help="Return an evidence-first first-load map for one stored paper.",
@@ -1775,6 +1868,43 @@ def main(argv: Sequence[str] | None = None) -> None:
             args.workspace,
             lambda workspace: workspace.list_external_reference_resolutions(
                 args.paper_id,
+            ),
+        )
+        return
+    if args.command == "search-external-reference":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.search_external_reference(
+                args.paper_id,
+                args.blocked_id,
+                providers=args.provider,
+                max_candidates=args.max_candidates,
+                refresh=args.refresh,
+            ),
+        )
+        return
+    if args.command == "list-external-reference-searches":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.list_external_reference_searches(
+                args.paper_id,
+                args.blocked_id,
+            ),
+        )
+        return
+    if args.command == "resolve-external-reference-candidate":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.resolve_external_reference_candidate(
+                args.paper_id,
+                args.blocked_id,
+                args.candidate_id,
+                import_target=args.import_target,
+                artifact_dir=args.artifact_dir,
+                overwrite=args.overwrite,
             ),
         )
         return

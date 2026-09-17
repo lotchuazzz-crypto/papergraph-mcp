@@ -21,8 +21,8 @@ papergraph-mcp doctor
 If you do not use an MCP-capable client yet, run PaperGraph from the CLI:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp doctor
 ```
 
 ## Workspace Hygiene
@@ -137,7 +137,7 @@ papergraph-mcp export-paper-reading-report --workspace $env:PAPERGRAPH_WORKSPACE
 
 Open the report's `Evidence Triage` section first. It tells you whether extracted dependencies are sparse, whether proofs are missing or fragmentary, whether external references block interpretation, and what manual checks should happen next. A candidate starting point is only a supported extracted route candidate, not a claim that the paper's main theorem has been identified.
 
-## Reference Import Closure
+## Scholarly Reference Resolver
 
 When Evidence Triage reports a blocked external reference, first inspect the planner output:
 
@@ -145,7 +145,53 @@ When Evidence Triage reports a blocked external reference, first inspect the pla
 workspace_plan_external_imports_for_paper(paper_id="local:paper-a")
 ```
 
-Then resolve the specific `blocked_id` with a user-confirmed target. In MCP:
+Then search for candidates for the specific `blocked_id`. Search is a low-risk metadata lookup and can be run without asking the user to confirm every query:
+
+```text
+workspace_search_external_reference(
+  paper_id="local:paper-a",
+  blocked_id="external-import:blocked:..."
+)
+```
+
+or:
+
+```powershell
+papergraph-mcp search-external-reference `
+  --workspace $env:PAPERGRAPH_WORKSPACE `
+  --paper-id local:paper-a `
+  --blocked-id external-import:blocked:...
+
+papergraph-mcp list-external-reference-searches `
+  --workspace $env:PAPERGRAPH_WORKSPACE `
+  --paper-id local:paper-a
+```
+
+Review the candidate confidence, provider evidence, DOI, arXiv ID, URLs, and warnings. A candidate is not a final identity claim. Strong candidates can usually be applied directly through Reference Import Closure; ambiguous, weak, or metadata-only candidates should be reported as boundaries unless the user supplies a source or explicitly chooses one.
+
+To apply a selected candidate in MCP:
+
+```text
+workspace_resolve_external_reference_candidate(
+  paper_id="local:paper-a",
+  blocked_id="external-import:blocked:...",
+  candidate_id="candidate:...",
+  import_target=true
+)
+```
+
+For CLI:
+
+```powershell
+papergraph-mcp resolve-external-reference-candidate `
+  --workspace $env:PAPERGRAPH_WORKSPACE `
+  --paper-id local:paper-a `
+  --blocked-id external-import:blocked:... `
+  --candidate-id candidate:... `
+  --import-target
+```
+
+If you already know the exact target, you can still resolve the `blocked_id` manually. In MCP:
 
 ```text
 workspace_resolve_external_reference(
@@ -170,7 +216,9 @@ papergraph-mcp list-external-reference-resolutions `
   --paper-id local:paper-a
 ```
 
-Use `--pdf .\reference.pdf=local:reference` or an arXiv target when you have an importable source. DOI, URL, and published metadata are recorded as resolved but not imported until a local source is supplied. No online search is performed by this workflow.
+Use `--pdf .\reference.pdf=local:reference` or an arXiv target when you have an importable source. DOI, URL, and published metadata are recorded as resolved but not imported until a local source is supplied.
+
+Some trails stop even after search. For example, A may cite B, B may cite C, and C may cite an older D that has no DOI, no arXiv record, no stable URL, and no accessible PDF. In that case PaperGraph records the metadata boundary and tells the reader what is missing instead of pretending it can continue.
 
 ## Cross-Paper Reading Plan
 
@@ -205,4 +253,4 @@ workspace_create_reading_queue(result_id=<target result id>)
 workspace_create_reading_session(paper_id=<paper id>)
 ```
 
-PaperGraph does not verify proofs, infer hidden prerequisites, perform semantic theorem matching, search the web for ambiguous references, or recursively import newly discovered literature in v1.1.2.
+PaperGraph does not verify proofs, infer hidden prerequisites, perform semantic theorem matching, bypass paywalls, or recursively import newly discovered literature. v1.1.3 can search scholarly metadata for blocked references, but it only imports or records a target when a candidate is explicitly applied.

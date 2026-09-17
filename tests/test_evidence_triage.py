@@ -147,6 +147,38 @@ def test_triage_summarizes_resolved_external_references():
     assert "Resolved but not imported references: 2" in rendered
 
 
+def test_triage_summarizes_scholarly_reference_searches():
+    paper_map = {
+        "paper": {"paper_id": "local:paper", "result_count": 3},
+        "reading_route": [],
+        "external_risks": {"summary": {"blocked_count": 1}, "blocked": []},
+        "evidence_quality": {"warnings": []},
+        "summary": {"recommended_start_result_id": None},
+    }
+
+    triage = build_evidence_triage(
+        paper_map,
+        reference_searches={
+            "summary": {
+                "search_run_count": 2,
+                "candidate_count": 3,
+                "ambiguous_candidate_count": 1,
+                "boundary_count": 1,
+            }
+        },
+    )
+
+    assert triage["scholarly_reference_search"] == {
+        "search_run_count": 2,
+        "candidate_count": 3,
+        "ambiguous_candidate_count": 1,
+        "boundary_count": 1,
+    }
+    rendered = "\n".join(render_evidence_triage_markdown(triage))
+    assert "Scholarly reference searches: 2" in rendered
+    assert "Ambiguous scholarly candidates: 1" in rendered
+
+
 def test_empty_dependencies_keep_scoped_negative_result_warning():
     paper_map = sparse_paper_map()
     paper_map["reading_route"] = []

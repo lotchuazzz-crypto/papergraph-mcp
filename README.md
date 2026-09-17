@@ -9,7 +9,7 @@
 
 **Read math papers with evidence, not guesses.**
 
-PaperGraph v1.1.2 is the stable evidence-first reading workflow for math papers: start with a Paper Map, inspect source-backed proof and citation evidence, use Evidence Triage to understand sparse extraction, then export Markdown Reading Reports or Cross-Paper Reading Plans.
+PaperGraph v1.1.3 is the stable evidence-first reading workflow for math papers: start with a Paper Map, inspect source-backed proof and citation evidence, use Evidence Triage to understand sparse extraction, search scholarly metadata for blocked references, then export Markdown Reading Reports or Cross-Paper Reading Plans.
 
 It helps AI agents turn arXiv papers, local LaTeX projects, and born-digital PDFs into a local theorem-centered workspace so a researcher can inspect where every claim came from.
 
@@ -23,11 +23,11 @@ It helps AI agents turn arXiv papers, local LaTeX projects, and born-digital PDF
 
 ### What PaperGraph Helps You Do
 
-| Start with a Paper Map | Trace proof evidence | Save reading artifacts | Plan across papers |
+| Start with a Paper Map | Trace proof evidence | Resolve references | Save reading artifacts |
 | --- | --- | --- | --- |
-| Identify main-result candidates, result structure, proof-path evidence, and external reading risks before choosing where to read. | Inspect proof-local references, cited stops, source slices, and dependency diagnostics with explicit evidence. | Export deterministic Markdown reports that can live in Git, notes, or handoff sessions. | Given a small explicit paper set, export a cross-paper reading plan with selected-paper citation evidence and remaining risks. |
+| Identify main-result candidates, result structure, proof-path evidence, and external reading risks before choosing where to read. | Inspect proof-local references, cited stops, source slices, and dependency diagnostics with explicit evidence. | Search Crossref, OpenAlex, and arXiv metadata for blocked references, then apply only a chosen candidate through the reference closure workflow. | Export deterministic Markdown reports and cross-paper reading plans that can live in Git, notes, or handoff sessions. |
 
-PaperGraph v1.1.2 adds Reference Import Closure: user-confirmed arXiv and local PDF imports for blocked references, plus DOI, URL, and published metadata records when a source is not yet importable. No online search is performed in v1.1.2.
+PaperGraph v1.1.3 adds Scholarly Reference Resolver: low-risk online metadata search for blocked references, deterministic candidate ranking, and explicit boundary messages when the trail stops at ambiguous or non-importable records. It does not bypass paywalls, invent identities, or automatically crawl a reference chain.
 
 ### Why Researchers Use It
 
@@ -45,11 +45,11 @@ PaperGraph does not verify proofs, perform semantic theorem matching, or claim t
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the pinned GitHub release without cloning:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp doctor
 ```
 
-Pinning the `v1.1.2` tag keeps MCP client installations reproducible.
+Pinning the `v1.1.3` tag keeps MCP client installations reproducible.
 
 Add PaperGraph to an MCP client that accepts JSON-style stdio configuration:
 
@@ -58,7 +58,7 @@ Add PaperGraph to an MCP client that accepts JSON-style stdio configuration:
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3", "papergraph-mcp"]
     }
   }
 }
@@ -78,7 +78,7 @@ If you do not use an MCP-capable client yet, PaperGraph can still be run from th
 
 If your agent clones into a directory that already exists, ask it to run `git fetch --tags origin` before treating the checkout as current. Existing clones can otherwise remain pinned to an old local `origin/main`.
 
-For a complete first run, follow [First PaperGraph Workspace](docs/walkthroughs/first-workspace.md). The Workspace Starter commands `plan-starter-project` and `bootstrap-reading-project` create `START_HERE.md`, `papergraph-starter-manifest.json`, Reading Reports, and a Cross-Paper Reading Plan from explicit paper inputs. For the stable surface, see [PaperGraph v1 Core Contract](docs/reference/v1-core-contract.md) and the [v1 Release Checklist](docs/reference/v1-release-checklist.md). Example outputs are available as a [Reading Report](docs/examples/reading-report-example.md), a [Cross-Paper Reading Plan](docs/examples/cross-paper-reading-plan-example.md), a [Reference Resolution](docs/examples/reference-resolution-example.json), a [Starter Summary](docs/examples/starter-summary-example.md), and a [Starter Manifest](docs/examples/papergraph-starter-manifest-example.json).
+For a complete first run, follow [First PaperGraph Workspace](docs/walkthroughs/first-workspace.md). The Workspace Starter commands `plan-starter-project` and `bootstrap-reading-project` create `START_HERE.md`, `papergraph-starter-manifest.json`, Reading Reports, and a Cross-Paper Reading Plan from explicit paper inputs. For the stable surface, see [PaperGraph v1 Core Contract](docs/reference/v1-core-contract.md) and the [v1 Release Checklist](docs/reference/v1-release-checklist.md). Example outputs are available as a [Reading Report](docs/examples/reading-report-example.md), a [Cross-Paper Reading Plan](docs/examples/cross-paper-reading-plan-example.md), a [Reference Search](docs/examples/reference-search-example.json), a [Reference Resolution](docs/examples/reference-resolution-example.json), a [Starter Summary](docs/examples/starter-summary-example.md), and a [Starter Manifest](docs/examples/papergraph-starter-manifest-example.json).
 
 For raw user requests, prefer `load_arxiv_request(input=...)` or `papergraph-mcp load-arxiv-request "..."`. These high-level entry points validate bare IDs, URLs, Markdown links, and prose before loading. To inspect the decision without loading, call `validate_arxiv_request` or `papergraph-mcp validate-arxiv-request "..."`. If validation returns `action: ask_user_to_choose`, ask the user to choose; detecting a conflict and then continuing is a failure. Use `load_arxiv_paper` only after the user has provided one already-disambiguated arXiv ID.
 
@@ -119,7 +119,9 @@ flowchart LR
 | --- | --- | --- | --- |
 | 在选择阅读目标前，先看到 main-result candidates、结果结构、proof-path evidence 和 external reading risks。 | 查看 proof-local references、citation stops、source slices 和 dependency diagnostics，并保留证据来源。 | 导出确定性的 Markdown report，方便放进 Git、笔记或交接会话。 | 对一组显式给定的小规模相关论文，导出跨论文阅读计划、选中论文之间的 citation evidence 和剩余风险。 |
 
-PaperGraph v1.1.2 是稳定的 evidence-first 数学论文阅读工作流：先看 Paper Map，再检查 proof 和 citation 证据，用 Evidence Triage 理解稀疏抽取结果，并把被阻塞的外部引用闭环到用户确认的 arXiv、本地 PDF、DOI、URL 或出版信息。v1.1.2 不做线上搜索。
+PaperGraph v1.1.3 是稳定的 evidence-first 数学论文阅读工作流：先看 Paper Map，再检查 proof 和 citation 证据，用 Evidence Triage 理解稀疏抽取结果，对被阻塞的外部引用做 scholarly metadata 搜索，然后把选定候选闭环到用户确认的 arXiv、本地 PDF、DOI、URL 或出版信息。
+
+v1.1.3 新增 Scholarly Reference Resolver：可以从 Crossref、OpenAlex 和 arXiv 检索候选，给出确定性排序和边界说明。它不会绕过付费墙、不会替用户断定模糊引用的身份，也不会自动沿着 A 引 B、B 引 C 的链条无限导入；遇到太老、无电子版、只有书目信息或候选冲突的文献，会明确告诉用户需要人工补充来源或停止在 metadata 边界。
 
 ### 为什么适合数学论文阅读
 
@@ -137,8 +139,8 @@ PaperGraph does not verify proofs，也不做 semantic theorem matching；它不
 先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，然后验证固定版本：
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp doctor
 ```
 
 如果你的 MCP client 使用 JSON 风格的 stdio server 配置，可以添加：
@@ -148,7 +150,7 @@ uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 pa
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3", "papergraph-mcp"]
     }
   }
 }
@@ -168,7 +170,7 @@ uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 pa
 
 如果目标目录已经存在，请让 agent 先运行 `git fetch --tags origin`，再判断仓库是否是最新。否则已有 clone 可能仍停留在旧的本地 `origin/main`。
 
-第一次完整使用可以跟着 [First PaperGraph Workspace](docs/walkthroughs/first-workspace.md) 走。稳定承诺见 [PaperGraph v1 Core Contract](docs/reference/v1-core-contract.md)，发布前检查见 [v1 Release Checklist](docs/reference/v1-release-checklist.md)。示例输出见 [Reading Report](docs/examples/reading-report-example.md)、[Cross-Paper Reading Plan](docs/examples/cross-paper-reading-plan-example.md) 和 [Reference Resolution](docs/examples/reference-resolution-example.json)。
+第一次完整使用可以跟着 [First PaperGraph Workspace](docs/walkthroughs/first-workspace.md) 走。稳定承诺见 [PaperGraph v1 Core Contract](docs/reference/v1-core-contract.md)，发布前检查见 [v1 Release Checklist](docs/reference/v1-release-checklist.md)。示例输出见 [Reading Report](docs/examples/reading-report-example.md)、[Cross-Paper Reading Plan](docs/examples/cross-paper-reading-plan-example.md)、[Reference Search](docs/examples/reference-search-example.json) 和 [Reference Resolution](docs/examples/reference-resolution-example.json)。
 
 普通用户请求优先走 `load_arxiv_request(input=...)` 或 `papergraph-mcp load-arxiv-request "..."`。这些入口会在加载前验证 bare IDs、URLs、Markdown links 和自然语言描述。若验证返回 `action: ask_user_to_choose`，必须让用户选择；detecting a conflict and then continuing is a failure。Use `load_arxiv_paper` only after 用户已经给出单一、无歧义的 arXiv ID。
 
@@ -198,11 +200,11 @@ uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 pa
 | Read a proof | `workspace_export_reading_bundle`, `workspace_export_result_reading_context`, `workspace_get_source_slice`, `workspace_get_result_reading_path` |
 | Resume reading | `workspace_create_reading_session`, `workspace_list_reading_sessions`, `workspace_get_reading_session`, `workspace_record_reading_checkpoint`, `workspace_add_reading_note`, `workspace_export_reading_session_summary` |
 | Plan reading | `workspace_create_reading_queue`, `workspace_list_reading_queues`, `workspace_get_reading_queue`, `workspace_apply_reading_queue_to_session` |
-| Plan and close imports | `workspace_plan_external_imports_for_result`, `workspace_plan_external_imports_for_queue`, `workspace_plan_external_imports_for_paper`, `workspace_resolve_external_reference`, `workspace_list_external_reference_resolutions` |
+| Resolve references | `workspace_plan_external_imports_for_result`, `workspace_plan_external_imports_for_queue`, `workspace_plan_external_imports_for_paper`, `workspace_search_external_reference`, `workspace_list_external_reference_searches`, `workspace_resolve_external_reference_candidate`, `workspace_resolve_external_reference`, `workspace_list_external_reference_resolutions` |
 
 Original single-paper tools: `get_environment_diagnostics`, `validate_arxiv_request`, `load_arxiv_request`, `validate_arxiv_input`, `load_paper`, `load_arxiv_paper`, `list_theorems`, `get_theorem`, `get_dependencies`, `get_dependency_diagnostics`, and `where_used`.
 
-Complete workspace tool index: `open_workspace`, `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, `workspace_get_dependency_diagnostics`, `workspace_get_citations`, `workspace_add_pdf_paper`, `workspace_get_paper_map`, `workspace_export_paper_reading_report`, `workspace_export_cross_paper_reading_plan`, `workspace_plan_starter_project`, `workspace_bootstrap_reading_project`, `workspace_list_results`, `workspace_get_result`, `workspace_get_result_proof`, `workspace_get_proof_dependencies`, `workspace_get_external_result_mentions`, `workspace_get_evidence`, `workspace_export_reading_bundle`, `workspace_export_result_reading_context`, `workspace_get_source_slice`, `workspace_get_result_reading_path`, `workspace_create_reading_session`, `workspace_list_reading_sessions`, `workspace_get_reading_session`, `workspace_record_reading_checkpoint`, `workspace_add_reading_note`, `workspace_export_reading_session_summary`, `workspace_create_reading_queue`, `workspace_list_reading_queues`, `workspace_get_reading_queue`, `workspace_apply_reading_queue_to_session`, `workspace_plan_external_imports_for_result`, `workspace_plan_external_imports_for_queue`, `workspace_plan_external_imports_for_paper`, `workspace_resolve_external_reference`, `workspace_list_external_reference_resolutions`.
+Complete workspace tool index: `open_workspace`, `workspace_add_local_paper`, `workspace_add_arxiv_paper`, `workspace_list_papers`, `workspace_get_paper`, `workspace_search_theorems`, `workspace_get_dependencies`, `workspace_get_dependency_diagnostics`, `workspace_get_citations`, `workspace_add_pdf_paper`, `workspace_get_paper_map`, `workspace_export_paper_reading_report`, `workspace_export_cross_paper_reading_plan`, `workspace_plan_starter_project`, `workspace_bootstrap_reading_project`, `workspace_list_results`, `workspace_get_result`, `workspace_get_result_proof`, `workspace_get_proof_dependencies`, `workspace_get_external_result_mentions`, `workspace_get_evidence`, `workspace_export_reading_bundle`, `workspace_export_result_reading_context`, `workspace_get_source_slice`, `workspace_get_result_reading_path`, `workspace_create_reading_session`, `workspace_list_reading_sessions`, `workspace_get_reading_session`, `workspace_record_reading_checkpoint`, `workspace_add_reading_note`, `workspace_export_reading_session_summary`, `workspace_create_reading_queue`, `workspace_list_reading_queues`, `workspace_get_reading_queue`, `workspace_apply_reading_queue_to_session`, `workspace_plan_external_imports_for_result`, `workspace_plan_external_imports_for_queue`, `workspace_plan_external_imports_for_paper`, `workspace_search_external_reference`, `workspace_list_external_reference_searches`, `workspace_resolve_external_reference_candidate`, `workspace_resolve_external_reference`, `workspace_list_external_reference_resolutions`.
 
 </details>
 
@@ -234,6 +236,9 @@ papergraph-mcp apply-reading-queue-to-session --workspace .\papergraph.sqlite3 -
 papergraph-mcp plan-external-imports-for-result --workspace .\papergraph.sqlite3 --result-id local:paper-a::thm:main
 papergraph-mcp plan-external-imports-for-queue --workspace .\papergraph.sqlite3 --queue-id QUEUE
 papergraph-mcp plan-external-imports-for-paper --workspace .\papergraph.sqlite3 --paper-id local:paper-a
+papergraph-mcp search-external-reference --workspace .\papergraph.sqlite3 --paper-id local:paper-a --blocked-id BLOCKED
+papergraph-mcp list-external-reference-searches --workspace .\papergraph.sqlite3 --paper-id local:paper-a
+papergraph-mcp resolve-external-reference-candidate --workspace .\papergraph.sqlite3 --paper-id local:paper-a --blocked-id BLOCKED --candidate-id CANDIDATE --import-target
 papergraph-mcp resolve-external-reference --workspace .\papergraph.sqlite3 --paper-id local:paper-a --blocked-id BLOCKED --doi 10.1000/example --title "Published target"
 papergraph-mcp resolve-external-reference --workspace .\papergraph.sqlite3 --paper-id local:paper-a --blocked-id BLOCKED --pdf .\reference.pdf=local:reference
 papergraph-mcp list-external-reference-resolutions --workspace .\papergraph.sqlite3 --paper-id local:paper-a
@@ -273,7 +278,7 @@ The repository includes a small fixture under `tests/fixtures/workspace_tex_proj
 <details>
 <summary><strong>Safety, Privacy, And Limits</strong></summary>
 
-PaperGraph only constructs remote downloads from arXiv's fixed e-print endpoint; arbitrary URLs are not accepted. It limits compressed responses to **100 MiB**, expanded content to **500 MiB**, and archives to **10,000** members. Absolute paths, parent traversal, symbolic links, hard links, devices, FIFOs, and other special archive members are rejected.
+PaperGraph only constructs remote downloads from arXiv's fixed e-print endpoint; arbitrary URLs are not accepted for downloads. Scholarly reference search queries public metadata services and records candidates before any resolution/import is applied. It limits compressed responses to **100 MiB**, expanded content to **500 MiB**, and archives to **10,000** members. Absolute paths, parent traversal, symbolic links, hard links, devices, FIFOs, and other special archive members are rejected.
 
 Workspaces are ordinary local SQLite files. Local PDFs remain local. Extracted PDF text, source spans, and proof evidence are written only to the workspace you choose. Do not commit databases, private manuscripts, cache data, credentials, tokens, generated distributions, or raw local logs.
 
@@ -284,7 +289,8 @@ PDF extraction is best for born-digital PDFs; scanned PDFs or OCR-heavy files ma
 <details>
 <summary><strong>Release Highlights</strong></summary>
 
-- v1.1.2 adds Reference Import Closure: user-confirmed arXiv and local PDF imports for blocked references, DOI, URL, and published metadata records for non-importable targets, and regenerated reading reports after successful imports. No online search is performed in v1.1.2.
+- v1.1.3 adds Scholarly Reference Resolver: metadata search across Crossref, OpenAlex, and arXiv for blocked references, deterministic candidate ranking, candidate apply through Reference Import Closure, and explicit boundaries for ambiguous, old, paywalled, or metadata-only literature.
+- v1.1.2 adds Reference Import Closure: user-confirmed arXiv and local PDF imports for blocked references, DOI, URL, and published metadata records for non-importable targets, and regenerated reading reports after successful imports.
 - v1.1.1 adds Evidence Triage for first-use Reading Reports and Starter artifacts, with candidate-start labels, sparse dependency status, external blocker next actions, and unchanged evidence boundaries.
 - v1.1.0 adds Workspace Starter planning and bootstrap commands for `START_HERE.md`, `papergraph-starter-manifest.json`, Reading Reports, and Cross-Paper Reading Plans from explicit paper inputs.
 - v1.0.0 released the stable PaperGraph core: Paper Map, Reading Report, Cross-Paper Reading Plan, first-workspace onboarding, and the v1 evidence contract.

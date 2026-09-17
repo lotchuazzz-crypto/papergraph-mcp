@@ -19,4 +19,3 @@ def default_reference_search_providers() -> list:
         OpenAlexReferenceProvider(),
         ArxivReferenceProvider(),
     ]
-

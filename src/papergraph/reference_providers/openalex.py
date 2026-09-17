@@ -89,4 +89,3 @@ def _clean(value) -> str | None:
         return None
     text = str(value).strip()
     return text or None
-

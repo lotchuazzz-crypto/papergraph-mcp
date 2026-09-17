@@ -63,4 +63,3 @@ def test_reference_search_mcp_tools_return_payload(tmp_path: Path):
 def test_reference_search_mcp_tools_report_missing_workspace():
     with pytest.raises(ToolError, match="open_workspace"):
         server.workspace_search_external_reference("local:paper", "blocked")
-

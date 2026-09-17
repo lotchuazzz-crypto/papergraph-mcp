@@ -12,4 +12,3 @@ class ReferenceSearchProvider(Protocol):
 
     def search(self, query: dict) -> dict:
         """Return a provider result with `provider`, `records`, and `warnings`."""
-

@@ -21,6 +21,7 @@ CANDIDATE_CAUTION = (
 def build_evidence_triage(
     paper_map: dict[str, Any],
     external_plan: dict[str, Any] | None = None,
+    reference_resolutions: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a small first-reading triage payload from existing evidence."""
 
@@ -32,6 +33,7 @@ def build_evidence_triage(
     supported_chains = _supported_local_chains(route)
     local_edge_count = len(supported_chains)
     blocked_count = int(external_summary.get("blocked_count", 0) or 0)
+    resolution_summary = (reference_resolutions or {}).get("summary", {})
     theorem_like_total = int(paper.get("result_count", 0) or 0)
     status = _status(
         theorem_like_total=theorem_like_total,
@@ -57,6 +59,17 @@ def build_evidence_triage(
         "candidate_starting_point": _candidate_starting_point(paper_map),
         "extraction_limits": _extraction_limits(local_edge_count),
         "external_blockers": _external_blockers(external_risks.get("blocked", [])),
+        "resolved_external_references": {
+            "resolved_imported_count": int(
+                resolution_summary.get("resolved_imported_count", 0) or 0
+            ),
+            "resolved_not_imported_count": int(
+                resolution_summary.get("resolved_not_imported_count", 0) or 0
+            ),
+            "failed_import_count": int(
+                resolution_summary.get("failed_import_count", 0) or 0
+            ),
+        },
         "next_actions": [],
     }
     triage["next_actions"] = _next_actions(triage)
@@ -74,6 +87,20 @@ def render_evidence_triage_markdown(triage: dict[str, Any]) -> list[str]:
         f"- Supported local dependency chains: {counts.get('local_dependency_edge_count', 0)}",
         f"- External import blockers: {counts.get('external_blocked_count', 0)}",
     ]
+    resolved = triage.get("resolved_external_references", {})
+    if any(int(resolved.get(key, 0) or 0) for key in resolved):
+        lines.append(
+            "- Resolved and imported references: "
+            f"{resolved.get('resolved_imported_count', 0)}"
+        )
+        lines.append(
+            "- Resolved but not imported references: "
+            f"{resolved.get('resolved_not_imported_count', 0)}"
+        )
+        lines.append(
+            "- Failed reference imports: "
+            f"{resolved.get('failed_import_count', 0)}"
+        )
     if candidate:
         lines.append(
             "- Candidate starting point: "

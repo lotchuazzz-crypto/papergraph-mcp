@@ -21,8 +21,8 @@ papergraph-mcp doctor
 If you do not use an MCP-capable client yet, run PaperGraph from the CLI:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.1 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.1 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 papergraph-mcp doctor
 ```
 
 ## Workspace Hygiene
@@ -137,6 +137,41 @@ papergraph-mcp export-paper-reading-report --workspace $env:PAPERGRAPH_WORKSPACE
 
 Open the report's `Evidence Triage` section first. It tells you whether extracted dependencies are sparse, whether proofs are missing or fragmentary, whether external references block interpretation, and what manual checks should happen next. A candidate starting point is only a supported extracted route candidate, not a claim that the paper's main theorem has been identified.
 
+## Reference Import Closure
+
+When Evidence Triage reports a blocked external reference, first inspect the planner output:
+
+```text
+workspace_plan_external_imports_for_paper(paper_id="local:paper-a")
+```
+
+Then resolve the specific `blocked_id` with a user-confirmed target. In MCP:
+
+```text
+workspace_resolve_external_reference(
+  paper_id="local:paper-a",
+  blocked_id="external-import:blocked:...",
+  target={"kind": "doi", "doi": "10.1000/example", "title": "Published target"}
+)
+```
+
+For CLI:
+
+```powershell
+papergraph-mcp resolve-external-reference `
+  --workspace $env:PAPERGRAPH_WORKSPACE `
+  --paper-id local:paper-a `
+  --blocked-id external-import:blocked:... `
+  --doi 10.1000/example `
+  --title "Published target"
+
+papergraph-mcp list-external-reference-resolutions `
+  --workspace $env:PAPERGRAPH_WORKSPACE `
+  --paper-id local:paper-a
+```
+
+Use `--pdf .\reference.pdf=local:reference` or an arXiv target when you have an importable source. DOI, URL, and published metadata are recorded as resolved but not imported until a local source is supplied. No online search is performed by this workflow.
+
 ## Cross-Paper Reading Plan
 
 After two or more related papers are loaded, export a cross-paper plan:
@@ -170,4 +205,4 @@ workspace_create_reading_queue(result_id=<target result id>)
 workspace_create_reading_session(paper_id=<paper id>)
 ```
 
-PaperGraph does not verify proofs, infer hidden prerequisites, perform semantic theorem matching, search the web for ambiguous references, or recursively import newly discovered literature in v1.1.1.
+PaperGraph does not verify proofs, infer hidden prerequisites, perform semantic theorem matching, search the web for ambiguous references, or recursively import newly discovered literature in v1.1.2.

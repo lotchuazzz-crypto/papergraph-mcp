@@ -42,6 +42,8 @@ def test_v1_core_contract_documents_stable_surface():
         "workspace_export_paper_reading_report",
         "workspace_export_cross_paper_reading_plan",
         "workspace_plan_external_imports_for_paper",
+        "workspace_resolve_external_reference",
+        "workspace_list_external_reference_resolutions",
         "workspace_plan_starter_project",
         "workspace_bootstrap_reading_project",
     ):
@@ -68,11 +70,14 @@ def test_first_workspace_walkthrough_covers_mcp_and_cli_paths():
 
     for command in (
         "papergraph-mcp doctor",
-        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.1 papergraph-mcp doctor",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 papergraph-mcp doctor",
         "open_workspace",
         "workspace_add_arxiv_paper",
         "workspace_get_paper_map",
+        "workspace_resolve_external_reference",
         "export-paper-reading-report",
+        "resolve-external-reference",
+        "list-external-reference-resolutions",
         "export-cross-paper-reading-plan",
         "plan-starter-project",
         "bootstrap-reading-project",
@@ -80,6 +85,7 @@ def test_first_workspace_walkthrough_covers_mcp_and_cli_paths():
     ):
         assert command in text
     assert "outside the Git repository" in text
+    assert "No online search is performed" in text
     assert_no_placeholders(text)
 
 
@@ -152,8 +158,8 @@ def test_v1_release_checklist_is_concrete():
 
     for command in (
         "uv run pytest -q -p no:cacheprovider --basetemp .pytest-tmp",
-        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.1 papergraph-mcp --version",
-        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.1 papergraph-mcp doctor",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 papergraph-mcp --version",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 papergraph-mcp doctor",
     ):
         assert command in text
     assert_no_placeholders(text)

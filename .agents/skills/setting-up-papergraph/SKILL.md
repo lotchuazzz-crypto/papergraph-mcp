@@ -27,6 +27,7 @@ Before loading arXiv papers:
 6. If validation returns `action: ask_user_to_choose`, stop and ask which one to analyze. detecting a conflict and then continuing is a failure.
 7. For a user's first real reading project, propose `plan-starter-project` before `bootstrap-reading-project` so they can review the workspace path, artifact directory, explicit paper inputs, and generated manifest path before writes.
 8. After bootstrap or Reading Report export, report Evidence Triage before interpreting dependency output. Name the triage status, supported local chains, candidate starting point, external blockers, and next actions. Do not treat empty dependencies as evidence that no mathematical dependencies exist.
+9. If Evidence Triage reports external blockers, ask the user for a confirmed arXiv ID, local PDF, DOI, URL, or published metadata. Use `workspace_resolve_external_reference` only with user-confirmed targets, then call `workspace_list_external_reference_resolutions` or export a Reading Report to show whether each target is `resolved_imported`, `resolved_not_imported`, or `failed_import`.
 
 ### What is missing
 
@@ -49,29 +50,29 @@ There are three separate approval boundaries:
 Use this immutable release source everywhere; never substitute a branch, a mutable default, or an unreleased revision:
 
 ```text
-git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.1
+git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2
 ```
 
 Never request credentials, upload papers, search the web to guess ambiguous references, recursively import newly discovered literature, or place a workspace database inside the Git repository.
 
 ### What changed
 
-Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `1.1.1`; file presence alone is insufficient:
+Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `1.1.2`; file presence alone is insufficient:
 
 ```text
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.1 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 papergraph-mcp --version
 ```
 
 Also validate the pinned diagnostics command:
 
 ```text
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.1 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.2 papergraph-mcp doctor
 ```
 
 The expected output is:
 
 ```text
-papergraph-mcp 1.1.1
+papergraph-mcp 1.1.2
 ```
 
 Before restart, say “launch command validated”; never say “client has loaded the PaperGraph tools.” Tool loading can be confirmed only after the restarted client discovers the server.

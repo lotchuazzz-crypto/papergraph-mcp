@@ -656,6 +656,42 @@ def workspace_plan_external_imports_for_paper(paper_id: str) -> dict:
 
 @mcp.tool()
 @_serialized_workspace_tool
+def workspace_resolve_external_reference(
+    paper_id: str,
+    blocked_id: str,
+    target: dict,
+    import_target: bool = True,
+    artifact_dir: str | None = None,
+) -> dict:
+    """Resolve a blocked external reference to a user-confirmed target."""
+
+    try:
+        return require_workspace().resolve_external_reference(
+            paper_id,
+            blocked_id,
+            target,
+            import_target=import_target,
+            artifact_dir=artifact_dir,
+        )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_list_external_reference_resolutions(
+    paper_id: str | None = None,
+) -> dict:
+    """List user-confirmed external reference resolutions."""
+
+    try:
+        return require_workspace().list_external_reference_resolutions(paper_id)
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
 def workspace_get_paper_map(
     paper_id: str,
     max_candidates: int = 5,
@@ -1027,6 +1063,50 @@ def _run_workspace_cli_command(command: str, workspace_path: str, callback) -> N
     finally:
         if workspace is not None:
             workspace.close()
+
+
+def _reference_target_from_cli(args) -> dict:
+    selected = [
+        name
+        for name, value in (
+            ("arxiv", args.arxiv),
+            ("pdf", args.pdf),
+            ("doi", args.doi),
+            ("url", args.url),
+        )
+        if value
+    ]
+    if not selected and (args.title or args.author or args.year or args.venue):
+        selected.append("metadata")
+    if len(selected) != 1:
+        raise ValueError(
+            "Exactly one reference target must be supplied: --arxiv, --pdf, "
+            "--doi, --url, or metadata fields."
+        )
+    target_kind = selected[0]
+    target: dict[str, object] = {"kind": target_kind}
+    if target_kind == "arxiv":
+        target["arxiv_id"] = args.arxiv
+    elif target_kind == "pdf":
+        if "=" in args.pdf:
+            path, paper_id = args.pdf.split("=", 1)
+            target["path"] = path
+            target["paper_id"] = paper_id
+        else:
+            target["path"] = args.pdf
+    elif target_kind == "doi":
+        target["doi"] = args.doi
+    elif target_kind == "url":
+        target["url"] = args.url
+    if args.title:
+        target["title"] = args.title
+    if args.author:
+        target["authors"] = args.author
+    if args.year:
+        target["year"] = args.year
+    if args.venue:
+        target["venue"] = args.venue
+    return target
 
 
 def _run_reading_report_cli_command(
@@ -1410,6 +1490,29 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     paper_import_plan_parser.add_argument("--workspace", required=True)
     paper_import_plan_parser.add_argument("--paper-id", required=True)
+    resolve_reference_parser = subparsers.add_parser(
+        "resolve-external-reference",
+        help="Resolve one blocked external reference to a user-confirmed target.",
+    )
+    resolve_reference_parser.add_argument("--workspace", required=True)
+    resolve_reference_parser.add_argument("--paper-id", required=True)
+    resolve_reference_parser.add_argument("--blocked-id", required=True)
+    resolve_reference_parser.add_argument("--arxiv")
+    resolve_reference_parser.add_argument("--pdf")
+    resolve_reference_parser.add_argument("--doi")
+    resolve_reference_parser.add_argument("--url")
+    resolve_reference_parser.add_argument("--title")
+    resolve_reference_parser.add_argument("--author", action="append")
+    resolve_reference_parser.add_argument("--year")
+    resolve_reference_parser.add_argument("--venue")
+    resolve_reference_parser.add_argument("--no-import", action="store_true")
+    resolve_reference_parser.add_argument("--artifact-dir")
+    list_reference_resolutions_parser = subparsers.add_parser(
+        "list-external-reference-resolutions",
+        help="List user-confirmed external reference resolutions.",
+    )
+    list_reference_resolutions_parser.add_argument("--workspace", required=True)
+    list_reference_resolutions_parser.add_argument("--paper-id")
     paper_map_parser = subparsers.add_parser(
         "get-paper-map",
         help="Return an evidence-first first-load map for one stored paper.",
@@ -1649,6 +1752,28 @@ def main(argv: Sequence[str] | None = None) -> None:
             args.command,
             args.workspace,
             lambda workspace: workspace.plan_external_imports_for_paper(
+                args.paper_id,
+            ),
+        )
+        return
+    if args.command == "resolve-external-reference":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.resolve_external_reference(
+                args.paper_id,
+                args.blocked_id,
+                _reference_target_from_cli(args),
+                import_target=not args.no_import,
+                artifact_dir=args.artifact_dir,
+            ),
+        )
+        return
+    if args.command == "list-external-reference-resolutions":
+        _run_workspace_cli_command(
+            args.command,
+            args.workspace,
+            lambda workspace: workspace.list_external_reference_resolutions(
                 args.paper_id,
             ),
         )

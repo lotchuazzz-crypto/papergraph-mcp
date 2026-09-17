@@ -11,6 +11,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from threading import RLock
 
+from papergraph.arxiv import prepare_arxiv_project
 from papergraph.citations import build_citation_records
 from papergraph.cross_paper_reading_plan import build_cross_paper_reading_plan
 from papergraph.evidence import (
@@ -25,6 +26,7 @@ from papergraph.evidence_extractors import build_pdf_evidence_document
 from papergraph.identity import (
     global_theorem_id,
     normalize_paper_id,
+    paper_id_from_arxiv,
     split_global_theorem_id,
 )
 from papergraph.models import (
@@ -35,7 +37,7 @@ from papergraph.models import (
 from papergraph.parser import latex_project_to_evidence_document, parse_project
 from papergraph.paper_map import build_paper_map
 from papergraph.pdf import load_pdf_evidence_spans
-from papergraph.project import LoadedProject
+from papergraph.project import LoadedProject, load_project
 from papergraph.reading_report import build_paper_reading_report
 from papergraph.starter import (
     bootstrap_reading_project,
@@ -53,7 +55,7 @@ from papergraph.reading import (
 )
 
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 _RESOLVED_RESOLUTION_STATUSES = (
     "resolved",
     "resolved_bibliography_entry",
@@ -95,6 +97,7 @@ _REQUIRED_TABLES = {
     "reading_notes",
     "reading_queues",
     "reading_queue_items",
+    "reference_resolutions",
 }
 _REQUIRED_THEOREM_COLUMNS = {
     "global_id",
@@ -266,6 +269,21 @@ _REQUIRED_TABLE_COLUMNS = {
         "reason",
         "evidence_json",
         "created_at",
+    },
+    "reference_resolutions": {
+        "resolution_id",
+        "source_paper_id",
+        "blocked_id",
+        "target_kind",
+        "target_json",
+        "status",
+        "imported_paper_id",
+        "evidence_json",
+        "review_json",
+        "artifact_json",
+        "warning_json",
+        "created_at",
+        "updated_at",
     },
 }
 
@@ -521,6 +539,31 @@ CREATE INDEX reading_queue_items_queue
     ON reading_queue_items(queue_id, position, item_id);
 """
 
+_REFERENCE_RESOLUTION_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS reference_resolutions (
+    resolution_id TEXT PRIMARY KEY,
+    source_paper_id TEXT NOT NULL REFERENCES papers(paper_id) ON DELETE CASCADE,
+    blocked_id TEXT NOT NULL,
+    target_kind TEXT NOT NULL CHECK (
+        target_kind IN ('arxiv', 'pdf', 'doi', 'url', 'metadata')
+    ),
+    target_json TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (
+        status IN ('resolved_imported', 'resolved_not_imported', 'failed_import')
+    ),
+    imported_paper_id TEXT REFERENCES papers(paper_id) ON DELETE SET NULL,
+    evidence_json TEXT NOT NULL,
+    review_json TEXT NOT NULL,
+    artifact_json TEXT NOT NULL,
+    warning_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (source_paper_id, blocked_id, target_kind, target_json)
+);
+CREATE INDEX IF NOT EXISTS reference_resolutions_source
+    ON reference_resolutions(source_paper_id, blocked_id, target_kind, resolution_id);
+"""
+
 _SCHEMA_SQL = """
 CREATE TABLE workspace_meta (
     key TEXT PRIMARY KEY,
@@ -565,8 +608,8 @@ CREATE INDEX theorems_paper_kind ON theorems(paper_id, normalized_kind);
 CREATE INDEX citations_source ON citation_evidence(source_paper_id);
 CREATE INDEX citations_target ON citation_evidence(target_paper_id);
 CREATE INDEX citations_arxiv ON citation_evidence(cited_arxiv_id);
-""" + _EVIDENCE_SCHEMA_SQL + _READING_SESSION_SCHEMA_SQL + _READING_QUEUE_SCHEMA_SQL + """
-INSERT INTO workspace_meta (key, value) VALUES ('schema_version', '5');
+""" + _EVIDENCE_SCHEMA_SQL + _READING_SESSION_SCHEMA_SQL + _READING_QUEUE_SCHEMA_SQL + _REFERENCE_RESOLUTION_SCHEMA_SQL + """
+INSERT INTO workspace_meta (key, value) VALUES ('schema_version', '6');
 """
 
 
@@ -679,6 +722,15 @@ class Workspace:
                 )
             }
             schema_version = 5
+        if schema_version == 5:
+            Workspace._migrate_v5_to_v6(connection)
+            tables = {
+                row[0]
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                )
+            }
+            schema_version = 6
         if schema_version != SCHEMA_VERSION:
             raise WorkspaceSchemaError(
                 f"Unsupported workspace schema version {schema_version}; "
@@ -752,7 +804,7 @@ class Workspace:
             _execute_sql_script(connection, _READING_SESSION_SCHEMA_SQL)
             connection.execute(
                 "UPDATE workspace_meta SET value = ? WHERE key = 'schema_version'",
-                (str(SCHEMA_VERSION),),
+                ("4",),
             )
             connection.execute("COMMIT")
         except Exception:
@@ -773,7 +825,28 @@ class Workspace:
             _execute_sql_script(connection, _READING_QUEUE_SCHEMA_SQL)
             connection.execute(
                 "UPDATE workspace_meta SET value = ? WHERE key = 'schema_version'",
-                (str(SCHEMA_VERSION),),
+                ("5",),
+            )
+            connection.execute("COMMIT")
+        except Exception:
+            if connection.in_transaction:
+                connection.execute("ROLLBACK")
+            raise
+
+        violations = connection.execute("PRAGMA foreign_key_check").fetchall()
+        if violations:
+            raise WorkspaceSchemaError(
+                "Workspace schema migration left foreign key violations"
+            )
+
+    @staticmethod
+    def _migrate_v5_to_v6(connection: sqlite3.Connection) -> None:
+        try:
+            connection.execute("BEGIN")
+            _execute_sql_script(connection, _REFERENCE_RESOLUTION_SCHEMA_SQL)
+            connection.execute(
+                "UPDATE workspace_meta SET value = ? WHERE key = 'schema_version'",
+                ("6",),
             )
             connection.execute("COMMIT")
         except Exception:
@@ -1901,6 +1974,183 @@ class Workspace:
                 "recursive": None,
             }
         )
+
+    @_synchronized
+    def resolve_external_reference(
+        self,
+        paper_id: str,
+        blocked_id: str,
+        target: dict,
+        *,
+        import_target: bool = True,
+        artifact_dir: str | Path | None = None,
+    ) -> dict:
+        """Persist a user-confirmed target for one blocked external reference."""
+
+        normalized_paper_id = normalize_paper_id(paper_id)
+        self.get_paper(normalized_paper_id)
+        normalized_target = _normalize_reference_target(target)
+        blocked = _blocked_external_reference(
+            self.plan_external_imports_for_paper(normalized_paper_id),
+            blocked_id,
+        )
+        evidence = _dedupe_external_import_evidence(blocked["evidence"])
+        review = _external_import_candidate_review(evidence)
+        resolution_id = _reference_resolution_id(
+            normalized_paper_id,
+            blocked["blocked_id"],
+            normalized_target,
+        )
+        existing = self._reference_resolution_by_id(resolution_id)
+        if existing is not None:
+            return existing
+
+        timestamp = datetime.now(timezone.utc).isoformat()
+        status = "resolved_not_imported"
+        artifacts: list[dict] = []
+        warnings: list[str] = []
+        imported_paper_id = None
+        self._connection.execute(
+            """
+            INSERT INTO reference_resolutions (
+                resolution_id, source_paper_id, blocked_id, target_kind,
+                target_json, status, imported_paper_id, evidence_json,
+                review_json, artifact_json, warning_json, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                resolution_id,
+                normalized_paper_id,
+                blocked["blocked_id"],
+                normalized_target["kind"],
+                _canonical_json(normalized_target),
+                status,
+                imported_paper_id,
+                _canonical_json(evidence),
+                _canonical_json(review),
+                _canonical_json(artifacts),
+                _canonical_json(warnings),
+                timestamp,
+                timestamp,
+            ),
+        )
+        if import_target and normalized_target["kind"] in {"arxiv", "pdf"}:
+            try:
+                imported_paper_id = self._import_reference_target(normalized_target)
+                status = "resolved_imported"
+            except Exception as exc:
+                status = "failed_import"
+                warnings = [bounded_excerpt(str(exc), limit=240)]
+            self._update_reference_resolution_import(
+                resolution_id,
+                status,
+                imported_paper_id,
+                warnings,
+            )
+        else:
+            self._connection.commit()
+        return self._reference_resolution_by_id(resolution_id)
+
+    @_synchronized
+    def list_external_reference_resolutions(
+        self,
+        paper_id: str | None = None,
+    ) -> dict:
+        """List user-confirmed external reference resolutions."""
+
+        parameters: tuple[str, ...]
+        where = ""
+        if paper_id is None:
+            parameters = ()
+        else:
+            normalized_paper_id = normalize_paper_id(paper_id)
+            self.get_paper(normalized_paper_id)
+            where = "WHERE source_paper_id = ?"
+            parameters = (normalized_paper_id,)
+        rows = self._connection.execute(
+            f"""
+            SELECT
+                resolution_id, source_paper_id, blocked_id, target_kind,
+                target_json, status, imported_paper_id, evidence_json,
+                review_json, artifact_json, warning_json, created_at, updated_at
+            FROM reference_resolutions
+            {where}
+            ORDER BY source_paper_id, blocked_id, target_kind, resolution_id
+            """,
+            parameters,
+        ).fetchall()
+        resolutions = [_reference_resolution_from_row(row) for row in rows]
+        return {
+            "resolution_schema_version": 1,
+            "scope": {"paper_id": normalize_paper_id(paper_id) if paper_id else None},
+            "resolutions": resolutions,
+            "summary": _reference_resolution_summary(resolutions),
+        }
+
+    def _reference_resolution_by_id(self, resolution_id: str) -> dict | None:
+        row = self._connection.execute(
+            """
+            SELECT
+                resolution_id, source_paper_id, blocked_id, target_kind,
+                target_json, status, imported_paper_id, evidence_json,
+                review_json, artifact_json, warning_json, created_at, updated_at
+            FROM reference_resolutions
+            WHERE resolution_id = ?
+            """,
+            (resolution_id,),
+        ).fetchone()
+        return _reference_resolution_from_row(row) if row else None
+
+    def _import_reference_target(self, target: dict) -> str:
+        if target["kind"] == "pdf":
+            path = Path(str(target["path"])).expanduser().resolve()
+            if not path.is_file():
+                raise ValueError(f"PDF target does not exist: {path}")
+            paper_id = str(
+                target.get("paper_id")
+                or f"local:{slug_fragment(str(path) + ':' + path.stem)}"
+            )
+            return self.import_pdf(path, paper_id).paper_id
+        if target["kind"] == "arxiv":
+            prepared = prepare_arxiv_project(str(target["arxiv_id"]), None, False)
+            paper_id, source_version = paper_id_from_arxiv(prepared.arxiv_id)
+            project = load_project(prepared.main_file)
+            result = self.import_project(
+                paper_id,
+                "arxiv",
+                paper_id.removeprefix("arxiv:"),
+                source_version,
+                project,
+            )
+            return result.paper_id
+        raise ValueError(f"Reference target is not importable: {target['kind']}")
+
+    def _update_reference_resolution_import(
+        self,
+        resolution_id: str,
+        status: str,
+        imported_paper_id: str | None,
+        warnings: list[str],
+    ) -> None:
+        self._connection.execute(
+            """
+            UPDATE reference_resolutions
+            SET status = ?,
+                imported_paper_id = ?,
+                warning_json = ?,
+                updated_at = ?
+            WHERE resolution_id = ?
+            """,
+            (
+                status,
+                imported_paper_id,
+                _canonical_json(warnings),
+                datetime.now(timezone.utc).isoformat(),
+                resolution_id,
+            ),
+        )
+        self._connection.commit()
 
     @_synchronized
     def get_paper_map(self, paper_id: str, max_candidates: int = 5) -> dict:
@@ -4548,6 +4798,179 @@ def _dedupe_external_import_evidence(items: list[dict]) -> list[dict]:
         deduped[key]
         for key in sorted(deduped, key=lambda value: (value[0], value[1], value[2]))
     ]
+
+
+def _blocked_external_reference(plan: dict, blocked_id: str) -> dict:
+    for item in plan.get("blocked", []):
+        if item.get("blocked_id") == blocked_id:
+            return item
+    raise ValueError(f"Unknown blocked external reference: {blocked_id}")
+
+
+def _normalize_reference_target(target: dict) -> dict:
+    if not isinstance(target, dict):
+        raise ValueError("target must be an object")
+    kind = str(target.get("kind") or "").strip().lower()
+    if kind not in {"arxiv", "pdf", "doi", "url", "metadata"}:
+        raise ValueError(
+            "target kind must be one of: arxiv, pdf, doi, url, metadata"
+        )
+    normalized: dict[str, object] = {"kind": kind}
+    if kind == "doi":
+        doi = _required_text(target, "doi")
+        normalized["doi"] = doi
+    elif kind == "url":
+        url = _required_text(target, "url")
+        normalized["url"] = url
+    elif kind == "metadata":
+        for field in ("title", "year", "venue"):
+            value = _optional_text(target, field)
+            if value is not None:
+                normalized[field] = value
+        authors = _normalize_authors(target.get("authors"))
+        if authors:
+            normalized["authors"] = authors
+        if set(normalized) == {"kind"}:
+            raise ValueError(
+                "metadata target requires title, authors, year, or venue"
+            )
+    elif kind == "arxiv":
+        normalized["arxiv_id"] = _required_text(target, "arxiv_id")
+        arxiv_version = _optional_text(target, "arxiv_version")
+        if arxiv_version is not None:
+            normalized["arxiv_version"] = arxiv_version
+    elif kind == "pdf":
+        normalized["path"] = _required_text(target, "path")
+        paper_id = _optional_text(target, "paper_id")
+        if paper_id is not None:
+            normalized["paper_id"] = normalize_paper_id(paper_id)
+
+    for field in ("title", "year", "venue"):
+        value = _optional_text(target, field)
+        if value is not None and field not in normalized:
+            normalized[field] = value
+    authors = _normalize_authors(target.get("authors"))
+    if authors and "authors" not in normalized:
+        normalized["authors"] = authors
+    return normalized
+
+
+def _required_text(target: dict, field: str) -> str:
+    value = _optional_text(target, field)
+    if value is None:
+        raise ValueError(f"{field} is required for reference target")
+    return value
+
+
+def _optional_text(target: dict, field: str) -> str | None:
+    value = target.get(field)
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _normalize_authors(value: object) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        values = [value]
+    elif isinstance(value, list):
+        values = value
+    else:
+        raise ValueError("authors must be a string or list of strings")
+    authors = []
+    for item in values:
+        text = str(item).strip()
+        if text:
+            authors.append(text)
+    return authors
+
+
+def _reference_resolution_id(
+    source_paper_id: str,
+    blocked_id: str,
+    target: dict,
+) -> str:
+    stable = "|".join(
+        [
+            source_paper_id,
+            blocked_id,
+            str(target["kind"]),
+            _canonical_json(target),
+        ]
+    )
+    return f"reference-resolution:{slug_fragment(stable)}"
+
+
+def _canonical_json(value: object) -> str:
+    return json.dumps(value, sort_keys=True, ensure_ascii=False)
+
+
+def _reference_resolution_from_row(row: tuple) -> dict:
+    target = json.loads(row[4])
+    status = row[5]
+    imported_paper_id = row[6]
+    evidence = json.loads(row[7])
+    review = json.loads(row[8])
+    artifacts = json.loads(row[9])
+    warnings = json.loads(row[10])
+    return {
+        "resolution_schema_version": 1,
+        "resolution_id": row[0],
+        "source": {
+            "paper_id": row[1],
+            "blocked_id": row[2],
+            "evidence": evidence,
+            "review": review,
+        },
+        "target": target,
+        "status": status,
+        "import": _reference_import_payload(status, imported_paper_id, target),
+        "artifacts": artifacts,
+        "warnings": warnings,
+        "created_at": row[11],
+        "updated_at": row[12],
+    }
+
+
+def _reference_import_payload(
+    status: str,
+    imported_paper_id: str | None,
+    target: dict,
+) -> dict:
+    if status == "resolved_imported":
+        return {
+            "attempted": True,
+            "paper_id": imported_paper_id,
+            "reason": None,
+        }
+    if status == "failed_import":
+        return {
+            "attempted": True,
+            "paper_id": imported_paper_id,
+            "reason": "import_failed",
+        }
+    return {
+        "attempted": False,
+        "paper_id": None,
+        "reason": "target_not_importable_without_local_source",
+    }
+
+
+def _reference_resolution_summary(resolutions: list[dict]) -> dict:
+    return {
+        "total_count": len(resolutions),
+        "resolved_imported_count": sum(
+            1 for item in resolutions if item["status"] == "resolved_imported"
+        ),
+        "resolved_not_imported_count": sum(
+            1 for item in resolutions if item["status"] == "resolved_not_imported"
+        ),
+        "failed_import_count": sum(
+            1 for item in resolutions if item["status"] == "failed_import"
+        ),
+    }
 
 
 def _paper_from_row(row: tuple) -> dict:

@@ -1,0 +1,40 @@
+{
+  "artifacts": [],
+  "import": {
+    "attempted": false,
+    "paper_id": null,
+    "reason": "target_not_importable_without_local_source"
+  },
+  "resolution_id": "reference-resolution:example",
+  "resolution_schema_version": 1,
+  "source": {
+    "blocked_id": "external-import:blocked:example",
+    "evidence": [
+      {
+        "citation_key": "17",
+        "id": "local:paper::citation-mention:1",
+        "kind": "citation_mention",
+        "paper_id": "local:paper",
+        "proof_id": "local:paper::proof:1",
+        "raw_text": "[17, Theorem 2.1]",
+        "result_id": "local:paper::pdf:theorem:1.1",
+        "source": "paper.citation_mentions"
+      }
+    ],
+    "paper_id": "local:paper",
+    "review": {
+      "citation_keys": ["17"],
+      "evidence_summary": "Needed by 1 local result through 1 proof; citation keys: 17",
+      "local_result_ids": ["local:paper::pdf:theorem:1.1"],
+      "proof_ids": ["local:paper::proof:1"],
+      "raw_texts": ["[17, Theorem 2.1]"]
+    }
+  },
+  "status": "resolved_not_imported",
+  "target": {
+    "doi": "10.1000/example",
+    "kind": "doi",
+    "title": "Published target"
+  },
+  "warnings": []
+}

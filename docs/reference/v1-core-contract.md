@@ -17,6 +17,8 @@ v1.1 adds a Workspace Starter layer that composes this workflow: it plans or boo
 
 v1.1.1 adds Evidence Triage to Reading Reports and Workspace Starter artifacts. Triage summarizes extraction status, supported local chains, candidate starts, external blockers, and next actions before a reader interprets dependency output.
 
+v1.1.2 adds Reference Import Closure: a blocked external reference can be resolved to a user-confirmed arXiv ID, local PDF, DOI, URL, or published metadata target. arXiv and local PDF targets can be imported; DOI, URL, and metadata targets are recorded as resolved but not imported until the user supplies a local source.
+
 ## Stable MCP Tools
 
 These MCP tools form the v1 core:
@@ -40,6 +42,8 @@ These MCP tools form the v1 core:
 - `workspace_plan_external_imports_for_paper`
 - `workspace_plan_external_imports_for_result`
 - `workspace_plan_external_imports_for_queue`
+- `workspace_resolve_external_reference`
+- `workspace_list_external_reference_resolutions`
 - `workspace_create_reading_queue`
 - `workspace_create_reading_session`
 
@@ -58,6 +62,8 @@ The v1 CLI mirrors the same workflow:
 - `papergraph-mcp export-paper-reading-report`
 - `papergraph-mcp export-cross-paper-reading-plan`
 - `papergraph-mcp plan-external-imports-for-paper`
+- `papergraph-mcp resolve-external-reference`
+- `papergraph-mcp list-external-reference-resolutions`
 - `papergraph-mcp create-reading-queue`
 - `papergraph-mcp create-reading-session`
 
@@ -111,6 +117,18 @@ Stable triage fields:
 
 Evidence Triage describes the state of available evidence, not the state of the mathematics. Empty dependencies mean no supported extraction evidence was found, not that no mathematical dependencies exist.
 
+## Reference Import Closure
+
+Reference Import Closure records user-confirmed identities for blocked external references.
+
+Stable resolution statuses:
+
+- `resolved_imported`: the user supplied an importable arXiv ID or local PDF and PaperGraph imported it.
+- `resolved_not_imported`: the user supplied DOI, URL, or published metadata, but no local source is available for PaperGraph analysis yet.
+- `failed_import`: the user supplied an importable target, but import failed and the failure is preserved.
+
+Reference resolutions supplement extraction evidence. They do not rewrite original citation, bibliography, or proof evidence.
+
 ## CLI Error Payloads
 
 Workspace CLI failures use this shape:
@@ -150,7 +168,7 @@ PaperGraph does not infer hidden mathematical prerequisites.
 
 PaperGraph does not perform semantic theorem matching.
 
-PaperGraph does not search the web to identify ambiguous references or recursively import newly discovered literature in v1.1.1.
+PaperGraph does not search the web to identify ambiguous references or recursively import newly discovered literature in v1.1.2.
 
 Citation evidence does not imply logical dependency unless supported by reading-path evidence.
 
@@ -164,5 +182,5 @@ These features are intentionally outside the v1 core contract:
 - semantic theorem equivalence;
 - notation or symbol indexing;
 - PDF rendering of reports;
-- online reference resolution and recursive external-paper import;
+- online reference search and recursive external-paper import;
 - proof checking.

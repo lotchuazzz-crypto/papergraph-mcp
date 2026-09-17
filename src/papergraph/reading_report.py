@@ -44,8 +44,19 @@ def build_paper_reading_report(
         "unresolved_risk_count": paper_map["summary"]["unresolved_risk_count"],
         "evidence_status": paper_map["summary"]["evidence_status"],
     }
-    evidence_triage = build_evidence_triage(paper_map)
-    sections = _sections_from_paper_map(paper_map, summary, evidence_triage)
+    reference_resolutions = workspace.list_external_reference_resolutions(
+        paper_map["paper"]["paper_id"]
+    )
+    evidence_triage = build_evidence_triage(
+        paper_map,
+        reference_resolutions=reference_resolutions,
+    )
+    sections = _sections_from_paper_map(
+        paper_map,
+        summary,
+        evidence_triage,
+        reference_resolutions,
+    )
     report: dict[str, Any] = {
         "report_schema_version": REPORT_SCHEMA_VERSION,
         "format": "markdown",
@@ -55,6 +66,7 @@ def build_paper_reading_report(
         "evidence_triage": evidence_triage,
         "sections": sections,
         "warnings": paper_map["evidence_quality"]["warnings"],
+        "reference_resolutions": reference_resolutions,
         "paper_map": paper_map,
     }
     report["markdown"] = render_paper_reading_report_markdown(report)
@@ -103,6 +115,8 @@ def render_paper_reading_report_markdown(report_model: dict[str, Any]) -> str:
     lines.extend(_render_logic_chain(paper_map["reading_route"]))
     lines.extend(["", "## External Reading Risks", ""])
     lines.extend(_render_external_risks(paper_map["external_risks"]))
+    lines.extend(["", "### Resolved External References", ""])
+    lines.extend(_render_reference_resolutions(report_model["reference_resolutions"]))
     lines.extend(["", "## Evidence Quality", ""])
     lines.extend(_render_warnings(report_model["warnings"]))
     lines.extend(["", "## Evidence Boundaries", ""])
@@ -135,6 +149,7 @@ def _sections_from_paper_map(
     paper_map: dict[str, Any],
     summary: dict[str, Any],
     evidence_triage: dict[str, Any],
+    reference_resolutions: dict[str, Any],
 ) -> list[dict[str, Any]]:
     return [
         {"id": "paper", "title": "Paper", "items": [paper_map["paper"]]},
@@ -158,6 +173,11 @@ def _sections_from_paper_map(
             "id": "external-reading-risks",
             "title": "External Reading Risks",
             "items": [paper_map["external_risks"]],
+        },
+        {
+            "id": "reference-resolutions",
+            "title": "Resolved External References",
+            "items": reference_resolutions["resolutions"],
         },
         {
             "id": "evidence-quality",
@@ -274,6 +294,53 @@ def _render_external_risks(external_risks: dict[str, Any]) -> list[str]:
             f"{_text(item.get('reason') or item.get('message') or _compact_json(item))}"
         )
     return lines
+
+
+def _render_reference_resolutions(reference_resolutions: dict[str, Any]) -> list[str]:
+    resolutions = reference_resolutions.get("resolutions", [])
+    if not resolutions:
+        return ["No external reference resolutions have been recorded."]
+    lines = []
+    for resolution in resolutions:
+        target = resolution.get("target", {})
+        target_label = _reference_target_label(target)
+        if resolution["status"] == "resolved_imported":
+            paper_id = resolution.get("import", {}).get("paper_id")
+            lines.append(
+                f"- Resolved and imported: {target_label} -> `{paper_id}`"
+            )
+        elif resolution["status"] == "resolved_not_imported":
+            lines.append(
+                "- Resolved, not imported: "
+                f"{target_label} "
+                "(provide a local source before PaperGraph can analyze it)."
+            )
+        elif resolution["status"] == "failed_import":
+            warnings = "; ".join(str(item) for item in resolution.get("warnings", []))
+            lines.append(
+                f"- Failed import: {target_label}"
+                + (f" ({_text(warnings)})" if warnings else "")
+            )
+    return lines
+
+
+def _reference_target_label(target: dict[str, Any]) -> str:
+    kind = target.get("kind", "metadata")
+    if kind == "doi":
+        return f"DOI `{target.get('doi')}`"
+    if kind == "url":
+        return f"URL `{target.get('url')}`"
+    if kind == "arxiv":
+        return f"arXiv `{target.get('arxiv_id')}`"
+    if kind == "pdf":
+        return f"PDF `{target.get('path')}`"
+    parts = [
+        str(target.get("title") or "").strip(),
+        str(target.get("year") or "").strip(),
+        str(target.get("venue") or "").strip(),
+    ]
+    compact = ", ".join(part for part in parts if part)
+    return _text(compact or "metadata target")
 
 
 def _render_warnings(warnings: list[dict[str, Any]]) -> list[str]:

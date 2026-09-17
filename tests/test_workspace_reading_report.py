@@ -19,16 +19,22 @@ def test_reading_report_exports_researcher_markdown(tmp_path: Path):
         assert report["summary"]["evidence_status"] == "usable"
         assert report["summary"]["main_candidate_count"] >= 1
         assert report["summary"]["reading_route_count"] >= 1
+        assert report["evidence_triage"]["triage_schema_version"] == 1
+        assert report["evidence_triage"]["candidate_starting_point"]["label"] == (
+            "automatic candidate"
+        )
         assert report["sections"][0]["id"] == "paper"
         assert report["warnings"] == report["paper_map"]["evidence_quality"]["warnings"]
         markdown = report["markdown"]
         assert markdown.startswith("# Reading Report:")
         assert "## Paper" in markdown
         assert "## Paper Map" in markdown
+        assert "## Evidence Triage" in markdown
+        assert "Candidate starting point" in markdown
         assert "## Main-Result Candidates" in markdown
         assert "result text contains a main-result cue" in markdown
-        assert "## Recommended Reading Route" in markdown
-        assert "## Local Logic Chain" in markdown
+        assert "## Candidate Reading Route" in markdown
+        assert "## Supported Local Logic Chain" in markdown
         assert "## External Reading Risks" in markdown
         assert "Review candidate: arXiv:2401.12345" in markdown
         assert "## Evidence Quality" in markdown
@@ -75,9 +81,13 @@ def test_reading_report_exports_sparse_empty_paper(tmp_path: Path):
         report = workspace.export_paper_reading_report("local:empty")
 
         assert report["summary"]["evidence_status"] == "limited"
+        assert report["evidence_triage"]["status"] == "needs_manual_review"
         assert report["warnings"][0]["kind"] == "no_results"
         assert "No main-result candidates were found" in report["markdown"]
         assert "No reading route evidence was extracted" in report["markdown"]
+        assert "Empty dependencies mean no supported extraction evidence was found" in (
+            report["markdown"]
+        )
         assert (
             "PaperGraph does not infer hidden mathematical prerequisites."
             in report["markdown"]

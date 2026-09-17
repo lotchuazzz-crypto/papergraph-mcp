@@ -2,17 +2,17 @@
 
 ## Version Pins
 
-- `pyproject.toml` reports `1.0.0`.
-- `uv.lock` reports package version `1.0.0`.
-- Runtime diagnostics report `version: 1.0.0` and `release_tag: v1.0.0`.
-- Active install commands use `v1.0.0`.
+- `pyproject.toml` reports `1.1.1`.
+- `uv.lock` reports package version `1.1.1`.
+- Runtime diagnostics report `version: 1.1.1` and `release_tag: v1.1.1`.
+- Active install commands use `v1.1.1`.
 - Historical specs and release history may keep old versions.
 
 ## Installation Validation
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.0.0 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.1 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.1 papergraph-mcp doctor
 ```
 
 Keep workspace databases outside the Git repository.
@@ -41,7 +41,7 @@ uv run papergraph-mcp <command> --help
 ## GitHub Release
 
 - Merge the v1.0 PR into `main`.
-- Create tag `v1.0.0` from the merge commit.
+- Create tag `v1.1.1` from the merge commit.
 - Publish release notes that emphasize Paper Map, Reading Report, Cross-Paper Reading Plan, local SQLite workspaces, deterministic Markdown artifacts, MCP and CLI usage, and evidence boundaries.
 
 ## Post-v1 Scope

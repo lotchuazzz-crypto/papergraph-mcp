@@ -137,6 +137,7 @@ def bootstrap_reading_project(
     artifacts = []
     warnings = []
     paper_maps = []
+    evidence_triage = []
 
     for filename in (STARTER_SUMMARY_NAME, STARTER_MANIFEST_NAME):
         _validate_output_path(artifact_path / filename, overwrite)
@@ -155,6 +156,7 @@ def bootstrap_reading_project(
         )
         report_payloads.append(report)
         paper_maps.append(report["paper_map"])
+        evidence_triage.append(report["evidence_triage"])
         warnings.extend(report.get("warnings", []))
 
     cross_plan = None
@@ -188,6 +190,7 @@ def bootstrap_reading_project(
         workspace_path=workspace_text,
         papers=existing_papers,
         paper_maps=paper_maps,
+        evidence_triage=evidence_triage,
         artifacts=artifacts,
         reading_queue=reading_queue,
         reading_session=reading_session,
@@ -206,6 +209,7 @@ def bootstrap_reading_project(
         "project_title": title,
         "paper_ids": paper_ids,
         "artifacts": [summary_record, *artifacts],
+        "evidence_triage": _compact_triage_records(evidence_triage),
         "next_commands": next_commands,
         "warnings": warnings,
     }
@@ -226,6 +230,7 @@ def bootstrap_reading_project(
         },
         "papers": existing_papers,
         "paper_maps": paper_maps,
+        "evidence_triage": evidence_triage,
         "artifacts": final_artifacts,
         "reading_queue": reading_queue,
         "reading_session": reading_session,
@@ -331,6 +336,7 @@ def _render_start_here(
     workspace_path: str,
     papers: list[dict],
     paper_maps: list[dict],
+    evidence_triage: list[dict],
     artifacts: list[dict],
     reading_queue: dict | None,
     reading_session: dict | None,
@@ -366,7 +372,26 @@ def _render_start_here(
             "",
             "## Start Here",
             "",
-            "- Open the first Reading Report, then inspect the Paper Map warnings.",
+        ]
+    )
+    if evidence_triage:
+        first_triage = evidence_triage[0]
+        lines.append(
+            f"- Evidence triage: `{first_triage.get('status', 'needs_manual_review')}`."
+        )
+        candidate = first_triage.get("candidate_starting_point")
+        if candidate:
+            lines.append(
+                "- Candidate starting point: "
+                f"`{candidate['result_id']}` ({candidate['label']})."
+            )
+        for action in first_triage.get("next_actions", [])[:3]:
+            lines.append(f"- {action['label']}")
+    else:
+        lines.append("- Open the first Reading Report, then inspect the Paper Map warnings.")
+    lines.extend(
+        [
+            "- Review `Evidence Triage` in each Reading Report before interpreting dependencies.",
             "",
             "## Reading Artifacts",
             "",
@@ -445,6 +470,24 @@ def _artifact_record(
     if paper_id is not None:
         record["paper_id"] = paper_id
     return record
+
+
+def _compact_triage_records(evidence_triage: list[dict]) -> list[dict]:
+    records = []
+    for triage in evidence_triage:
+        records.append(
+            {
+                "triage_schema_version": triage["triage_schema_version"],
+                "paper_id": triage["paper_id"],
+                "status": triage["status"],
+                "local_dependency_edge_count": triage["counts"][
+                    "local_dependency_edge_count"
+                ],
+                "external_blocked_count": triage["counts"]["external_blocked_count"],
+                "next_actions": triage["next_actions"],
+            }
+        )
+    return records
 
 
 def _reading_report_name(paper_id: str) -> str:

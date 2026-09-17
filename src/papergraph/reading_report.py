@@ -5,6 +5,11 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
+from papergraph.evidence_triage import (
+    build_evidence_triage,
+    render_evidence_triage_markdown,
+)
+
 if TYPE_CHECKING:
     from papergraph.workspace import Workspace
 
@@ -39,13 +44,15 @@ def build_paper_reading_report(
         "unresolved_risk_count": paper_map["summary"]["unresolved_risk_count"],
         "evidence_status": paper_map["summary"]["evidence_status"],
     }
-    sections = _sections_from_paper_map(paper_map, summary)
+    evidence_triage = build_evidence_triage(paper_map)
+    sections = _sections_from_paper_map(paper_map, summary, evidence_triage)
     report: dict[str, Any] = {
         "report_schema_version": REPORT_SCHEMA_VERSION,
         "format": "markdown",
         "paper_id": paper_map["paper"]["paper_id"],
         "title": paper_map["paper"].get("title"),
         "summary": summary,
+        "evidence_triage": evidence_triage,
         "sections": sections,
         "warnings": paper_map["evidence_quality"]["warnings"],
         "paper_map": paper_map,
@@ -77,56 +84,28 @@ def render_paper_reading_report_markdown(report_model: dict[str, Any]) -> str:
         "",
         "## Paper Map",
         "",
-        f"- Recommended start result: {_code_or_none(summary['recommended_start_result_id'])}",
+        f"- Candidate starting point: {_code_or_none(summary['recommended_start_result_id'])}",
         f"- Evidence status: `{summary['evidence_status']}`",
         f"- Main-result candidates: {summary['main_candidate_count']}",
         f"- Reading route items: {summary['reading_route_count']}",
         f"- External risks: {summary['external_risk_count']}",
         f"- Unresolved risks: {summary['unresolved_risk_count']}",
         "",
-        "## Main-Result Candidates",
+        "## Evidence Triage",
         "",
     ]
+    lines.extend(render_evidence_triage_markdown(report_model["evidence_triage"]))
+    lines.extend(["", "## Main-Result Candidates", ""])
     lines.extend(_render_main_candidates(paper_map["main_result_candidates"]))
-    lines.extend(
-        [
-            "",
-            "## Recommended Reading Route",
-            "",
-        ]
-    )
+    lines.extend(["", "## Candidate Reading Route", ""])
     lines.extend(_render_reading_route(paper_map["reading_route"]))
-    lines.extend(
-        [
-            "",
-            "## Local Logic Chain",
-            "",
-        ]
-    )
+    lines.extend(["", "## Supported Local Logic Chain", ""])
     lines.extend(_render_logic_chain(paper_map["reading_route"]))
-    lines.extend(
-        [
-            "",
-            "## External Reading Risks",
-            "",
-        ]
-    )
+    lines.extend(["", "## External Reading Risks", ""])
     lines.extend(_render_external_risks(paper_map["external_risks"]))
-    lines.extend(
-        [
-            "",
-            "## Evidence Quality",
-            "",
-        ]
-    )
+    lines.extend(["", "## Evidence Quality", ""])
     lines.extend(_render_warnings(report_model["warnings"]))
-    lines.extend(
-        [
-            "",
-            "## Evidence Boundaries",
-            "",
-        ]
-    )
+    lines.extend(["", "## Evidence Boundaries", ""])
     lines.extend(f"- {boundary}" for boundary in REQUIRED_BOUNDARIES)
     lines.extend(
         [
@@ -155,18 +134,24 @@ def render_paper_reading_report_markdown(report_model: dict[str, Any]) -> str:
 def _sections_from_paper_map(
     paper_map: dict[str, Any],
     summary: dict[str, Any],
+    evidence_triage: dict[str, Any],
 ) -> list[dict[str, Any]]:
     return [
         {"id": "paper", "title": "Paper", "items": [paper_map["paper"]]},
         {"id": "paper-map", "title": "Paper Map", "items": [summary]},
+        {
+            "id": "evidence-triage",
+            "title": "Evidence Triage",
+            "items": [evidence_triage],
+        },
         {
             "id": "main-result-candidates",
             "title": "Main-Result Candidates",
             "items": paper_map["main_result_candidates"],
         },
         {
-            "id": "recommended-reading-route",
-            "title": "Recommended Reading Route",
+            "id": "candidate-reading-route",
+            "title": "Candidate Reading Route",
             "items": paper_map["reading_route"],
         },
         {
@@ -232,7 +217,7 @@ def _render_logic_chain(route: list[dict[str, Any]]) -> list[str]:
     ]
     if not dependencies:
         return [
-            "No local dependency evidence was extracted for the recommended route."
+            "No local dependency evidence was extracted for the candidate route."
         ]
     lines = []
     for item in dependencies:

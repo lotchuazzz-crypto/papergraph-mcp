@@ -9,6 +9,9 @@ from papergraph.reference_search import (
     build_reference_search_query,
     rank_reference_candidates,
 )
+from papergraph.reference_providers.arxiv import ArxivReferenceProvider
+from papergraph.reference_providers.crossref import CrossrefReferenceProvider
+from papergraph.reference_providers.openalex import OpenAlexReferenceProvider
 from papergraph.workspace import Workspace
 
 
@@ -46,6 +49,28 @@ def provider_result(
         "records": records or [],
         "warnings": warnings or [],
     }
+
+
+class FakeResponse:
+    def __init__(self, payload=None, text: str = ""):
+        self._payload = payload
+        self.text = text
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self):
+        return self._payload
+
+
+class FakeClient:
+    def __init__(self, response: FakeResponse):
+        self.response = response
+        self.calls = []
+
+    def get(self, url: str, params=None, timeout=None):
+        self.calls.append({"url": url, "params": params, "timeout": timeout})
+        return self.response
 
 
 def test_rank_reference_candidates_prefers_published_metadata_over_arxiv_only():
@@ -228,6 +253,111 @@ def test_build_reference_search_query_uses_blocked_evidence():
     assert query["raw_bibliography_text"] == "[17] A. Author. Published target. 2020."
     assert query["title_hint"] == "Published target"
     assert query["year_hint"] == "2020"
+
+
+def test_crossref_provider_normalizes_work_records():
+    client = FakeClient(
+        FakeResponse(
+            {
+                "message": {
+                    "items": [
+                        {
+                            "DOI": "10.1000/example",
+                            "title": ["Published target"],
+                            "author": [
+                                {"given": "Ada", "family": "Lovelace"},
+                                {"given": "Emmy", "family": "Noether"},
+                            ],
+                            "published-print": {"date-parts": [[2020]]},
+                            "container-title": ["Journal of Examples"],
+                            "URL": "https://doi.org/10.1000/example",
+                        }
+                    ]
+                }
+            }
+        )
+    )
+
+    result = CrossrefReferenceProvider(client=client).search(
+        {"raw_bibliography_text": "Published target", "title_hint": "Published target"}
+    )
+
+    assert client.calls[0]["url"] == "https://api.crossref.org/works"
+    assert result["provider"] == "crossref"
+    assert result["records"] == [
+        {
+            "kind": "doi",
+            "doi": "10.1000/example",
+            "title": "Published target",
+            "authors": ["Ada Lovelace", "Emmy Noether"],
+            "year": "2020",
+            "venue": "Journal of Examples",
+            "url": "https://doi.org/10.1000/example",
+        }
+    ]
+
+
+def test_openalex_provider_normalizes_work_records():
+    client = FakeClient(
+        FakeResponse(
+            {
+                "results": [
+                    {
+                        "display_name": "Published target",
+                        "doi": "https://doi.org/10.1000/example",
+                        "publication_year": 2020,
+                        "primary_location": {
+                            "source": {"display_name": "Journal of Examples"},
+                            "landing_page_url": "https://publisher.example/paper",
+                        },
+                        "authorships": [
+                            {"author": {"display_name": "Ada Lovelace"}},
+                        ],
+                        "ids": {"arxiv": "https://arxiv.org/abs/2401.12345"},
+                    }
+                ]
+            }
+        )
+    )
+
+    result = OpenAlexReferenceProvider(client=client).search(
+        {"raw_bibliography_text": "Published target", "title_hint": "Published target"}
+    )
+
+    assert client.calls[0]["url"] == "https://api.openalex.org/works"
+    assert result["records"][0]["doi"] == "10.1000/example"
+    assert result["records"][0]["arxiv_id"] == "2401.12345"
+    assert result["records"][0]["venue"] == "Journal of Examples"
+
+
+def test_arxiv_provider_normalizes_atom_records():
+    atom = """<?xml version="1.0" encoding="UTF-8"?>
+    <feed xmlns="http://www.w3.org/2005/Atom">
+      <entry>
+        <id>http://arxiv.org/abs/2401.12345v2</id>
+        <title>Published target</title>
+        <published>2020-01-01T00:00:00Z</published>
+        <author><name>Ada Lovelace</name></author>
+        <link href="http://arxiv.org/abs/2401.12345v2" rel="alternate"/>
+      </entry>
+    </feed>
+    """
+    client = FakeClient(FakeResponse(text=atom))
+
+    result = ArxivReferenceProvider(client=client).search(
+        {"raw_bibliography_text": "Published target", "title_hint": "Published target"}
+    )
+
+    assert client.calls[0]["url"] == "https://export.arxiv.org/api/query"
+    assert result["records"][0] == {
+        "kind": "arxiv",
+        "arxiv_id": "2401.12345",
+        "arxiv_version": "v2",
+        "title": "Published target",
+        "authors": ["Ada Lovelace"],
+        "year": "2020",
+        "url": "http://arxiv.org/abs/2401.12345v2",
+    }
 
 
 def test_workspace_search_external_reference_persists_and_reuses_cached_run(

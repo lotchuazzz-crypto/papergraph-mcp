@@ -39,6 +39,13 @@ from papergraph.paper_map import build_paper_map
 from papergraph.pdf import load_pdf_evidence_spans
 from papergraph.project import LoadedProject, load_project
 from papergraph.reading_report import build_paper_reading_report
+from papergraph.reference_providers import default_reference_search_providers
+from papergraph.reference_search import (
+    build_reference_search_query,
+    candidate_id_for,
+    rank_reference_candidates,
+    search_run_id,
+)
 from papergraph.starter import (
     bootstrap_reading_project,
     plan_starter_project,
@@ -55,7 +62,7 @@ from papergraph.reading import (
 )
 
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 _RESOLVED_RESOLUTION_STATUSES = (
     "resolved",
     "resolved_bibliography_entry",
@@ -98,6 +105,8 @@ _REQUIRED_TABLES = {
     "reading_queues",
     "reading_queue_items",
     "reference_resolutions",
+    "reference_search_runs",
+    "reference_search_candidates",
 }
 _REQUIRED_THEOREM_COLUMNS = {
     "global_id",
@@ -284,6 +293,28 @@ _REQUIRED_TABLE_COLUMNS = {
         "warning_json",
         "created_at",
         "updated_at",
+    },
+    "reference_search_runs": {
+        "search_run_id",
+        "source_paper_id",
+        "blocked_id",
+        "query_json",
+        "provider_json",
+        "boundary_json",
+        "created_at",
+    },
+    "reference_search_candidates": {
+        "candidate_id",
+        "search_run_id",
+        "source_paper_id",
+        "blocked_id",
+        "target_json",
+        "score",
+        "confidence",
+        "evidence_json",
+        "provider_record_json",
+        "warning_json",
+        "rank",
     },
 }
 
@@ -564,6 +595,36 @@ CREATE INDEX IF NOT EXISTS reference_resolutions_source
     ON reference_resolutions(source_paper_id, blocked_id, target_kind, resolution_id);
 """
 
+_REFERENCE_SEARCH_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS reference_search_runs (
+    search_run_id TEXT PRIMARY KEY,
+    source_paper_id TEXT NOT NULL REFERENCES papers(paper_id) ON DELETE CASCADE,
+    blocked_id TEXT NOT NULL,
+    query_json TEXT NOT NULL,
+    provider_json TEXT NOT NULL,
+    boundary_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS reference_search_candidates (
+    candidate_id TEXT PRIMARY KEY,
+    search_run_id TEXT NOT NULL REFERENCES reference_search_runs(search_run_id)
+        ON DELETE CASCADE,
+    source_paper_id TEXT NOT NULL REFERENCES papers(paper_id) ON DELETE CASCADE,
+    blocked_id TEXT NOT NULL,
+    target_json TEXT NOT NULL,
+    score REAL NOT NULL,
+    confidence TEXT NOT NULL,
+    evidence_json TEXT NOT NULL,
+    provider_record_json TEXT NOT NULL,
+    warning_json TEXT NOT NULL,
+    rank INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS reference_search_runs_source
+    ON reference_search_runs(source_paper_id, blocked_id, created_at, search_run_id);
+CREATE INDEX IF NOT EXISTS reference_search_candidates_run
+    ON reference_search_candidates(search_run_id, rank, candidate_id);
+"""
+
 _SCHEMA_SQL = """
 CREATE TABLE workspace_meta (
     key TEXT PRIMARY KEY,
@@ -608,8 +669,8 @@ CREATE INDEX theorems_paper_kind ON theorems(paper_id, normalized_kind);
 CREATE INDEX citations_source ON citation_evidence(source_paper_id);
 CREATE INDEX citations_target ON citation_evidence(target_paper_id);
 CREATE INDEX citations_arxiv ON citation_evidence(cited_arxiv_id);
-""" + _EVIDENCE_SCHEMA_SQL + _READING_SESSION_SCHEMA_SQL + _READING_QUEUE_SCHEMA_SQL + _REFERENCE_RESOLUTION_SCHEMA_SQL + """
-INSERT INTO workspace_meta (key, value) VALUES ('schema_version', '6');
+""" + _EVIDENCE_SCHEMA_SQL + _READING_SESSION_SCHEMA_SQL + _READING_QUEUE_SCHEMA_SQL + _REFERENCE_RESOLUTION_SCHEMA_SQL + _REFERENCE_SEARCH_SCHEMA_SQL + """
+INSERT INTO workspace_meta (key, value) VALUES ('schema_version', '7');
 """
 
 
@@ -731,6 +792,15 @@ class Workspace:
                 )
             }
             schema_version = 6
+        if schema_version == 6:
+            Workspace._migrate_v6_to_v7(connection)
+            tables = {
+                row[0]
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                )
+            }
+            schema_version = 7
         if schema_version != SCHEMA_VERSION:
             raise WorkspaceSchemaError(
                 f"Unsupported workspace schema version {schema_version}; "
@@ -847,6 +917,21 @@ class Workspace:
             connection.execute(
                 "UPDATE workspace_meta SET value = ? WHERE key = 'schema_version'",
                 ("6",),
+            )
+            connection.execute("COMMIT")
+        except Exception:
+            if connection.in_transaction:
+                connection.execute("ROLLBACK")
+            raise
+
+    @staticmethod
+    def _migrate_v6_to_v7(connection: sqlite3.Connection) -> None:
+        try:
+            connection.execute("BEGIN")
+            _execute_sql_script(connection, _REFERENCE_SEARCH_SCHEMA_SQL)
+            connection.execute(
+                "UPDATE workspace_meta SET value = ? WHERE key = 'schema_version'",
+                ("7",),
             )
             connection.execute("COMMIT")
         except Exception:
@@ -2149,6 +2234,332 @@ class Workspace:
                 datetime.now(timezone.utc).isoformat(),
                 resolution_id,
             ),
+        )
+        self._connection.commit()
+
+    @_synchronized
+    def search_external_reference(
+        self,
+        paper_id: str,
+        blocked_id: str,
+        *,
+        providers: list[str] | None = None,
+        max_candidates: int = 10,
+        refresh: bool = False,
+    ) -> dict:
+        """Search scholarly metadata providers for one blocked reference."""
+
+        if not isinstance(max_candidates, int) or max_candidates < 1:
+            raise ValueError("max_candidates must be a positive integer")
+        normalized_paper_id = normalize_paper_id(paper_id)
+        self.get_paper(normalized_paper_id)
+        blocked = _blocked_external_reference(
+            self.plan_external_imports_for_paper(normalized_paper_id),
+            blocked_id,
+        )
+        if not refresh:
+            cached = self._latest_reference_search(
+                normalized_paper_id,
+                blocked["blocked_id"],
+            )
+            if cached is not None:
+                return cached
+
+        query = build_reference_search_query(blocked)
+        provider_results = self._run_reference_search_providers(query, providers)
+        ranked = rank_reference_candidates(query, provider_results, max_candidates)
+        ordinal = self._reference_search_count(
+            normalized_paper_id,
+            blocked["blocked_id"],
+        ) + 1
+        run_id = search_run_id(normalized_paper_id, blocked["blocked_id"], query, ordinal)
+        timestamp = datetime.now(timezone.utc).isoformat()
+        self._connection.execute(
+            """
+            INSERT INTO reference_search_runs (
+                search_run_id, source_paper_id, blocked_id, query_json,
+                provider_json, boundary_json, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                run_id,
+                normalized_paper_id,
+                blocked["blocked_id"],
+                _canonical_json(query),
+                _canonical_json(
+                    {
+                        "providers": providers,
+                        "provider_warnings": ranked["provider_warnings"],
+                    }
+                ),
+                _canonical_json(ranked["boundaries"]),
+                timestamp,
+            ),
+        )
+        for index, candidate in enumerate(ranked["candidates"], start=1):
+            candidate_id = candidate_id_for(
+                normalized_paper_id,
+                blocked["blocked_id"],
+                candidate["target"],
+            )
+            self._connection.execute(
+                """
+                INSERT INTO reference_search_candidates (
+                    candidate_id, search_run_id, source_paper_id, blocked_id,
+                    target_json, score, confidence, evidence_json,
+                    provider_record_json, warning_json, rank
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    candidate_id,
+                    run_id,
+                    normalized_paper_id,
+                    blocked["blocked_id"],
+                    _canonical_json(candidate["target"]),
+                    candidate["score"],
+                    candidate["confidence"],
+                    _canonical_json(candidate["evidence"]),
+                    _canonical_json(candidate["provider_records"]),
+                    _canonical_json(candidate["warnings"]),
+                    index,
+                ),
+            )
+        self._connection.commit()
+        return self._reference_search_by_id(run_id)
+
+    @_synchronized
+    def list_external_reference_searches(
+        self,
+        paper_id: str | None = None,
+        blocked_id: str | None = None,
+    ) -> dict:
+        """List persisted scholarly reference search runs."""
+
+        clauses = []
+        parameters: list[str] = []
+        normalized_paper_id = None
+        if paper_id is not None:
+            normalized_paper_id = normalize_paper_id(paper_id)
+            self.get_paper(normalized_paper_id)
+            clauses.append("source_paper_id = ?")
+            parameters.append(normalized_paper_id)
+        if blocked_id is not None:
+            clauses.append("blocked_id = ?")
+            parameters.append(blocked_id)
+        where = "WHERE " + " AND ".join(clauses) if clauses else ""
+        rows = self._connection.execute(
+            f"""
+            SELECT search_run_id
+            FROM reference_search_runs
+            {where}
+            ORDER BY source_paper_id, blocked_id, created_at, search_run_id
+            """,
+            tuple(parameters),
+        ).fetchall()
+        searches = [self._reference_search_by_id(row[0]) for row in rows]
+        return {
+            "search_schema_version": 1,
+            "scope": {
+                "paper_id": normalized_paper_id,
+                "blocked_id": blocked_id,
+            },
+            "searches": searches,
+            "summary": {
+                "search_run_count": len(searches),
+                "candidate_count": sum(
+                    len(search.get("candidates", [])) for search in searches
+                ),
+                "ambiguous_candidate_count": sum(
+                    1
+                    for search in searches
+                    for candidate in search.get("candidates", [])
+                    if candidate.get("confidence") == "ambiguous"
+                ),
+                "boundary_count": sum(
+                    len(search.get("boundaries", [])) for search in searches
+                ),
+            },
+        }
+
+    @_synchronized
+    def resolve_external_reference_candidate(
+        self,
+        paper_id: str,
+        blocked_id: str,
+        candidate_id: str,
+        *,
+        import_target: bool = False,
+        artifact_dir: str | Path | None = None,
+        overwrite: bool = False,
+    ) -> dict:
+        """Apply a persisted search candidate through Reference Import Closure."""
+
+        normalized_paper_id = normalize_paper_id(paper_id)
+        self.get_paper(normalized_paper_id)
+        candidate = self._reference_search_candidate_by_id(candidate_id)
+        if candidate is None:
+            raise ValueError(f"Unknown reference candidate: {candidate_id}")
+        if (
+            candidate["source_paper_id"] != normalized_paper_id
+            or candidate["blocked_id"] != blocked_id
+        ):
+            raise ValueError("candidate does not belong to the requested blocker")
+        existing = self.list_external_reference_resolutions(normalized_paper_id)[
+            "resolutions"
+        ]
+        different_existing = [
+            item
+            for item in existing
+            if item["source"]["blocked_id"] == blocked_id
+            and item["target"] != candidate["target"]
+        ]
+        if different_existing and not overwrite:
+            raise ValueError(
+                "An existing resolution is recorded for this blocked reference; "
+                "pass overwrite=True to apply a different candidate."
+            )
+        if overwrite and different_existing:
+            self._delete_reference_resolutions(normalized_paper_id, blocked_id)
+        resolution = self.resolve_external_reference(
+            normalized_paper_id,
+            blocked_id,
+            candidate["target"],
+            import_target=import_target,
+            artifact_dir=artifact_dir,
+        )
+        return {
+            "candidate_resolution_schema_version": 1,
+            "candidate": candidate,
+            "resolution": resolution,
+        }
+
+    def _run_reference_search_providers(
+        self,
+        query: dict,
+        providers: list[str] | None,
+    ) -> list[dict]:
+        custom_provider = getattr(self, "reference_search_provider", None)
+        if custom_provider is not None:
+            return custom_provider(query)
+        selected = set(providers or [])
+        results = []
+        for provider in default_reference_search_providers():
+            if selected and provider.name not in selected:
+                continue
+            try:
+                results.append(provider.search(query))
+            except Exception as exc:
+                results.append(
+                    {
+                        "provider": provider.name,
+                        "records": [],
+                        "warnings": [bounded_excerpt(str(exc), limit=240)],
+                    }
+                )
+        return results
+
+    def _reference_search_count(self, paper_id: str, blocked_id: str) -> int:
+        row = self._connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM reference_search_runs
+            WHERE source_paper_id = ? AND blocked_id = ?
+            """,
+            (paper_id, blocked_id),
+        ).fetchone()
+        return int(row[0] if row else 0)
+
+    def _latest_reference_search(self, paper_id: str, blocked_id: str) -> dict | None:
+        row = self._connection.execute(
+            """
+            SELECT search_run_id
+            FROM reference_search_runs
+            WHERE source_paper_id = ? AND blocked_id = ?
+            ORDER BY created_at DESC, search_run_id DESC
+            LIMIT 1
+            """,
+            (paper_id, blocked_id),
+        ).fetchone()
+        return self._reference_search_by_id(row[0]) if row else None
+
+    def _reference_search_by_id(self, search_run_id: str) -> dict:
+        row = self._connection.execute(
+            """
+            SELECT
+                search_run_id, source_paper_id, blocked_id, query_json,
+                provider_json, boundary_json, created_at
+            FROM reference_search_runs
+            WHERE search_run_id = ?
+            """,
+            (search_run_id,),
+        ).fetchone()
+        if row is None:
+            raise ValueError(f"Unknown reference search run: {search_run_id}")
+        candidate_rows = self._connection.execute(
+            """
+            SELECT
+                candidate_id, search_run_id, source_paper_id, blocked_id,
+                target_json, score, confidence, evidence_json,
+                provider_record_json, warning_json, rank
+            FROM reference_search_candidates
+            WHERE search_run_id = ?
+            ORDER BY rank, candidate_id
+            """,
+            (search_run_id,),
+        ).fetchall()
+        candidates = [_reference_search_candidate_from_row(item) for item in candidate_rows]
+        provider_payload = json.loads(row[4])
+        boundaries = json.loads(row[5])
+        return {
+            "search_schema_version": 1,
+            "search_run_id": row[0],
+            "source": {
+                "paper_id": row[1],
+                "blocked_id": row[2],
+            },
+            "query": json.loads(row[3]),
+            "provider_warnings": provider_payload.get("provider_warnings", []),
+            "boundaries": boundaries,
+            "candidates": candidates,
+            "summary": {
+                "candidate_count": len(candidates),
+                "strong_candidate_count": sum(
+                    1 for item in candidates if item["confidence"] == "strong"
+                ),
+                "ambiguous_candidate_count": sum(
+                    1 for item in candidates if item["confidence"] == "ambiguous"
+                ),
+                "boundary_count": len(boundaries),
+                "provider_warning_count": len(
+                    provider_payload.get("provider_warnings", [])
+                ),
+            },
+            "created_at": row[6],
+        }
+
+    def _reference_search_candidate_by_id(self, candidate_id: str) -> dict | None:
+        row = self._connection.execute(
+            """
+            SELECT
+                candidate_id, search_run_id, source_paper_id, blocked_id,
+                target_json, score, confidence, evidence_json,
+                provider_record_json, warning_json, rank
+            FROM reference_search_candidates
+            WHERE candidate_id = ?
+            """,
+            (candidate_id,),
+        ).fetchone()
+        return _reference_search_candidate_from_row(row) if row else None
+
+    def _delete_reference_resolutions(self, paper_id: str, blocked_id: str) -> None:
+        self._connection.execute(
+            """
+            DELETE FROM reference_resolutions
+            WHERE source_paper_id = ? AND blocked_id = ?
+            """,
+            (paper_id, blocked_id),
         )
         self._connection.commit()
 
@@ -4970,6 +5381,23 @@ def _reference_resolution_summary(resolutions: list[dict]) -> dict:
         "failed_import_count": sum(
             1 for item in resolutions if item["status"] == "failed_import"
         ),
+    }
+
+
+def _reference_search_candidate_from_row(row: tuple) -> dict:
+    return {
+        "candidate_schema_version": 1,
+        "candidate_id": row[0],
+        "search_run_id": row[1],
+        "source_paper_id": row[2],
+        "blocked_id": row[3],
+        "target": json.loads(row[4]),
+        "score": row[5],
+        "confidence": row[6],
+        "evidence": json.loads(row[7]),
+        "provider_records": json.loads(row[8]),
+        "warnings": json.loads(row[9]),
+        "rank": row[10],
     }
 
 

@@ -21,8 +21,8 @@ papergraph-mcp doctor
 If you do not use an MCP-capable client yet, run PaperGraph from the CLI:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp doctor
 ```
 
 ## Workspace Hygiene
@@ -253,4 +253,4 @@ workspace_create_reading_queue(result_id=<target result id>)
 workspace_create_reading_session(paper_id=<paper id>)
 ```
 
-PaperGraph does not verify proofs, infer hidden prerequisites, perform semantic theorem matching, bypass paywalls, or recursively import newly discovered literature. v1.1.3 can search scholarly metadata for blocked references, but it only imports or records a target when a candidate is explicitly applied.
+PaperGraph does not verify proofs, infer hidden prerequisites, perform semantic theorem matching, bypass paywalls, or perform unlimited crawling. The standalone scholarly resolver only imports or records a target when a candidate is explicitly applied. v1.1.4 additionally offers [bounded reference expansion](bounded-reference-expansion.md): an explicitly approved finite policy permits unique strong imports, with ambiguous branches waiting for review. The v1.1.4 pinned install commands in this guide require the published tag; before release use `uv run papergraph-mcp` in the development checkout.

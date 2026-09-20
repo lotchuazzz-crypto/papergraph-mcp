@@ -70,7 +70,7 @@ def test_first_workspace_walkthrough_covers_mcp_and_cli_paths():
 
     for command in (
         "papergraph-mcp doctor",
-        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp doctor",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp doctor",
         "open_workspace",
         "workspace_add_arxiv_paper",
         "workspace_get_paper_map",
@@ -175,8 +175,8 @@ def test_v1_release_checklist_is_concrete():
 
     for command in (
         "uv run pytest -q -p no:cacheprovider --basetemp .pytest-tmp",
-        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp --version",
-        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp doctor",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp --version",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp doctor",
     ):
         assert command in text
     assert_no_placeholders(text)

@@ -1,0 +1,13 @@
+{
+  "ambiguous": [
+    {"provider": "arxiv", "warnings": [], "records": [
+      {"kind": "arxiv", "arxiv_id": "2401.10003", "title": "Uncertain target", "authors": ["Ada Author"], "year": "2020"},
+      {"kind": "arxiv", "arxiv_id": "2401.19999", "title": "Uncertain target", "authors": ["Ada Author"], "year": "2020"}
+    ]}
+  ],
+  "metadata": [
+    {"provider": "crossref", "warnings": [], "records": [
+      {"kind": "metadata", "title": "Unavailable target", "authors": ["Dana Author"], "year": "1980"}
+    ]}
+  ]
+}

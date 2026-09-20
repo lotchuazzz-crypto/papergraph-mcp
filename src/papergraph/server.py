@@ -25,6 +25,10 @@ from papergraph.parser import parse_latex
 from papergraph.pdf import PdfExtractionError
 from papergraph.project import load_project
 from papergraph.workspace import SCHEMA_VERSION, Workspace, WorkspaceError
+from papergraph.reference_expansion_api import (
+    COMMANDS as EXPANSION_COMMANDS, add_cli as add_expansion_cli,
+    register_tools as register_expansion_tools, run_cli as run_expansion_cli,
+)
 
 
 mcp = MCPServer("PaperGraph MCP")
@@ -682,7 +686,7 @@ def workspace_resolve_external_reference(
 def workspace_list_external_reference_resolutions(
     paper_id: str | None = None,
 ) -> dict:
-    """List user-confirmed external reference resolutions."""
+    """List recorded external reference resolutions and selection provenance."""
 
     try:
         return require_workspace().list_external_reference_resolutions(paper_id)
@@ -1365,6 +1369,9 @@ def _run_starter_cli_command(command: str, args) -> None:
             workspace.close()
 
 
+register_expansion_tools(mcp, require_workspace, _serialized_workspace_tool)
+
+
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="papergraph-mcp",
@@ -1376,6 +1383,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         version=f"%(prog)s {distribution_version('papergraph-mcp')}",
     )
     subparsers = parser.add_subparsers(dest="command")
+    add_expansion_cli(subparsers)
     subparsers.add_parser(
         "doctor",
         help="Print PaperGraph environment diagnostics as JSON.",
@@ -1574,7 +1582,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     resolve_reference_parser.add_argument("--artifact-dir")
     list_reference_resolutions_parser = subparsers.add_parser(
         "list-external-reference-resolutions",
-        help="List user-confirmed external reference resolutions.",
+        help="List recorded external reference resolutions and selection provenance.",
     )
     list_reference_resolutions_parser.add_argument("--workspace", required=True)
     list_reference_resolutions_parser.add_argument("--paper-id")
@@ -1640,6 +1648,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     cross_paper_plan_parser.add_argument("--output")
 
     args = parser.parse_args(argv)
+    if args.command in EXPANSION_COMMANDS:
+        run_expansion_cli(args, Workspace)
+        return
     if args.command == "doctor":
         _print_json(environment_diagnostics())
         return

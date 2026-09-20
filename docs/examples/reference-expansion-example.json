@@ -1,0 +1,746 @@
+{
+  "affected_paper_ids": [
+    "arxiv:2401.10001",
+    "arxiv:2401.10002",
+    "arxiv:2401.10003"
+  ],
+  "attempts": [
+    {
+      "attempt_id": "attempt:1",
+      "edge_id": "expansion-edge:17f9c47e5a77d731722a47e4",
+      "kind": "import",
+      "phase": "completed",
+      "previous_attempt_id": null,
+      "paper_id": "arxiv:2401.10003",
+      "target": {
+        "kind": "arxiv",
+        "arxiv_id": "2401.10003"
+      },
+      "digest": null,
+      "baseline_exists": false,
+      "reserved": false,
+      "decision": {
+        "kind": "policy_selected",
+        "policy_version": "unique_strong_v1",
+        "reason_codes": [
+          "exact_source_identifier"
+        ]
+      }
+    },
+    {
+      "attempt_id": "attempt:2",
+      "edge_id": "expansion-edge:c8805ea19e6885be73e3528e",
+      "kind": "import",
+      "phase": "completed",
+      "previous_attempt_id": null,
+      "paper_id": "arxiv:2401.10002",
+      "target": {
+        "kind": "arxiv",
+        "arxiv_id": "2401.10002"
+      },
+      "digest": null,
+      "baseline_exists": false,
+      "reserved": false,
+      "decision": {
+        "kind": "policy_selected",
+        "policy_version": "unique_strong_v1",
+        "reason_codes": [
+          "exact_source_identifier"
+        ]
+      }
+    },
+    {
+      "attempt_id": "attempt:3",
+      "edge_id": "expansion-edge:13674414681912ab6606b76e",
+      "kind": "import",
+      "phase": "completed",
+      "previous_attempt_id": null,
+      "paper_id": "arxiv:2401.10003",
+      "target": {
+        "kind": "arxiv",
+        "arxiv_id": "2401.10003"
+      },
+      "digest": null,
+      "baseline_exists": true,
+      "reserved": false,
+      "decision": {
+        "kind": "policy_selected",
+        "policy_version": "unique_strong_v1",
+        "reason_codes": [
+          "exact_source_identifier"
+        ]
+      }
+    },
+    {
+      "attempt_id": "attempt:4",
+      "edge_id": "expansion-edge:c2d611171732a566a0bfbc19",
+      "kind": "import",
+      "phase": "completed",
+      "previous_attempt_id": null,
+      "paper_id": "arxiv:2401.10001",
+      "target": {
+        "kind": "arxiv",
+        "arxiv_id": "2401.10001"
+      },
+      "digest": null,
+      "baseline_exists": true,
+      "reserved": false,
+      "decision": {
+        "kind": "policy_selected",
+        "policy_version": "unique_strong_v1",
+        "reason_codes": [
+          "exact_source_identifier"
+        ]
+      }
+    },
+    {
+      "attempt_id": "attempt:5",
+      "edge_id": "expansion-edge:dc6423f3e317501b6c77aaee",
+      "kind": "import",
+      "phase": "completed",
+      "previous_attempt_id": null,
+      "paper_id": "arxiv:2401.10001",
+      "target": {
+        "kind": "arxiv",
+        "arxiv_id": "2401.10001"
+      },
+      "digest": null,
+      "baseline_exists": true,
+      "reserved": false,
+      "decision": {
+        "kind": "policy_selected",
+        "policy_version": "unique_strong_v1",
+        "reason_codes": [
+          "exact_source_identifier"
+        ]
+      }
+    }
+  ],
+  "continuation_required": false,
+  "created_at": 0,
+  "edges": [
+    {
+      "edge_id": "expansion-edge:c8805ea19e6885be73e3528e",
+      "source": "arxiv:2401.10001",
+      "reference_key": "external-import:arxiv:2401.10002",
+      "evidence": [
+        {
+          "kind": "citation_record",
+          "id": "arxiv:2401.10001:cite:main.tex:b",
+          "paper_id": "arxiv:2401.10001",
+          "result_id": null,
+          "proof_id": null,
+          "citation_key": "b",
+          "raw_text": "\\cite{b}",
+          "source": "paper.citation_evidence",
+          "source_file": "main.tex",
+          "bib_file": "refs.bib"
+        }
+      ],
+      "state": "imported",
+      "reason": null,
+      "target": {
+        "kind": "arxiv",
+        "arxiv_id": "2401.10002"
+      },
+      "decision": {
+        "kind": "policy_selected",
+        "policy_version": "unique_strong_v1",
+        "reason_codes": [
+          "exact_source_identifier"
+        ]
+      },
+      "attempt_id": "attempt:2",
+      "target_node": "arxiv:2401.10002"
+    },
+    {
+      "edge_id": "expansion-edge:17f9c47e5a77d731722a47e4",
+      "source": "arxiv:2401.10001",
+      "reference_key": "external-import:arxiv:2401.10003",
+      "evidence": [
+        {
+          "kind": "citation_record",
+          "id": "arxiv:2401.10001:cite:main.tex:c",
+          "paper_id": "arxiv:2401.10001",
+          "result_id": null,
+          "proof_id": null,
+          "citation_key": "c",
+          "raw_text": "\\cite{c}",
+          "source": "paper.citation_evidence",
+          "source_file": "main.tex",
+          "bib_file": "refs.bib"
+        }
+      ],
+      "state": "imported",
+      "reason": null,
+      "target": {
+        "kind": "arxiv",
+        "arxiv_id": "2401.10003"
+      },
+      "decision": {
+        "kind": "policy_selected",
+        "policy_version": "unique_strong_v1",
+        "reason_codes": [
+          "exact_source_identifier"
+        ]
+      },
+      "attempt_id": "attempt:1",
+      "target_node": "arxiv:2401.10003"
+    },
+    {
+      "edge_id": "expansion-edge:c2d611171732a566a0bfbc19",
+      "source": "arxiv:2401.10002",
+      "reference_key": "external-import:arxiv:2401.10001",
+      "evidence": [
+        {
+          "kind": "citation_record",
+          "id": "arxiv:2401.10002:cite:main.tex:a",
+          "paper_id": "arxiv:2401.10002",
+          "result_id": null,
+          "proof_id": null,
+          "citation_key": "a",
+          "raw_text": "\\cite{a}",
+          "source": "paper.citation_evidence",
+          "source_file": "main.tex",
+          "bib_file": "refs.bib"
+        }
+      ],
+      "state": "linked_existing",
+      "reason": null,
+      "target": {
+        "kind": "arxiv",
+        "arxiv_id": "2401.10001"
+      },
+      "decision": {
+        "kind": "policy_selected",
+        "policy_version": "unique_strong_v1",
+        "reason_codes": [
+          "exact_source_identifier"
+        ]
+      },
+      "attempt_id": "attempt:4",
+      "target_node": "arxiv:2401.10001"
+    },
+    {
+      "edge_id": "expansion-edge:13674414681912ab6606b76e",
+      "source": "arxiv:2401.10002",
+      "reference_key": "external-import:arxiv:2401.10003",
+      "evidence": [
+        {
+          "kind": "citation_record",
+          "id": "arxiv:2401.10002:cite:main.tex:c",
+          "paper_id": "arxiv:2401.10002",
+          "result_id": null,
+          "proof_id": null,
+          "citation_key": "c",
+          "raw_text": "\\cite{c}",
+          "source": "paper.citation_evidence",
+          "source_file": "main.tex",
+          "bib_file": "refs.bib"
+        }
+      ],
+      "state": "linked_existing",
+      "reason": null,
+      "target": {
+        "kind": "arxiv",
+        "arxiv_id": "2401.10003"
+      },
+      "decision": {
+        "kind": "policy_selected",
+        "policy_version": "unique_strong_v1",
+        "reason_codes": [
+          "exact_source_identifier"
+        ]
+      },
+      "attempt_id": "attempt:3",
+      "target_node": "arxiv:2401.10003"
+    },
+    {
+      "edge_id": "expansion-edge:dc6423f3e317501b6c77aaee",
+      "source": "arxiv:2401.10003",
+      "reference_key": "external-import:arxiv:2401.10001",
+      "evidence": [
+        {
+          "kind": "citation_record",
+          "id": "arxiv:2401.10003:cite:main.tex:a",
+          "paper_id": "arxiv:2401.10003",
+          "result_id": null,
+          "proof_id": null,
+          "citation_key": "a",
+          "raw_text": "\\cite{a}",
+          "source": "paper.citation_evidence",
+          "source_file": "main.tex",
+          "bib_file": "refs.bib"
+        }
+      ],
+      "state": "linked_existing",
+      "reason": null,
+      "target": {
+        "kind": "arxiv",
+        "arxiv_id": "2401.10001"
+      },
+      "decision": {
+        "kind": "policy_selected",
+        "policy_version": "unique_strong_v1",
+        "reason_codes": [
+          "exact_source_identifier"
+        ]
+      },
+      "attempt_id": "attempt:5",
+      "target_node": "arxiv:2401.10001"
+    }
+  ],
+  "events": [
+    {
+      "event_id": 1,
+      "kind": "created",
+      "policy": {
+        "auto_select_policy": "unique_strong_v1",
+        "max_depth": 3,
+        "max_edges": 500,
+        "max_new_papers": 10,
+        "max_searches": 100,
+        "providers": [
+          "arxiv",
+          "crossref",
+          "openalex"
+        ]
+      },
+      "timestamp": 0
+    },
+    {
+      "event_id": 2,
+      "kind": "advance",
+      "timestamp": 0
+    },
+    {
+      "event_id": 3,
+      "kind": "import_completed",
+      "timestamp": 0,
+      "edge_id": "expansion-edge:17f9c47e5a77d731722a47e4",
+      "paper_id": "arxiv:2401.10003"
+    },
+    {
+      "attempt_id": "attempt:1",
+      "event_id": -4,
+      "kind": "paper_committed",
+      "paper_id": "arxiv:2401.10003",
+      "timestamp": 0
+    },
+    {
+      "event_id": 5,
+      "kind": "import_completed",
+      "timestamp": 0,
+      "edge_id": "expansion-edge:c8805ea19e6885be73e3528e",
+      "paper_id": "arxiv:2401.10002"
+    },
+    {
+      "attempt_id": "attempt:2",
+      "event_id": -6,
+      "kind": "paper_committed",
+      "paper_id": "arxiv:2401.10002",
+      "timestamp": 0
+    },
+    {
+      "event_id": 7,
+      "kind": "import_completed",
+      "timestamp": 0,
+      "edge_id": "expansion-edge:13674414681912ab6606b76e",
+      "paper_id": "arxiv:2401.10003"
+    },
+    {
+      "event_id": 8,
+      "kind": "import_completed",
+      "timestamp": 0,
+      "edge_id": "expansion-edge:c2d611171732a566a0bfbc19",
+      "paper_id": "arxiv:2401.10001"
+    },
+    {
+      "event_id": 9,
+      "kind": "import_completed",
+      "timestamp": 0,
+      "edge_id": "expansion-edge:dc6423f3e317501b6c77aaee",
+      "paper_id": "arxiv:2401.10001"
+    }
+  ],
+  "expansion_schema_version": 1,
+  "next_actions": [],
+  "nodes": [
+    {
+      "aliases": [
+        "arxiv:2401.10001"
+      ],
+      "cursor": 2,
+      "depth": 0,
+      "discovery": "done",
+      "fingerprint": "fixture-source-revision",
+      "node_id": "arxiv:2401.10001",
+      "paper_id": "arxiv:2401.10001",
+      "references": [
+        {
+          "key": "external-import:arxiv:2401.10002",
+          "direct": {
+            "candidate_id": "external-import:arxiv:2401.10002",
+            "status": "import_candidate",
+            "source": {
+              "type": "arxiv",
+              "arxiv_id": "2401.10002",
+              "arxiv_version": null,
+              "recommended_paper_id": "arxiv:2401.10002"
+            },
+            "evidence": [
+              {
+                "kind": "citation_record",
+                "id": "arxiv:2401.10001:cite:main.tex:b",
+                "paper_id": "arxiv:2401.10001",
+                "result_id": null,
+                "proof_id": null,
+                "citation_key": "b",
+                "raw_text": "\\cite{b}",
+                "source": "paper.citation_evidence",
+                "source_file": "main.tex",
+                "bib_file": "refs.bib"
+              }
+            ],
+            "review": {
+              "local_result_ids": [],
+              "proof_ids": [],
+              "citation_keys": [
+                "b"
+              ],
+              "raw_texts": [
+                "\\cite{b}"
+              ],
+              "evidence_summary": "Needed by 0 local results through 0 proofs; citation keys: b; cited result evidence: \\cite{b}"
+            },
+            "counts": {
+              "external_mentions": 0,
+              "citation_mentions": 0,
+              "bibliography_entries": 0
+            },
+            "warnings": []
+          },
+          "evidence": [
+            {
+              "kind": "citation_record",
+              "id": "arxiv:2401.10001:cite:main.tex:b",
+              "paper_id": "arxiv:2401.10001",
+              "result_id": null,
+              "proof_id": null,
+              "citation_key": "b",
+              "raw_text": "\\cite{b}",
+              "source": "paper.citation_evidence",
+              "source_file": "main.tex",
+              "bib_file": "refs.bib"
+            }
+          ]
+        },
+        {
+          "key": "external-import:arxiv:2401.10003",
+          "direct": {
+            "candidate_id": "external-import:arxiv:2401.10003",
+            "status": "import_candidate",
+            "source": {
+              "type": "arxiv",
+              "arxiv_id": "2401.10003",
+              "arxiv_version": null,
+              "recommended_paper_id": "arxiv:2401.10003"
+            },
+            "evidence": [
+              {
+                "kind": "citation_record",
+                "id": "arxiv:2401.10001:cite:main.tex:c",
+                "paper_id": "arxiv:2401.10001",
+                "result_id": null,
+                "proof_id": null,
+                "citation_key": "c",
+                "raw_text": "\\cite{c}",
+                "source": "paper.citation_evidence",
+                "source_file": "main.tex",
+                "bib_file": "refs.bib"
+              }
+            ],
+            "review": {
+              "local_result_ids": [],
+              "proof_ids": [],
+              "citation_keys": [
+                "c"
+              ],
+              "raw_texts": [
+                "\\cite{c}"
+              ],
+              "evidence_summary": "Needed by 0 local results through 0 proofs; citation keys: c; cited result evidence: \\cite{c}"
+            },
+            "counts": {
+              "external_mentions": 0,
+              "citation_mentions": 0,
+              "bibliography_entries": 0
+            },
+            "warnings": []
+          },
+          "evidence": [
+            {
+              "kind": "citation_record",
+              "id": "arxiv:2401.10001:cite:main.tex:c",
+              "paper_id": "arxiv:2401.10001",
+              "result_id": null,
+              "proof_id": null,
+              "citation_key": "c",
+              "raw_text": "\\cite{c}",
+              "source": "paper.citation_evidence",
+              "source_file": "main.tex",
+              "bib_file": "refs.bib"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "node_id": "arxiv:2401.10003",
+      "paper_id": "arxiv:2401.10003",
+      "aliases": [
+        "arxiv:2401.10003"
+      ],
+      "depth": 1,
+      "fingerprint": "fixture-source-revision",
+      "cursor": 1,
+      "discovery": "done",
+      "references": [
+        {
+          "key": "external-import:arxiv:2401.10001",
+          "direct": {
+            "candidate_id": "external-import:arxiv:2401.10001",
+            "status": "already_imported",
+            "source": {
+              "type": "arxiv",
+              "arxiv_id": "2401.10001",
+              "arxiv_version": null,
+              "recommended_paper_id": "arxiv:2401.10001"
+            },
+            "evidence": [
+              {
+                "kind": "citation_record",
+                "id": "arxiv:2401.10003:cite:main.tex:a",
+                "paper_id": "arxiv:2401.10003",
+                "result_id": null,
+                "proof_id": null,
+                "citation_key": "a",
+                "raw_text": "\\cite{a}",
+                "source": "paper.citation_evidence",
+                "source_file": "main.tex",
+                "bib_file": "refs.bib"
+              }
+            ],
+            "review": {
+              "local_result_ids": [],
+              "proof_ids": [],
+              "citation_keys": [
+                "a"
+              ],
+              "raw_texts": [
+                "\\cite{a}"
+              ],
+              "evidence_summary": "Needed by 0 local results through 0 proofs; citation keys: a; cited result evidence: \\cite{a}"
+            },
+            "counts": {
+              "external_mentions": 0,
+              "citation_mentions": 0,
+              "bibliography_entries": 0
+            },
+            "warnings": []
+          },
+          "evidence": [
+            {
+              "kind": "citation_record",
+              "id": "arxiv:2401.10003:cite:main.tex:a",
+              "paper_id": "arxiv:2401.10003",
+              "result_id": null,
+              "proof_id": null,
+              "citation_key": "a",
+              "raw_text": "\\cite{a}",
+              "source": "paper.citation_evidence",
+              "source_file": "main.tex",
+              "bib_file": "refs.bib"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "node_id": "arxiv:2401.10002",
+      "paper_id": "arxiv:2401.10002",
+      "aliases": [
+        "arxiv:2401.10002"
+      ],
+      "depth": 1,
+      "fingerprint": "fixture-source-revision",
+      "cursor": 2,
+      "discovery": "done",
+      "references": [
+        {
+          "key": "external-import:arxiv:2401.10001",
+          "direct": {
+            "candidate_id": "external-import:arxiv:2401.10001",
+            "status": "already_imported",
+            "source": {
+              "type": "arxiv",
+              "arxiv_id": "2401.10001",
+              "arxiv_version": null,
+              "recommended_paper_id": "arxiv:2401.10001"
+            },
+            "evidence": [
+              {
+                "kind": "citation_record",
+                "id": "arxiv:2401.10002:cite:main.tex:a",
+                "paper_id": "arxiv:2401.10002",
+                "result_id": null,
+                "proof_id": null,
+                "citation_key": "a",
+                "raw_text": "\\cite{a}",
+                "source": "paper.citation_evidence",
+                "source_file": "main.tex",
+                "bib_file": "refs.bib"
+              }
+            ],
+            "review": {
+              "local_result_ids": [],
+              "proof_ids": [],
+              "citation_keys": [
+                "a"
+              ],
+              "raw_texts": [
+                "\\cite{a}"
+              ],
+              "evidence_summary": "Needed by 0 local results through 0 proofs; citation keys: a; cited result evidence: \\cite{a}"
+            },
+            "counts": {
+              "external_mentions": 0,
+              "citation_mentions": 0,
+              "bibliography_entries": 0
+            },
+            "warnings": []
+          },
+          "evidence": [
+            {
+              "kind": "citation_record",
+              "id": "arxiv:2401.10002:cite:main.tex:a",
+              "paper_id": "arxiv:2401.10002",
+              "result_id": null,
+              "proof_id": null,
+              "citation_key": "a",
+              "raw_text": "\\cite{a}",
+              "source": "paper.citation_evidence",
+              "source_file": "main.tex",
+              "bib_file": "refs.bib"
+            }
+          ]
+        },
+        {
+          "key": "external-import:arxiv:2401.10003",
+          "direct": {
+            "candidate_id": "external-import:arxiv:2401.10003",
+            "status": "already_imported",
+            "source": {
+              "type": "arxiv",
+              "arxiv_id": "2401.10003",
+              "arxiv_version": null,
+              "recommended_paper_id": "arxiv:2401.10003"
+            },
+            "evidence": [
+              {
+                "kind": "citation_record",
+                "id": "arxiv:2401.10002:cite:main.tex:c",
+                "paper_id": "arxiv:2401.10002",
+                "result_id": null,
+                "proof_id": null,
+                "citation_key": "c",
+                "raw_text": "\\cite{c}",
+                "source": "paper.citation_evidence",
+                "source_file": "main.tex",
+                "bib_file": "refs.bib"
+              }
+            ],
+            "review": {
+              "local_result_ids": [],
+              "proof_ids": [],
+              "citation_keys": [
+                "c"
+              ],
+              "raw_texts": [
+                "\\cite{c}"
+              ],
+              "evidence_summary": "Needed by 0 local results through 0 proofs; citation keys: c; cited result evidence: \\cite{c}"
+            },
+            "counts": {
+              "external_mentions": 0,
+              "citation_mentions": 0,
+              "bibliography_entries": 0
+            },
+            "warnings": []
+          },
+          "evidence": [
+            {
+              "kind": "citation_record",
+              "id": "arxiv:2401.10002:cite:main.tex:c",
+              "paper_id": "arxiv:2401.10002",
+              "result_id": null,
+              "proof_id": null,
+              "citation_key": "c",
+              "raw_text": "\\cite{c}",
+              "source": "paper.citation_evidence",
+              "source_file": "main.tex",
+              "bib_file": "refs.bib"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "policy": {
+    "auto_select_policy": "unique_strong_v1",
+    "max_depth": 3,
+    "max_edges": 500,
+    "max_new_papers": 10,
+    "max_searches": 100,
+    "providers": [
+      "arxiv",
+      "crossref",
+      "openalex"
+    ]
+  },
+  "policy_revisions": [
+    {
+      "auto_select_policy": "unique_strong_v1",
+      "max_depth": 3,
+      "max_edges": 500,
+      "max_new_papers": 10,
+      "max_searches": 100,
+      "providers": [
+        "arxiv",
+        "crossref",
+        "openalex"
+      ]
+    }
+  ],
+  "reason": null,
+  "roots": [
+    "arxiv:2401.10001"
+  ],
+  "run_id": "expansion:fixture",
+  "state": "completed",
+  "summary": {
+    "needs_review": 0,
+    "boundary": 0,
+    "retryable_failure": 0,
+    "imported": 2,
+    "linked_existing": 3,
+    "skipped": 0,
+    "runnable": 0,
+    "frontier": 0
+  },
+  "usage": {
+    "edges": 5,
+    "new_papers": 2,
+    "searches": 0
+  }
+}

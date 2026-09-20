@@ -9,7 +9,7 @@
 
 **Read math papers with evidence, not guesses.**
 
-PaperGraph v1.1.3 is the stable evidence-first reading workflow for math papers: start with a Paper Map, inspect source-backed proof and citation evidence, use Evidence Triage to understand sparse extraction, search scholarly metadata for blocked references, then export Markdown Reading Reports or Cross-Paper Reading Plans.
+PaperGraph v1.1.4 is the stable evidence-first reading workflow for math papers: start with a Paper Map, inspect source-backed proof and citation evidence, use Evidence Triage to understand sparse extraction, search scholarly metadata for blocked references, then export Markdown Reading Reports or Cross-Paper Reading Plans.
 
 It helps AI agents turn arXiv papers, local LaTeX projects, and born-digital PDFs into a local theorem-centered workspace so a researcher can inspect where every claim came from.
 
@@ -27,7 +27,11 @@ It helps AI agents turn arXiv papers, local LaTeX projects, and born-digital PDF
 | --- | --- | --- | --- |
 | Identify main-result candidates, result structure, proof-path evidence, and external reading risks before choosing where to read. | Inspect proof-local references, cited stops, source slices, and dependency diagnostics with explicit evidence. | Search Crossref, OpenAlex, and arXiv metadata for blocked references, then apply only a chosen candidate through the reference closure workflow. | Export deterministic Markdown reports and cross-paper reading plans that can live in Git, notes, or handoff sessions. |
 
-PaperGraph v1.1.3 adds Scholarly Reference Resolver: low-risk online metadata search for blocked references, deterministic candidate ranking, and explicit boundary messages when the trail stops at ambiguous or non-importable records. It does not bypass paywalls, invent identities, or automatically crawl a reference chain.
+PaperGraph v1.1.3 adds Scholarly Reference Resolver: low-risk online metadata search for blocked references, deterministic candidate ranking, and explicit boundary messages when the trail stops at ambiguous or non-importable records.
+
+v1.1.4 adds **bounded reference expansion**: approve a finite policy, then advance a saved run. Defaults are depth 2 and 10 new papers; unique strong importable identities can be selected automatically, while ambiguous references await review and independent branches continue. Runs retain budgets, evidence, decisions and recovery history. Only arXiv sources and explicitly supplied local PDFs are importable. It does not bypass paywalls or perform unlimited crawling.
+
+See the [expansion walkthrough](docs/walkthroughs/bounded-reference-expansion.md), [offline JSON](docs/examples/reference-expansion-example.json), [reference tree](docs/examples/reference-expansion-example.md), and [client verification matrix](docs/reference/client-compatibility.md). This branch prepares v1.1.4; the pinned tag commands below become available only after that release is published. Until then, use `uv run papergraph-mcp` from this checkout.
 
 ### Why Researchers Use It
 
@@ -45,11 +49,11 @@ PaperGraph does not verify proofs, perform semantic theorem matching, or claim t
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the pinned GitHub release without cloning:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp doctor
 ```
 
-Pinning the `v1.1.3` tag keeps MCP client installations reproducible.
+Pinning the `v1.1.4` tag keeps MCP client installations reproducible.
 
 Add PaperGraph to an MCP client that accepts JSON-style stdio configuration:
 
@@ -58,7 +62,7 @@ Add PaperGraph to an MCP client that accepts JSON-style stdio configuration:
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4", "papergraph-mcp"]
     }
   }
 }
@@ -119,9 +123,9 @@ flowchart LR
 | --- | --- | --- | --- |
 | 在选择阅读目标前，先看到 main-result candidates、结果结构、proof-path evidence 和 external reading risks。 | 查看 proof-local references、citation stops、source slices 和 dependency diagnostics，并保留证据来源。 | 导出确定性的 Markdown report，方便放进 Git、笔记或交接会话。 | 对一组显式给定的小规模相关论文，导出跨论文阅读计划、选中论文之间的 citation evidence 和剩余风险。 |
 
-PaperGraph v1.1.3 是稳定的 evidence-first 数学论文阅读工作流：先看 Paper Map，再检查 proof 和 citation 证据，用 Evidence Triage 理解稀疏抽取结果，对被阻塞的外部引用做 scholarly metadata 搜索，然后把选定候选闭环到用户确认的 arXiv、本地 PDF、DOI、URL 或出版信息。
+PaperGraph v1.1.4 是稳定的 evidence-first 数学论文阅读工作流：先看 Paper Map，再检查 proof 和 citation 证据，用 Evidence Triage 理解稀疏抽取结果，对被阻塞的外部引用做 scholarly metadata 搜索，然后把选定候选闭环到用户确认的 arXiv、本地 PDF、DOI、URL 或出版信息。
 
-v1.1.3 新增 Scholarly Reference Resolver：可以从 Crossref、OpenAlex 和 arXiv 检索候选，给出确定性排序和边界说明。它不会绕过付费墙、不会替用户断定模糊引用的身份，也不会自动沿着 A 引 B、B 引 C 的链条无限导入；遇到太老、无电子版、只有书目信息或候选冲突的文献，会明确告诉用户需要人工补充来源或停止在 metadata 边界。
+v1.1.4 新增有界引用扩展：默认最多追踪 2 层、导入 10 篇新论文。先批准策略，再分步推进；唯一且证据充分的可导入候选可以自动选择，模糊引用等待确认，其余分支继续。进度、预算、来源证据和决策保存在 workspace 中，可中断恢复。只支持 arXiv 源码和用户明确提供的本地 PDF，不绕过付费墙、不无限爬取。见[完整操作示例](docs/walkthroughs/bounded-reference-expansion.md)及[客户端验证状态](docs/reference/client-compatibility.md)。当前分支为发布准备；v1.1.4 标签发布前请在仓库中使用 `uv run papergraph-mcp`。
 
 ### 为什么适合数学论文阅读
 
@@ -139,8 +143,8 @@ PaperGraph does not verify proofs，也不做 semantic theorem matching；它不
 先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，然后验证固定版本：
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp doctor
 ```
 
 如果你的 MCP client 使用 JSON 风格的 stdio server 配置，可以添加：
@@ -150,7 +154,7 @@ uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3 pa
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.3", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4", "papergraph-mcp"]
     }
   }
 }

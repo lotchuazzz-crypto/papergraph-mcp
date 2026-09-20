@@ -40,6 +40,8 @@ from papergraph.pdf import load_pdf_evidence_spans
 from papergraph.project import LoadedProject, load_project
 from papergraph.reading_report import build_paper_reading_report
 from papergraph.reference_providers import default_reference_search_providers
+from papergraph.reference_expansion import ReferenceExpansionMixin
+from papergraph.reference_expansion_store import TABLES as EXPANSION_TABLES, migrate as migrate_expansion
 from papergraph.reference_search import (
     build_reference_search_query,
     candidate_id_for,
@@ -62,7 +64,7 @@ from papergraph.reading import (
 )
 
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 _RESOLVED_RESOLUTION_STATUSES = (
     "resolved",
     "resolved_bibliography_entry",
@@ -701,7 +703,7 @@ def _synchronized(method):
     return synchronized
 
 
-class Workspace:
+class Workspace(ReferenceExpansionMixin):
     """A single SQLite-backed PaperGraph workspace."""
 
     def __init__(self, path: Path, connection: sqlite3.Connection):
@@ -739,6 +741,7 @@ class Workspace:
         }
         if not tables:
             connection.executescript(_SCHEMA_SQL)
+            migrate_expansion(connection)
             return
         if "workspace_meta" not in tables:
             raise WorkspaceSchemaError(
@@ -801,18 +804,23 @@ class Workspace:
                 )
             }
             schema_version = 7
+        if schema_version == 7:
+            migrate_expansion(connection)
+            tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            schema_version = 8
         if schema_version != SCHEMA_VERSION:
             raise WorkspaceSchemaError(
                 f"Unsupported workspace schema version {schema_version}; "
                 f"this PaperGraph supports version {SCHEMA_VERSION}"
             )
-        missing_tables = sorted(_REQUIRED_TABLES - tables)
+        missing_tables = sorted((_REQUIRED_TABLES | EXPANSION_TABLES) - tables)
         if missing_tables:
             raise WorkspaceSchemaError(
                 "Workspace schema is missing required tables: "
                 + ", ".join(missing_tables)
             )
-        for table, required_columns in _REQUIRED_TABLE_COLUMNS.items():
+        from papergraph.reference_expansion_store import COLUMNS
+        for table, required_columns in {**_REQUIRED_TABLE_COLUMNS, **COLUMNS}.items():
             columns = {
                 row[1]
                 for row in connection.execute(f"PRAGMA table_info({table})")
@@ -1006,6 +1014,7 @@ class Workspace:
         authors_json = json.dumps(list(project.authors), ensure_ascii=False)
 
         with self._connection:
+            self._check_expansion_import(normalized_paper_id)
             self._connection.execute(
                 "DELETE FROM papers WHERE paper_id = ?",
                 (normalized_paper_id,),
@@ -1170,6 +1179,7 @@ class Workspace:
         unresolved_count = _unresolved_evidence_mention_count(document)
 
         with self._connection:
+            self._check_expansion_import(normalized_paper_id)
             self._connection.execute(
                 "DELETE FROM papers WHERE paper_id = ?",
                 (normalized_paper_id,),
@@ -2051,6 +2061,23 @@ class Workspace:
         for row in citation_rows:
             collector.add_citation_mention(row[0], "paper.citation_mentions")
 
+        # LaTeX citation records predate proof-span evidence. Preserve their
+        # source file/key provenance instead of dropping this existing evidence.
+        for citation in self.get_citations(normalized_paper_id):
+            evidence = _external_import_evidence(
+                "citation_record",
+                f"{normalized_paper_id}:cite:{citation['source_file']}:{citation['citation_key']}",
+                normalized_paper_id, None, None, citation["citation_key"],
+                "\\" + citation["command"] + "{" + citation["citation_key"] + "}",
+                "paper.citation_evidence",
+            )
+            evidence["source_file"] = citation["source_file"]
+            evidence["bib_file"] = citation["bib_file"]
+            if citation["cited_arxiv_id"]:
+                collector._add_candidate(citation["cited_arxiv_id"], citation["cited_version"], [evidence])
+            else:
+                collector.add_blocked("missing_arxiv_id", [evidence])
+
         return collector.payload(
             {
                 "kind": "paper_id",
@@ -2142,7 +2169,7 @@ class Workspace:
         self,
         paper_id: str | None = None,
     ) -> dict:
-        """List user-confirmed external reference resolutions."""
+        """List recorded external reference resolutions and selection provenance."""
 
         parameters: tuple[str, ...]
         where = ""
@@ -2290,6 +2317,7 @@ class Workspace:
                 _canonical_json(
                     {
                         "providers": providers,
+                        "max_candidates": max_candidates,
                         "provider_warnings": ranked["provider_warnings"],
                     }
                 ),
@@ -2303,6 +2331,8 @@ class Workspace:
                 blocked["blocked_id"],
                 candidate["target"],
             )
+            # Candidate IDs identify immutable search snapshots, including refreshes.
+            candidate_id += ":" + run_id.rsplit(":", 1)[-1]
             self._connection.execute(
                 """
                 INSERT INTO reference_search_candidates (
@@ -2520,6 +2550,8 @@ class Workspace:
                 "blocked_id": row[2],
             },
             "query": json.loads(row[3]),
+            "providers": provider_payload.get("providers"),
+            "max_candidates": provider_payload.get("max_candidates", 10),
             "provider_warnings": provider_payload.get("provider_warnings", []),
             "boundaries": boundaries,
             "candidates": candidates,

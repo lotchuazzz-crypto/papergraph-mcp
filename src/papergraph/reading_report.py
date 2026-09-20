@@ -55,6 +55,12 @@ def build_paper_reading_report(
         reference_resolutions=reference_resolutions,
         reference_searches=reference_searches,
     )
+    expansions = []
+    for item in workspace.list_reference_expansions()["runs"]:
+        run = workspace.get_reference_expansion(item["run_id"])
+        if any(n["paper_id"] == paper_id for n in run["nodes"]):
+            expansions.append(item)
+    evidence_triage["reference_expansions"] = expansions
     sections = _sections_from_paper_map(
         paper_map,
         summary,
@@ -73,6 +79,7 @@ def build_paper_reading_report(
         "warnings": paper_map["evidence_quality"]["warnings"],
         "reference_resolutions": reference_resolutions,
         "reference_searches": reference_searches,
+        "reference_expansions": expansions,
         "paper_map": paper_map,
     }
     report["markdown"] = render_paper_reading_report_markdown(report)
@@ -113,6 +120,10 @@ def render_paper_reading_report_markdown(report_model: dict[str, Any]) -> str:
         "",
     ]
     lines.extend(render_evidence_triage_markdown(report_model["evidence_triage"]))
+    if report_model.get("reference_expansions"):
+        lines.extend(["", "## Reference Expansion", ""])
+        for run in report_model["reference_expansions"]:
+            lines.append(f"- `{run['run_id']}`: {run['state']}; {run['usage']['new_papers']} new papers; {run['summary']['needs_review']} decisions; {run['summary']['boundary']} source boundaries. Export the expansion report for evidence and next actions.")
     lines.extend(["", "## Main-Result Candidates", ""])
     lines.extend(_render_main_candidates(paper_map["main_result_candidates"]))
     lines.extend(["", "## Candidate Reading Route", ""])
@@ -319,6 +330,9 @@ def _render_reference_resolutions(reference_resolutions: dict[str, Any]) -> list
     lines = []
     for resolution in resolutions:
         target = resolution.get("target", {})
+        selection = resolution.get("source", {}).get("review", {}).get("selection")
+        if selection:
+            lines.append(f"- Selection: {selection['kind']} (expansion `{selection['run_id']}`, edge `{selection['edge_id']}`).")
         target_label = _reference_target_label(target)
         if resolution["status"] == "resolved_imported":
             paper_id = resolution.get("import", {}).get("paper_id")

@@ -190,7 +190,22 @@ PaperGraph does not infer hidden mathematical prerequisites.
 
 PaperGraph does not perform semantic theorem matching.
 
-PaperGraph v1.1.3 can search scholarly metadata for blocked references, but it does not recursively crawl newly discovered literature, bypass paywalls, or assert that an ambiguous metadata candidate is the intended source.
+PaperGraph v1.1.4 can expand extracted references within an explicitly approved finite policy. It does not perform unlimited crawling, bypass paywalls, or assert that an ambiguous metadata candidate is the intended source. Existing search/apply tools remain manual; the separate expansion API permits policy-selected imports with durable provenance.
+
+## Bounded Reference Expansion (v1.1.4)
+
+Workspace schema 8 migrates existing schema-7 workspaces. Back up important
+workspaces before upgrading; older PaperGraph versions cannot open schema 8.
+Expansion payloads carry `expansion_schema_version: 1`.
+
+The nine Workspace methods are `create_reference_expansion`,
+`advance_reference_expansion`, `get_reference_expansion`,
+`list_reference_expansions`, `decide_reference_expansion`,
+`update_reference_expansion_policy`, `pause_reference_expansion`,
+`cancel_reference_expansion`, and `export_reference_expansion`. MCP prefixes each
+with `workspace_`; CLI replaces underscores with hyphens. See the
+[walkthrough](../walkthroughs/bounded-reference-expansion.md) for their arguments,
+automatic-import authorization, limits, recovery and report refresh recipe.
 
 Citation evidence does not imply logical dependency unless supported by reading-path evidence.
 

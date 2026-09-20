@@ -40,7 +40,7 @@ def import_queue_pdf(tmp_path: Path, paper_id: str = "local:paper") -> tuple[Pat
 def test_schema_v5_initializes_reading_queue_tables(tmp_path: Path):
     workspace = Workspace.open(tmp_path / "workspace.sqlite3")
     try:
-        assert SCHEMA_VERSION == 7
+        assert SCHEMA_VERSION == 8
         tables = {
             row[0]
             for row in workspace._connection.execute(
@@ -50,7 +50,7 @@ def test_schema_v5_initializes_reading_queue_tables(tmp_path: Path):
         assert {"reading_queues", "reading_queue_items"} <= tables
         assert workspace._connection.execute(
             "SELECT value FROM workspace_meta WHERE key = 'schema_version'"
-        ).fetchone() == ("7",)
+        ).fetchone() == ("8",)
     finally:
         workspace.close()
 
@@ -67,6 +67,9 @@ def test_v4_workspace_migrates_to_v5_without_losing_session_state(tmp_path: Path
         workspace.close()
 
     with sqlite3.connect(workspace_path) as connection:
+        from papergraph.reference_expansion_store import TABLES
+        for table in TABLES:
+            connection.execute(f"DROP TABLE {table}")
         connection.execute("DROP TABLE reading_queue_items")
         connection.execute("DROP TABLE reading_queues")
         connection.execute(
@@ -77,7 +80,7 @@ def test_v4_workspace_migrates_to_v5_without_losing_session_state(tmp_path: Path
     try:
         assert workspace._connection.execute(
             "SELECT value FROM workspace_meta WHERE key = 'schema_version'"
-        ).fetchone() == ("7",)
+        ).fetchone() == ("8",)
         assert workspace.get_result(result_id)["result_id"] == result_id
         assert workspace.get_reading_session(session["session_id"])["session"][
             "session_id"

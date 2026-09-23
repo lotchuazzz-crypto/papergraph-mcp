@@ -702,6 +702,7 @@ def workspace_search_external_reference(
     providers: list[str] | None = None,
     max_candidates: int = 10,
     refresh: bool = False,
+    resolver_version: str = "deterministic_v2",
 ) -> dict:
     """Search scholarly metadata providers for a blocked external reference."""
 
@@ -712,6 +713,7 @@ def workspace_search_external_reference(
             providers=providers,
             max_candidates=max_candidates,
             refresh=refresh,
+            resolver_version=resolver_version,
         )
     except _WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc
@@ -1596,6 +1598,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     search_reference_parser.add_argument("--provider", action="append")
     search_reference_parser.add_argument("--max-candidates", type=int, default=10)
     search_reference_parser.add_argument("--refresh", action="store_true")
+    search_reference_parser.add_argument("--resolver-version", choices=("legacy_v1", "deterministic_v2"), default="deterministic_v2")
     list_reference_searches_parser = subparsers.add_parser(
         "list-external-reference-searches",
         help="List scholarly reference search runs and candidates.",
@@ -1892,6 +1895,7 @@ def main(argv: Sequence[str] | None = None) -> None:
                 providers=args.provider,
                 max_candidates=args.max_candidates,
                 refresh=args.refresh,
+                resolver_version=args.resolver_version,
             ),
         )
         return

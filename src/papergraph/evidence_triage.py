@@ -79,6 +79,9 @@ def build_evidence_triage(
                 search_summary.get("ambiguous_candidate_count", 0) or 0
             ),
             "boundary_count": int(search_summary.get("boundary_count", 0) or 0),
+            "next_actions": sorted({action for search in (reference_searches or {}).get("searches", [])
+                                    for boundary in search.get("boundaries", [])
+                                    for action in boundary.get("next_actions", [])}),
         },
         "next_actions": [],
     }

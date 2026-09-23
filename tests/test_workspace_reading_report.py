@@ -116,7 +116,7 @@ def test_reading_report_includes_scholarly_reference_search_summary(tmp_path: Pa
                 ],
             )
         ]
-        workspace.search_external_reference("local:paper", blocked["blocked_id"])
+        workspace.search_external_reference("local:paper", blocked["blocked_id"], resolver_version="legacy_v1")
 
         report = workspace.export_paper_reading_report("local:paper")
 

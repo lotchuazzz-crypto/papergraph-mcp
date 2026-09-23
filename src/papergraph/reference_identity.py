@@ -8,7 +8,7 @@ import re
 import unicodedata
 from urllib.parse import urlsplit, unquote
 
-from papergraph.arxiv import extract_arxiv_id_from_url
+from papergraph.arxiv import extract_arxiv_id_from_url, InvalidArxivIdError
 from papergraph.identity import paper_id_from_arxiv
 
 
@@ -57,7 +57,7 @@ def normalize_identifier(value: str, kind: str, *, version: str | None = None) -
                 warnings.append('version_conflict')
             result.update(canonical=identity[6:], identity=identity,
                           version=embedded or version, valid=True)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, InvalidArxivIdError):
         warnings.append('invalid_identifier')
     result['warnings'] = sorted(set(warnings))
     result['exact_eligible'] = result['valid'] and not warnings

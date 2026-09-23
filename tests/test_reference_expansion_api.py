@@ -39,6 +39,14 @@ def test_reading_report_contains_expansion_progress(chain):
     assert "reference_expansions" in report["evidence_triage"]
 
 
+def test_cli_can_explicitly_create_legacy_policy(chain, capsys):
+    ws, _ = chain
+    server.main(["create-reference-expansion", "--workspace", str(ws.path),
+                 "--root-paper-id", "arxiv:2401.10001", "--auto-select-policy", "unique_strong_v1"])
+    run = json.loads(capsys.readouterr().out)
+    assert run["policy"]["resolver_version"] == "legacy_v1"
+
+
 def test_stdio_mcp_uses_same_saved_state(chain):
     from mcp import ClientSession, StdioServerParameters
     from mcp.client.stdio import stdio_client

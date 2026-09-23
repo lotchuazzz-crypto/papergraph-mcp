@@ -1,0 +1,1743 @@
+[
+  {
+    "name": "initials",
+    "category": "query_layouts",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:initials",
+          "raw_text": "A. Author and B. Writer. \"Maps\". 2020."
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {
+      "title_hint": "Maps",
+      "author_hints": [
+        "A. Author",
+        "B. Writer"
+      ],
+      "year_hint": "2020"
+    },
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false
+  },
+  {
+    "name": "numbered",
+    "category": "query_layouts",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:numbered",
+          "raw_text": "[17] A. Author. Published target. Journal of Examples 2020."
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {
+      "title_hint": "Published target",
+      "author_hints": [
+        "A. Author"
+      ],
+      "year_hint": "2020"
+    },
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false
+  },
+  {
+    "name": "unicode",
+    "category": "query_layouts",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:unicode",
+          "raw_text": "É. Auteur (2020). \"Étale 映射\"."
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {
+      "title_hint": "Étale 映射",
+      "author_hints": [
+        "É. Auteur"
+      ],
+      "year_hint": "2020"
+    },
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false
+  },
+  {
+    "name": "long",
+    "category": "query_layouts",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:long",
+          "raw_text": "A. Author. \"One two three four five six seven eight nine ten eleven twelve thirteen fourteen\". 2020."
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {
+      "title_hint": "One two three four five six seven eight nine ten eleven twelve thirteen fourteen",
+      "author_hints": [
+        "A. Author"
+      ],
+      "year_hint": "2020"
+    },
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false
+  },
+  {
+    "name": "tex",
+    "category": "query_layouts",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:tex",
+          "raw_text": "A. Author. \\emph{Maps {and} $X^2$}. 2020."
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {
+      "title_hint": "Maps {and} $X^2$",
+      "author_hints": [
+        "A. Author"
+      ],
+      "year_hint": "2020"
+    },
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false
+  },
+  {
+    "name": "curly_quotes",
+    "category": "query_layouts",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:curly_quotes",
+          "raw_text": "A. Author. “Maps”. 2020."
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {
+      "title_hint": "Maps",
+      "author_hints": [
+        "A. Author"
+      ],
+      "year_hint": "2020"
+    },
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false
+  },
+  {
+    "name": "missing_year",
+    "category": "query_layouts",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:missing_year",
+          "raw_text": "A. Author. \"Maps\"."
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {
+      "title_hint": "Maps",
+      "author_hints": [
+        "A. Author"
+      ],
+      "year_hint": null
+    },
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false
+  },
+  {
+    "name": "competing_titles",
+    "category": "query_layouts",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:competing_titles",
+          "raw_text": "A. Author. \"Maps\" or \"Proofs\". 2020."
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {
+      "title_hint": null,
+      "author_hints": [],
+      "year_hint": "2020"
+    },
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false
+  },
+  {
+    "name": "competing_years",
+    "category": "query_layouts",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:competing_years",
+          "raw_text": "A. Author. \"Maps\". 2019; revised 2021."
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {
+      "title_hint": "Maps",
+      "author_hints": [
+        "A. Author"
+      ],
+      "year_hint": null
+    },
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false
+  },
+  {
+    "name": "malformed_tex",
+    "category": "query_layouts",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:malformed_tex",
+          "raw_text": "A. Author. \\emph{Unclosed title. 2020."
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {
+      "title_hint": null,
+      "author_hints": [],
+      "year_hint": "2020"
+    },
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false
+  },
+  {
+    "name": "doi_prefix",
+    "category": "identifiers",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:doi_prefix",
+          "raw_text": "doi:10.1000/ABC"
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false,
+    "normalization": {
+      "kind": "doi",
+      "raw": "doi:10.1000/ABC"
+    },
+    "expected_normalization": {
+      "canonical": "10.1000/abc",
+      "version": null,
+      "exact_eligible": true
+    }
+  },
+  {
+    "name": "doi_balanced",
+    "category": "identifiers",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:doi_balanced",
+          "raw_text": "https://doi.org/10.1000/A(B)"
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false,
+    "normalization": {
+      "kind": "doi",
+      "raw": "https://doi.org/10.1000/A(B)"
+    },
+    "expected_normalization": {
+      "canonical": "10.1000/a(b)",
+      "version": null,
+      "exact_eligible": true
+    }
+  },
+  {
+    "name": "doi_encoded",
+    "category": "identifiers",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:doi_encoded",
+          "raw_text": "https://dx.doi.org/10.1000/a%2Fb"
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false,
+    "normalization": {
+      "kind": "doi",
+      "raw": "https://dx.doi.org/10.1000/a%2Fb"
+    },
+    "expected_normalization": {
+      "canonical": "10.1000/a/b",
+      "version": null,
+      "exact_eligible": true
+    }
+  },
+  {
+    "name": "doi_bad_prefix",
+    "category": "identifiers",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:doi_bad_prefix",
+          "raw_text": "10.1/bad"
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false,
+    "normalization": {
+      "kind": "doi",
+      "raw": "10.1/bad"
+    },
+    "expected_normalization": {
+      "canonical": null,
+      "version": null,
+      "exact_eligible": false
+    }
+  },
+  {
+    "name": "doi_foreign_host",
+    "category": "identifiers",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:doi_foreign_host",
+          "raw_text": "https://evil.test/10.1000/a"
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false,
+    "normalization": {
+      "kind": "doi",
+      "raw": "https://evil.test/10.1000/a"
+    },
+    "expected_normalization": {
+      "canonical": null,
+      "version": null,
+      "exact_eligible": false
+    }
+  },
+  {
+    "name": "doi_punctuation",
+    "category": "identifiers",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:doi_punctuation",
+          "raw_text": "10.1000/a."
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false,
+    "normalization": {
+      "kind": "doi",
+      "raw": "10.1000/a."
+    },
+    "expected_normalization": {
+      "canonical": "10.1000/a.",
+      "version": null,
+      "exact_eligible": false
+    }
+  },
+  {
+    "name": "doi_query",
+    "category": "identifiers",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:doi_query",
+          "raw_text": "https://doi.org/10.1000/a?secret=x"
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false,
+    "normalization": {
+      "kind": "doi",
+      "raw": "https://doi.org/10.1000/a?secret=x"
+    },
+    "expected_normalization": {
+      "canonical": "10.1000/a",
+      "version": null,
+      "exact_eligible": false
+    }
+  },
+  {
+    "name": "arxiv_modern",
+    "category": "identifiers",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:arxiv_modern",
+          "raw_text": "https://arxiv.org/abs/2401.12345v2"
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false,
+    "normalization": {
+      "kind": "arxiv",
+      "raw": "https://arxiv.org/abs/2401.12345v2"
+    },
+    "expected_normalization": {
+      "canonical": "2401.12345",
+      "version": "v2",
+      "exact_eligible": true
+    }
+  },
+  {
+    "name": "arxiv_legacy",
+    "category": "identifiers",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:arxiv_legacy",
+          "raw_text": "https://arxiv.org/pdf/math/0301234v2.pdf"
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false,
+    "normalization": {
+      "kind": "arxiv",
+      "raw": "https://arxiv.org/pdf/math/0301234v2.pdf"
+    },
+    "expected_normalization": {
+      "canonical": "math/0301234",
+      "version": "v2",
+      "exact_eligible": true
+    }
+  },
+  {
+    "name": "arxiv_invalid",
+    "category": "identifiers",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:arxiv_invalid",
+          "raw_text": "2401.invalid"
+        }
+      ]
+    },
+    "provider_results": [],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": false,
+    "normalization": {
+      "kind": "arxiv",
+      "raw": "2401.invalid"
+    },
+    "expected_normalization": {
+      "canonical": null,
+      "version": null,
+      "exact_eligible": false
+    }
+  },
+  {
+    "name": "shared_bridge",
+    "category": "grouping_order",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:shared_bridge",
+          "raw_text": "doi:10.1000/maps"
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {
+            "doi": "10.1000/maps",
+            "arxiv_id": "2401.12345"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      },
+      {
+        "provider": "arxiv",
+        "records": [
+          {
+            "arxiv_id": "2401.12345"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "arxiv:2401.12345",
+          "doi:10.1000/maps"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "strong",
+        "reason_codes": [
+          "exact_identifier"
+        ],
+        "eligible": true
+      }
+    ],
+    "expected_eligible": true,
+    "safety_negative": false
+  },
+  {
+    "name": "contradictory_bridge",
+    "category": "grouping_order",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:contradictory_bridge",
+          "raw_text": ""
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {
+            "doi": "10.1000/a",
+            "arxiv_id": "2401.12345"
+          },
+          {
+            "doi": "10.1000/b",
+            "arxiv_id": "2401.12345"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "arxiv:2401.12345",
+          "doi:10.1000/a",
+          "doi:10.1000/b"
+        ],
+        "conflict_codes": [
+          "identifier_conflict"
+        ]
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "ambiguous",
+        "reason_codes": [
+          "identifier_conflict"
+        ],
+        "eligible": false
+      }
+    ],
+    "expected_eligible": false,
+    "safety_negative": true
+  },
+  {
+    "name": "duplicate_provider",
+    "category": "grouping_order",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:duplicate_provider",
+          "raw_text": "A. Author. \"Maps\". 2020."
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {
+            "title": "Maps",
+            "authors": [
+              "A. Author"
+            ],
+            "year": "2020",
+            "arxiv_id": "2401.12345"
+          },
+          {
+            "title": "Maps",
+            "authors": [
+              "A. Author"
+            ],
+            "year": "2020",
+            "arxiv_id": "2401.12345"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "arxiv:2401.12345"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "plausible",
+        "reason_codes": [
+          "partial_match"
+        ],
+        "eligible": false
+      }
+    ],
+    "expected_eligible": false,
+    "safety_negative": true
+  },
+  {
+    "name": "same_title_distinct_ids",
+    "category": "grouping_order",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:same_title_distinct_ids",
+          "raw_text": ""
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {
+            "title": "Maps",
+            "doi": "10.1000/a"
+          },
+          {
+            "title": "Maps",
+            "doi": "10.1000/b"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "doi:10.1000/a"
+        ],
+        "conflict_codes": []
+      },
+      {
+        "identifiers": [
+          "doi:10.1000/b"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "weak",
+        "reason_codes": [
+          "insufficient_evidence"
+        ],
+        "eligible": false
+      },
+      {
+        "confidence": "weak",
+        "reason_codes": [
+          "insufficient_evidence"
+        ],
+        "eligible": false
+      }
+    ],
+    "expected_eligible": false,
+    "safety_negative": true
+  },
+  {
+    "name": "empty_metadata",
+    "category": "grouping_order",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:empty_metadata",
+          "raw_text": ""
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {}
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": true
+  },
+  {
+    "name": "complete_metadata",
+    "category": "grouping_order",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:complete_metadata",
+          "raw_text": "A. Author. \"Maps\". 2020."
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {
+            "title": "Maps",
+            "authors": [
+              "A. Author"
+            ],
+            "year": "2020"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      },
+      {
+        "provider": "openalex",
+        "records": [
+          {
+            "title": "Maps",
+            "authors": [
+              "A. Author"
+            ],
+            "year": "2020"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "strong",
+        "reason_codes": [
+          "corroborated_metadata"
+        ],
+        "eligible": false
+      }
+    ],
+    "expected_eligible": false,
+    "safety_negative": true
+  },
+  {
+    "name": "identifier_presence_only",
+    "category": "ranking_conflicts",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:identifier_presence_only",
+          "raw_text": ""
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {
+            "doi": "10.1000/a"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      },
+      {
+        "provider": "openalex",
+        "records": [
+          {
+            "doi": "10.1000/a"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "doi:10.1000/a"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "weak",
+        "reason_codes": [
+          "insufficient_evidence"
+        ],
+        "eligible": false
+      }
+    ],
+    "expected_eligible": false,
+    "safety_negative": true
+  },
+  {
+    "name": "year_conflict",
+    "category": "ranking_conflicts",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:year_conflict",
+          "raw_text": "A. Author. \"Maps\". 2020. arXiv:2401.12345"
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {
+            "title": "Maps",
+            "authors": [
+              "A. Author"
+            ],
+            "year": "2021",
+            "arxiv_id": "2401.12345"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "arxiv:2401.12345"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "ambiguous",
+        "reason_codes": [
+          "metadata_conflict"
+        ],
+        "eligible": false
+      }
+    ],
+    "expected_eligible": false,
+    "safety_negative": true
+  },
+  {
+    "name": "author_conflict",
+    "category": "ranking_conflicts",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:author_conflict",
+          "raw_text": "A. Author. \"Maps\". 2020. arXiv:2401.12345"
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {
+            "title": "Maps",
+            "authors": [
+              "B. Other"
+            ],
+            "year": "2020",
+            "arxiv_id": "2401.12345"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "arxiv:2401.12345"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "ambiguous",
+        "reason_codes": [
+          "metadata_conflict"
+        ],
+        "eligible": false
+      }
+    ],
+    "expected_eligible": false,
+    "safety_negative": true
+  },
+  {
+    "name": "title_conflict",
+    "category": "ranking_conflicts",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:title_conflict",
+          "raw_text": "A. Author. \"Maps\". 2020. arXiv:2401.12345"
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {
+            "title": "Different work",
+            "authors": [
+              "A. Author"
+            ],
+            "year": "2020",
+            "arxiv_id": "2401.12345"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "arxiv:2401.12345"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "ambiguous",
+        "reason_codes": [
+          "metadata_conflict"
+        ],
+        "eligible": false
+      }
+    ],
+    "expected_eligible": false,
+    "safety_negative": true
+  },
+  {
+    "name": "retracted",
+    "category": "ranking_conflicts",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:retracted",
+          "raw_text": "arXiv:2401.12345"
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {
+            "arxiv_id": "2401.12345",
+            "is_retracted": true
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "arxiv:2401.12345"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "ambiguous",
+        "reason_codes": [
+          "retraction_or_withdrawal"
+        ],
+        "eligible": false
+      }
+    ],
+    "expected_eligible": false,
+    "safety_negative": true
+  },
+  {
+    "name": "version_conflict",
+    "category": "ranking_conflicts",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:version_conflict",
+          "raw_text": "arXiv:2401.12345v1"
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {
+            "arxiv_id": "2401.12345",
+            "arxiv_version": "v2"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "arxiv:2401.12345"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "ambiguous",
+        "reason_codes": [
+          "version_conflict"
+        ],
+        "eligible": false
+      }
+    ],
+    "expected_eligible": false,
+    "safety_negative": true
+  },
+  {
+    "name": "provider_empty",
+    "category": "provider_failures",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:provider_empty",
+          "raw_text": ""
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [],
+        "warnings": [],
+        "outcome": "empty"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": true,
+    "expected_boundaries": [
+      "no_candidates"
+    ]
+  },
+  {
+    "name": "provider_timeout",
+    "category": "provider_failures",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:provider_timeout",
+          "raw_text": ""
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [],
+        "warnings": [],
+        "outcome": "timeout"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": true,
+    "expected_boundaries": [
+      "provider_failure"
+    ]
+  },
+  {
+    "name": "provider_rate_limited",
+    "category": "provider_failures",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:provider_rate_limited",
+          "raw_text": ""
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [],
+        "warnings": [],
+        "outcome": "rate_limited"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": true,
+    "expected_boundaries": [
+      "provider_failure"
+    ]
+  },
+  {
+    "name": "provider_invalid_response",
+    "category": "provider_failures",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:provider_invalid_response",
+          "raw_text": ""
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [],
+        "warnings": [],
+        "outcome": "invalid_response"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [],
+    "expected_candidates": [],
+    "expected_eligible": false,
+    "safety_negative": true,
+    "expected_boundaries": [
+      "provider_failure"
+    ]
+  },
+  {
+    "name": "exact_arxiv",
+    "category": "automation_boundaries",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:exact_arxiv",
+          "raw_text": "arXiv:2401.12345"
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {
+            "arxiv_id": "2401.12345"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "arxiv:2401.12345"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "strong",
+        "reason_codes": [
+          "exact_identifier"
+        ],
+        "eligible": true
+      }
+    ],
+    "expected_eligible": true,
+    "safety_negative": false
+  },
+  {
+    "name": "doi_only",
+    "category": "automation_boundaries",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:doi_only",
+          "raw_text": "doi:10.1000/a"
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {
+            "doi": "10.1000/a"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "doi:10.1000/a"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "strong",
+        "reason_codes": [
+          "exact_identifier"
+        ],
+        "eligible": false
+      }
+    ],
+    "expected_eligible": false,
+    "safety_negative": true
+  },
+  {
+    "name": "hidden_competing_identity",
+    "category": "automation_boundaries",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:hidden_competing_identity",
+          "raw_text": "A. Author. \"Maps\". 2020."
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {
+            "title": "Maps",
+            "authors": [
+              "A. Author"
+            ],
+            "year": "2020",
+            "arxiv_id": "2401.12345"
+          },
+          {
+            "title": "Maps",
+            "authors": [
+              "A. Author"
+            ],
+            "year": "2020",
+            "arxiv_id": "2401.12346"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      },
+      {
+        "provider": "openalex",
+        "records": [
+          {
+            "title": "Maps",
+            "authors": [
+              "A. Author"
+            ],
+            "year": "2020",
+            "arxiv_id": "2401.12345"
+          },
+          {
+            "title": "Maps",
+            "authors": [
+              "A. Author"
+            ],
+            "year": "2020",
+            "arxiv_id": "2401.12346"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 1,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "arxiv:2401.12345"
+        ],
+        "conflict_codes": []
+      },
+      {
+        "identifiers": [
+          "arxiv:2401.12346"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "ambiguous",
+        "reason_codes": [
+          "ambiguous_candidates",
+          "corroborated_metadata"
+        ],
+        "eligible": false
+      }
+    ],
+    "expected_eligible": false,
+    "safety_negative": true
+  },
+  {
+    "name": "partial_outage_metadata",
+    "category": "automation_boundaries",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:partial_outage_metadata",
+          "raw_text": "A. Author. \"Maps\". 2020."
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {
+            "title": "Maps",
+            "authors": [
+              "A. Author"
+            ],
+            "year": "2020",
+            "arxiv_id": "2401.12345"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      },
+      {
+        "provider": "openalex",
+        "records": [
+          {
+            "title": "Maps",
+            "authors": [
+              "A. Author"
+            ],
+            "year": "2020",
+            "arxiv_id": "2401.12345"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      },
+      {
+        "provider": "arxiv",
+        "records": [],
+        "warnings": [],
+        "outcome": "timeout"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "arxiv:2401.12345"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "strong",
+        "reason_codes": [
+          "corroborated_metadata"
+        ],
+        "eligible": false
+      }
+    ],
+    "expected_eligible": false,
+    "safety_negative": true
+  },
+  {
+    "name": "exact_survives_outage",
+    "category": "automation_boundaries",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:exact_survives_outage",
+          "raw_text": "arXiv:2401.12345"
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          {
+            "arxiv_id": "2401.12345"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      },
+      {
+        "provider": "openalex",
+        "records": [],
+        "warnings": [],
+        "outcome": "timeout"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "arxiv:2401.12345"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "strong",
+        "reason_codes": [
+          "exact_identifier"
+        ],
+        "eligible": true
+      }
+    ],
+    "expected_eligible": true,
+    "safety_negative": false
+  },
+  {
+    "name": "malformed_sibling",
+    "category": "provider_failures",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:malformed_sibling",
+          "raw_text": "arXiv:2401.12345"
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "crossref",
+        "records": [
+          null,
+          {
+            "arxiv_id": "2401.12345"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "arxiv:2401.12345"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "strong",
+        "reason_codes": [
+          "exact_identifier"
+        ],
+        "eligible": true
+      }
+    ],
+    "expected_eligible": true,
+    "safety_negative": false
+  },
+  {
+    "name": "source_conflicting_years",
+    "category": "automation_boundaries",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:source_conflicting_years",
+          "raw_text": "A. Author. \"Maps\". 2019; revised 2021. arXiv:2401.12345"
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "arxiv",
+        "records": [
+          {
+            "arxiv_id": "2401.12345"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "arxiv:2401.12345"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "ambiguous",
+        "reason_codes": [
+          "metadata_conflict"
+        ],
+        "eligible": false
+      }
+    ],
+    "expected_eligible": false,
+    "safety_negative": true
+  },
+  {
+    "name": "source_competing_titles",
+    "category": "automation_boundaries",
+    "blocked": {
+      "evidence": [
+        {
+          "kind": "bibliography_entry",
+          "evidence_id": "bib:source_competing_titles",
+          "raw_text": "A. Author. \"Maps\" or \"Proofs\". 2020. arXiv:2401.12345"
+        }
+      ]
+    },
+    "provider_results": [
+      {
+        "provider": "arxiv",
+        "records": [
+          {
+            "arxiv_id": "2401.12345"
+          }
+        ],
+        "warnings": [],
+        "outcome": "ok"
+      }
+    ],
+    "max_candidates": 10,
+    "expected_query": {},
+    "expected_groups": [
+      {
+        "identifiers": [
+          "arxiv:2401.12345"
+        ],
+        "conflict_codes": []
+      }
+    ],
+    "expected_candidates": [
+      {
+        "confidence": "ambiguous",
+        "reason_codes": [
+          "metadata_conflict"
+        ],
+        "eligible": false
+      }
+    ],
+    "expected_eligible": false,
+    "safety_negative": true
+  }
+]

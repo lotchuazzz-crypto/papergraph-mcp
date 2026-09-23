@@ -69,14 +69,14 @@ def _provider_results(results):
             else:
                 valid.append(copy.deepcopy(record))
         outcome = result.get('outcome', 'unavailable' if result.get('warnings') else 'ok' if valid else 'empty')
-        if outcome not in OUTCOMES:
+        if not isinstance(outcome, str) or outcome not in OUTCOMES:
             outcome = 'invalid_response'
         if invalid:
             outcome = 'partial' if valid else 'invalid_response'
         # Outcomes, not untrusted exception text, are user-facing diagnostics.
         if result.get('warnings') and outcome in {'ok', 'empty'}:
             outcome = 'partial' if valid else 'unavailable'
-        cleaned.append({'provider': str(result.get('provider') or 'unknown'), 'records': valid,
+        cleaned.append({'provider': str(result.get('provider') or 'unknown'), 'records': sorted(valid, key=stable_key),
                         'outcome': outcome, 'warnings': [] if outcome in {'ok', 'empty'} else [outcome]})
     return sorted(cleaned, key=stable_key)
 
@@ -89,6 +89,12 @@ def _assess(query, group, healthy):
     matched, missing = [], []
     def conflict(code, field, values):
         conflicts.append({'code': code, 'field': field, 'values': values, 'evidence_refs': refs})
+    for warning, field in [('conflicting_titles','title'), ('conflicting_years','year'), ('conflicting_authors','authors')]:
+        if warning in query.get('parse_warnings', []):
+            evidence = [e for e in query.get('field_evidence', []) if e['field'] == field]
+            conflicts.append({'code':'metadata_conflict', 'field':'source_' + field,
+                'values':[e['value'] for e in evidence],
+                'evidence_refs':sorted({str(e['evidence_id']) for e in evidence if e.get('evidence_id')})})
     hints = query.get('identifier_hints', [])
     source_ids = {i['identity'] for i in hints if i.get('exact_eligible')}
     ids = set(group['identifiers'])
@@ -202,21 +208,34 @@ def select_v2(search: dict) -> dict:
     denied = {'eligible':False, 'reason_codes':['incomplete_assessment'], 'policy_version':'unique_strong_v2'}
     summary = search.get('summary', {})
     candidates = search.get('candidates', [])
-    if search.get('resolver_version') != 'deterministic_v2' or not {'total_candidate_count','returned_candidate_count','truncated','blocking_conflicts'} <= summary.keys():
+    if (search.get('resolver_version') != 'deterministic_v2' or search.get('search_schema_version') != 2
+            or not isinstance(summary, dict) or not isinstance(candidates, list)
+            or not {'total_candidate_count','returned_candidate_count','truncated','blocking_conflicts'} <= summary.keys()):
         return denied
-    if summary['returned_candidate_count'] != len(candidates):
+    total, returned = summary['total_candidate_count'], summary['returned_candidate_count']
+    if (type(total) is not int or type(returned) is not int or total < returned or returned < 0
+            or returned != len(candidates) or type(summary['truncated']) is not bool
+            or summary['truncated'] != (total > returned) or not isinstance(summary['blocking_conflicts'], list)):
         return denied
     if summary['blocking_conflicts']:
         return {**denied, 'reason_codes':['ambiguous_candidates']}
     eligible = []
     reasons = []
     for candidate in candidates:
-        a = candidate.get('assessment')
-        if not a or 'auto_selection' not in a:
+        if not isinstance(candidate, dict) or not isinstance(candidate.get('target'), dict):
             return denied
-        reasons.extend(a['auto_selection']['reason_codes'])
-        if a['auto_selection'].get('eligible'):
-            if candidate['confidence'] != 'strong' or a['conflicts'] or a['source_status'] != 'arxiv_importable' or a['identity_status'] not in {'exact_identifier','corroborated_metadata'}:
+        a = candidate.get('assessment')
+        if (not isinstance(a, dict) or not isinstance(a.get('conflicts'), list)
+                or not isinstance(a.get('auto_selection'), dict)):
+            return denied
+        selection = a['auto_selection']
+        if (selection.get('policy_version') != 'unique_strong_v2' or type(selection.get('eligible')) is not bool
+                or not isinstance(selection.get('reason_codes'), list)
+                or not all(isinstance(r, str) for r in selection['reason_codes'])):
+            return denied
+        reasons.extend(selection['reason_codes'])
+        if selection['eligible']:
+            if candidate.get('confidence') != 'strong' or a['conflicts'] or a.get('source_status') != 'arxiv_importable' or a.get('identity_status') not in ('exact_identifier','corroborated_metadata'):
                 return denied
             eligible.append(candidate)
     if len(eligible) != 1:

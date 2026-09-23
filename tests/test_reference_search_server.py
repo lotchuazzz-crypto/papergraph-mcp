@@ -44,6 +44,7 @@ def test_reference_search_mcp_tools_return_payload(tmp_path: Path):
     search = server.workspace_search_external_reference(
         "local:paper",
         blocked["blocked_id"],
+        resolver_version="legacy_v1",
     )
 
     assert search["summary"]["candidate_count"] == 1
@@ -63,3 +64,10 @@ def test_reference_search_mcp_tools_return_payload(tmp_path: Path):
 def test_reference_search_mcp_tools_report_missing_workspace():
     with pytest.raises(ToolError, match="open_workspace"):
         server.workspace_search_external_reference("local:paper", "blocked")
+
+
+def test_invalid_resolver_is_tool_error_before_provider(tmp_path):
+    blocked = load_workspace_with_missing_reference(tmp_path)
+    server.require_workspace().reference_search_provider = lambda query: pytest.fail("provider called")
+    with pytest.raises(ToolError, match="Unsupported resolver"):
+        server.workspace_search_external_reference("local:paper", blocked["blocked_id"], resolver_version="future")

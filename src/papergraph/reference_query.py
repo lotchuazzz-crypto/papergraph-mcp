@@ -84,12 +84,15 @@ def build_query_v2(blocked: dict) -> dict:
         if entry.get('kind') != 'bibliography_entry':
             continue
         spans, malformed = _title_spans(text)
+        for _, _, title, rule in spans:
+            evidence('title', title, rule, 'heuristic' if rule == 'delimited_title' else 'explicit')
+        if len({s[2] for s in spans}) > 1:
+            warnings.add('conflicting_titles')
         if malformed or len({s[2] for s in spans}) != 1:
             warnings.add('uncertain_title')
         else:
             start, end, title, rule = spans[0]
             titles.append(title)
-            evidence('title', title, rule, 'heuristic' if rule == 'delimited_title' else 'explicit')
             parsed_authors = _authors(text[:start])
             if parsed_authors:
                 authors.append(parsed_authors)
@@ -101,6 +104,7 @@ def build_query_v2(blocked: dict) -> dict:
             evidence('year', year, 'year_token', 'heuristic')
     if len(set(titles)) > 1:
         warnings.add('uncertain_title')
+        warnings.add('conflicting_titles')
     if len(years) > 1:
         warnings.add('conflicting_years')
     if len({tuple(a) for a in authors}) > 1:

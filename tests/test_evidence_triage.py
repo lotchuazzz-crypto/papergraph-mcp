@@ -169,6 +169,7 @@ def test_triage_summarizes_scholarly_reference_searches():
     )
 
     assert triage["scholarly_reference_search"] == {
+        "next_actions": [],
         "search_run_count": 2,
         "candidate_count": 3,
         "ambiguous_candidate_count": 1,

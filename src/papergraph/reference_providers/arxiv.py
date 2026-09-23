@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 
 import httpx
 from papergraph.reference_providers.base import failure_result, parsed_result
-from papergraph.arxiv import extract_arxiv_id_from_url
+from papergraph.arxiv import extract_arxiv_id_from_url, InvalidArxivIdError
 from papergraph.identity import paper_id_from_arxiv
 
 
@@ -45,12 +45,14 @@ class ArxivReferenceProvider:
 def _records_from_atom(atom: str) -> list[dict]:
     namespace = {"atom": "http://www.w3.org/2005/Atom"}
     root = ET.fromstring(atom)
+    if root.tag != '{http://www.w3.org/2005/Atom}feed':
+        raise ValueError('Expected Atom feed')
     records = []
     for entry in root.findall("atom:entry", namespace):
         entry_id = _text(entry.find("atom:id", namespace))
         try:
             arxiv_id, arxiv_version = _split_arxiv_id(entry_id)
-        except ValueError:
+        except (ValueError, InvalidArxivIdError):
             records.append({})
             continue
         title = " ".join(_text(entry.find("atom:title", namespace)).split())

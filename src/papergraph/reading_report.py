@@ -375,9 +375,15 @@ def _render_reference_search_candidates(reference_searches: dict[str, Any]) -> l
             f"score: {candidate.get('score')})"
         )
         if target.get("doi"):
-            lines.append(f"  - DOI: `{target['doi']}`")
+            lines.append(f"  - DOI: {_text(target['doi'])}")
         if target.get("arxiv_id"):
-            lines.append(f"  - arXiv: `{target['arxiv_id']}`")
+            lines.append(f"  - arXiv: {_text(target['arxiv_id'])}")
+        assessment = candidate.get("assessment")
+        if assessment:
+            lines.append(f"  - Source status: {_text(assessment['source_status'])}")
+            lines.append(f"  - Reason: {_text(', '.join(assessment['reason_codes']))}")
+            selection = assessment["auto_selection"]
+            lines.append(f"  - Automatic selection: {selection['eligible']}; {_text(', '.join(selection['reason_codes']))}")
         evidence = candidate.get("evidence", [])
         if evidence:
             lines.append(f"  - Evidence: {', '.join(_text(item) for item in evidence)}")
@@ -397,6 +403,8 @@ def _render_reference_search_boundaries(reference_searches: dict[str, Any]) -> l
         lines.append(
             f"- `{boundary.get('kind', 'boundary')}`: {_text(boundary.get('message', ''))}"
         )
+        if boundary.get("next_actions"):
+            lines.append(f"  - Next actions: {_text(', '.join(boundary['next_actions']))}")
     return lines
 
 
@@ -443,7 +451,8 @@ def _code_or_none(value: str | None) -> str:
 
 
 def _text(value: Any) -> str:
-    compact = " ".join(str(value).split())
+    from html import escape
+    compact = escape(" ".join(str(value).split()), quote=False)
     return (
         compact.replace("\\", "\\\\")
         .replace("`", "\\`")

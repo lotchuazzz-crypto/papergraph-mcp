@@ -63,3 +63,70 @@ def test_failed_migration_rolls_back(tmp_path):
         assert list(db.iterdump()) == before
     finally:
         db.close()
+
+
+def test_snapshot_assessment_reopens_and_report_is_offline(tmp_path, monkeypatch):
+    path = tmp_path / 'persist.sqlite3'
+    with closing(Workspace.open(path)) as ws:
+        blocked = import_search_source_pdf(ws, tmp_path)['blocked_id']
+        ws.reference_search_provider = lambda q: [{'provider':'crossref','records':[{'doi':'10.1000/a','title':'Published target'}]}]
+        snapshot = ws.search_external_reference('local:paper',blocked,providers=['crossref'])
+    with closing(Workspace.open(path)) as ws:
+        ws.reference_search_provider = lambda q: pytest.fail('Unexpected provider call')
+        monkeypatch.setattr(ws, '_import_reference_target', lambda *a,**k: pytest.fail('Unexpected import'))
+        assert ws.search_external_reference('local:paper',blocked,providers=['crossref']) == snapshot
+        report = ws.export_paper_reading_report('local:paper')
+        assert 'Source status:' in report['markdown']
+        assert ws.list_external_reference_resolutions('local:paper')['resolutions'] == []
+
+
+def test_conflicted_candidate_overwrite_does_not_mutate(tmp_path):
+    with closing(Workspace.open(tmp_path/'conflict.sqlite3')) as ws:
+        blocked = import_search_source_pdf(ws, tmp_path)['blocked_id']
+        ws.reference_search_provider = lambda q: [{'provider':'crossref','records':[
+            {'doi':'10.1000/a','arxiv_id':'2401.12345'}, {'doi':'10.1000/b','arxiv_id':'2401.12345'}]}]
+        snapshot = ws.search_external_reference('local:paper',blocked)
+        ws.resolve_external_reference('local:paper',blocked,{'kind':'doi','doi':'10.1000/original'})
+        before = list(ws._connection.iterdump())
+        with pytest.raises(ValueError,match='(?i)conflict'):
+            ws.resolve_external_reference_candidate('local:paper',blocked,snapshot['candidates'][0]['candidate_id'],overwrite=True)
+        assert list(ws._connection.iterdump()) == before
+
+
+def test_cache_requires_providers_limit_and_valid_arguments(tmp_path):
+    with closing(Workspace.open(tmp_path/'cache.sqlite3')) as ws:
+        blocked = import_search_source_pdf(ws, tmp_path)['blocked_id']
+        calls = []
+        ws.reference_search_provider = lambda q: calls.append(q) or []
+        args = ('local:paper', blocked)
+        first = ws.search_external_reference(*args,providers=['crossref'],max_candidates=2)
+        ws.search_external_reference(*args,providers=['openalex'],max_candidates=2)
+        ws.search_external_reference(*args,providers=['crossref'],max_candidates=3)
+        assert ws.search_external_reference(*args,providers=['crossref'],max_candidates=2) == first
+        assert len(calls) == 3
+        for options in ({'resolver_version':'future'}, {'max_candidates':True}, {'max_candidates':0}, {'providers':['unknown']}):
+            with pytest.raises(ValueError):
+                ws.search_external_reference(*args,**options)
+        assert len(calls) == 3
+
+
+def test_failed_candidate_write_rolls_back_whole_snapshot(tmp_path):
+    from papergraph.reference_assessment import rank_candidates_v2
+    from papergraph.reference_search_store import save_search
+    with closing(Workspace.open(tmp_path/'atomic.sqlite3')) as ws:
+        blocked = import_search_source_pdf(ws,tmp_path)['blocked_id']
+        class FailSecondCandidate:
+            count = 0
+            def execute(self, sql, *args):
+                if 'INSERT INTO reference_search_candidates' in sql:
+                    self.count += 1
+                    if self.count == 2:
+                        raise sqlite3.OperationalError('injected candidate write failure')
+                return ws._connection.execute(sql,*args)
+        before = list(ws._connection.iterdump())
+        ranked = rank_candidates_v2({},[{'provider':'crossref','records':[{'doi':'10.1000/a'},{'doi':'10.1000/b'}]}])
+        with pytest.raises(sqlite3.OperationalError,match='injected'):
+            save_search(FailSecondCandidate(), run_id='reference-search:atomic',paper_id='local:paper',
+                        blocked_id=blocked,ranked=ranked,providers=['crossref'],max_candidates=10,
+                        resolver_version='deterministic_v2',timestamp='2026-09-23T00:00:00Z')
+        assert list(ws._connection.iterdump()) == before

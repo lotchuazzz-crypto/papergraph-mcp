@@ -1,7 +1,8 @@
 """Render the saved citation graph without network calls or filesystem writes."""
 def render_expansion(run: dict) -> str:
     def clean(value):
-        return str(value).replace("\n", " ").replace("\r", " ")
+        from papergraph.reading_report import _text
+        return _text(value)
     lines = ["# Reference Expansion", "", f"Run: `{run['run_id']}`", "",
              f"State: {run['state']} ({run.get('reason') or 'within approved policy'})", "",
              f"Policy: depth {run['policy']['max_depth']}; new papers {run['usage']['new_papers']}/{run['policy']['max_new_papers']}; searches {run['usage']['searches']}/{run['policy']['max_searches']}; edges {run['usage']['edges']}/{run['policy']['max_edges']}.", "",
@@ -25,6 +26,14 @@ def render_expansion(run: dict) -> str:
             lines.append(f"{indent}  - `{edge['edge_id']}`: {edge['state']}; {choice}; {clean(edge.get('reason') or reasons)}")
             for evidence in edge["evidence"]:
                 lines.append(f"{indent}    - Evidence: {clean(evidence.get('raw_text') or evidence.get('id') or evidence)} (source: {clean(evidence.get('source_file') or evidence.get('id') or 'saved evidence')})")
+            search = edge.get("search") or {}
+            for candidate in search.get("candidates", []):
+                assessment = candidate.get("assessment")
+                if assessment:
+                    lines.append(f"{indent}    - Source status: {clean(assessment['source_status'])}; reason: {clean(', '.join(assessment['reason_codes']))}")
+            actions = sorted({a for b in search.get("boundaries", []) for a in b.get("next_actions", [])})
+            if actions:
+                lines.append(f"{indent}    - Next actions: {clean(', '.join(actions))}")
             if edge.get("target_node"):
                 visit(edge["target_node"], depth + 2, ancestors | {pid})
     for root in run["roots"]:

@@ -76,4 +76,8 @@ jobs:
       - name: Verify installed CLI
         run: |
           version="$(.smoke-venv/bin/papergraph-mcp --version)"
-          test "$version" = "papergraph-mcp 1.1.4"
+          test "$version" = "papergraph-mcp 1.1.5"
+      - name: Verify installed resolver CLI and MCP outside checkout
+        run: |
+          cd "$(mktemp -d)"
+          PYTHONPATH= "$GITHUB_WORKSPACE/.smoke-venv/bin/python" "$GITHUB_WORKSPACE/scripts/smoke_installed_reference_quality.py"

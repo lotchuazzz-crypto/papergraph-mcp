@@ -21,10 +21,102 @@
       "reserved": false,
       "decision": {
         "kind": "policy_selected",
-        "policy_version": "unique_strong_v1",
+        "eligible": true,
+        "policy_version": "unique_strong_v2",
         "reason_codes": [
-          "exact_source_identifier"
-        ]
+          "exact_identifier"
+        ],
+        "candidate": {
+          "candidate_schema_version": 2,
+          "candidate_id": "reference-candidate:b193f1bfe99727f2af99da742be876934a268f2234fdb8f4ed450d81f1626f90",
+          "target": {
+            "kind": "arxiv",
+            "arxiv_id": "2401.10003"
+          },
+          "score": 8.0,
+          "confidence": "strong",
+          "evidence": [
+            "exact_identifier"
+          ],
+          "providers": [
+            "source"
+          ],
+          "provider_records": [
+            {
+              "provider": "source",
+              "record": {
+                "arxiv_id": "2401.10003",
+                "arxiv_version": null
+              },
+              "record_key": "c6022931c201dbc841f0ee2cf759b59efd65e8b0829211299f79bf748ea2b4d4"
+            }
+          ],
+          "warnings": [],
+          "assessment": {
+            "identity_status": "exact_identifier",
+            "matched_fields": [
+              {
+                "field": "identifiers",
+                "relation": "exact",
+                "query_value": [
+                  "arxiv:2401.10003"
+                ],
+                "candidate_value": [
+                  "arxiv:2401.10003"
+                ],
+                "evidence_refs": [
+                  "c6022931c201dbc841f0ee2cf759b59efd65e8b0829211299f79bf748ea2b4d4"
+                ]
+              }
+            ],
+            "missing_fields": [
+              {
+                "field": "title",
+                "side": "query"
+              },
+              {
+                "field": "title",
+                "side": "candidate"
+              },
+              {
+                "field": "authors",
+                "side": "query"
+              },
+              {
+                "field": "authors",
+                "side": "candidate"
+              },
+              {
+                "field": "year",
+                "side": "query"
+              },
+              {
+                "field": "year",
+                "side": "candidate"
+              }
+            ],
+            "conflicts": [],
+            "reason_codes": [
+              "exact_identifier"
+            ],
+            "source_status": "arxiv_importable",
+            "auto_selection": {
+              "eligible": true,
+              "reason_codes": [
+                "exact_identifier"
+              ],
+              "policy_version": "unique_strong_v2"
+            }
+          }
+        },
+        "identity_target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10003"
+        },
+        "target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10003"
+        }
       }
     },
     {
@@ -43,10 +135,102 @@
       "reserved": false,
       "decision": {
         "kind": "policy_selected",
-        "policy_version": "unique_strong_v1",
+        "eligible": true,
+        "policy_version": "unique_strong_v2",
         "reason_codes": [
-          "exact_source_identifier"
-        ]
+          "exact_identifier"
+        ],
+        "candidate": {
+          "candidate_schema_version": 2,
+          "candidate_id": "reference-candidate:4987ead30469ab093ca51854329f5da53678701570d56d61b6d18d62aea7e8f3",
+          "target": {
+            "kind": "arxiv",
+            "arxiv_id": "2401.10002"
+          },
+          "score": 8.0,
+          "confidence": "strong",
+          "evidence": [
+            "exact_identifier"
+          ],
+          "providers": [
+            "source"
+          ],
+          "provider_records": [
+            {
+              "provider": "source",
+              "record": {
+                "arxiv_id": "2401.10002",
+                "arxiv_version": null
+              },
+              "record_key": "0154ff584f81ff56b565d7db19503edde271e4ce305a8a100e81939de2157724"
+            }
+          ],
+          "warnings": [],
+          "assessment": {
+            "identity_status": "exact_identifier",
+            "matched_fields": [
+              {
+                "field": "identifiers",
+                "relation": "exact",
+                "query_value": [
+                  "arxiv:2401.10002"
+                ],
+                "candidate_value": [
+                  "arxiv:2401.10002"
+                ],
+                "evidence_refs": [
+                  "0154ff584f81ff56b565d7db19503edde271e4ce305a8a100e81939de2157724"
+                ]
+              }
+            ],
+            "missing_fields": [
+              {
+                "field": "title",
+                "side": "query"
+              },
+              {
+                "field": "title",
+                "side": "candidate"
+              },
+              {
+                "field": "authors",
+                "side": "query"
+              },
+              {
+                "field": "authors",
+                "side": "candidate"
+              },
+              {
+                "field": "year",
+                "side": "query"
+              },
+              {
+                "field": "year",
+                "side": "candidate"
+              }
+            ],
+            "conflicts": [],
+            "reason_codes": [
+              "exact_identifier"
+            ],
+            "source_status": "arxiv_importable",
+            "auto_selection": {
+              "eligible": true,
+              "reason_codes": [
+                "exact_identifier"
+              ],
+              "policy_version": "unique_strong_v2"
+            }
+          }
+        },
+        "identity_target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10002"
+        },
+        "target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10002"
+        }
       }
     },
     {
@@ -65,10 +249,102 @@
       "reserved": false,
       "decision": {
         "kind": "policy_selected",
-        "policy_version": "unique_strong_v1",
+        "eligible": true,
+        "policy_version": "unique_strong_v2",
         "reason_codes": [
-          "exact_source_identifier"
-        ]
+          "exact_identifier"
+        ],
+        "candidate": {
+          "candidate_schema_version": 2,
+          "candidate_id": "reference-candidate:b193f1bfe99727f2af99da742be876934a268f2234fdb8f4ed450d81f1626f90",
+          "target": {
+            "kind": "arxiv",
+            "arxiv_id": "2401.10003"
+          },
+          "score": 8.0,
+          "confidence": "strong",
+          "evidence": [
+            "exact_identifier"
+          ],
+          "providers": [
+            "source"
+          ],
+          "provider_records": [
+            {
+              "provider": "source",
+              "record": {
+                "arxiv_id": "2401.10003",
+                "arxiv_version": null
+              },
+              "record_key": "c6022931c201dbc841f0ee2cf759b59efd65e8b0829211299f79bf748ea2b4d4"
+            }
+          ],
+          "warnings": [],
+          "assessment": {
+            "identity_status": "exact_identifier",
+            "matched_fields": [
+              {
+                "field": "identifiers",
+                "relation": "exact",
+                "query_value": [
+                  "arxiv:2401.10003"
+                ],
+                "candidate_value": [
+                  "arxiv:2401.10003"
+                ],
+                "evidence_refs": [
+                  "c6022931c201dbc841f0ee2cf759b59efd65e8b0829211299f79bf748ea2b4d4"
+                ]
+              }
+            ],
+            "missing_fields": [
+              {
+                "field": "title",
+                "side": "query"
+              },
+              {
+                "field": "title",
+                "side": "candidate"
+              },
+              {
+                "field": "authors",
+                "side": "query"
+              },
+              {
+                "field": "authors",
+                "side": "candidate"
+              },
+              {
+                "field": "year",
+                "side": "query"
+              },
+              {
+                "field": "year",
+                "side": "candidate"
+              }
+            ],
+            "conflicts": [],
+            "reason_codes": [
+              "exact_identifier"
+            ],
+            "source_status": "arxiv_importable",
+            "auto_selection": {
+              "eligible": true,
+              "reason_codes": [
+                "exact_identifier"
+              ],
+              "policy_version": "unique_strong_v2"
+            }
+          }
+        },
+        "identity_target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10003"
+        },
+        "target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10003"
+        }
       }
     },
     {
@@ -87,10 +363,102 @@
       "reserved": false,
       "decision": {
         "kind": "policy_selected",
-        "policy_version": "unique_strong_v1",
+        "eligible": true,
+        "policy_version": "unique_strong_v2",
         "reason_codes": [
-          "exact_source_identifier"
-        ]
+          "exact_identifier"
+        ],
+        "candidate": {
+          "candidate_schema_version": 2,
+          "candidate_id": "reference-candidate:61e2a0852b0687b8a7c33c7c9e6ac4b878b7ad5b112cef50ffb67f0141c5f112",
+          "target": {
+            "kind": "arxiv",
+            "arxiv_id": "2401.10001"
+          },
+          "score": 8.0,
+          "confidence": "strong",
+          "evidence": [
+            "exact_identifier"
+          ],
+          "providers": [
+            "source"
+          ],
+          "provider_records": [
+            {
+              "provider": "source",
+              "record": {
+                "arxiv_id": "2401.10001",
+                "arxiv_version": null
+              },
+              "record_key": "25e81caed1efa170426bab62636e263f90d513b877d922361a5174d8e4759c5a"
+            }
+          ],
+          "warnings": [],
+          "assessment": {
+            "identity_status": "exact_identifier",
+            "matched_fields": [
+              {
+                "field": "identifiers",
+                "relation": "exact",
+                "query_value": [
+                  "arxiv:2401.10001"
+                ],
+                "candidate_value": [
+                  "arxiv:2401.10001"
+                ],
+                "evidence_refs": [
+                  "25e81caed1efa170426bab62636e263f90d513b877d922361a5174d8e4759c5a"
+                ]
+              }
+            ],
+            "missing_fields": [
+              {
+                "field": "title",
+                "side": "query"
+              },
+              {
+                "field": "title",
+                "side": "candidate"
+              },
+              {
+                "field": "authors",
+                "side": "query"
+              },
+              {
+                "field": "authors",
+                "side": "candidate"
+              },
+              {
+                "field": "year",
+                "side": "query"
+              },
+              {
+                "field": "year",
+                "side": "candidate"
+              }
+            ],
+            "conflicts": [],
+            "reason_codes": [
+              "exact_identifier"
+            ],
+            "source_status": "arxiv_importable",
+            "auto_selection": {
+              "eligible": true,
+              "reason_codes": [
+                "exact_identifier"
+              ],
+              "policy_version": "unique_strong_v2"
+            }
+          }
+        },
+        "identity_target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10001"
+        },
+        "target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10001"
+        }
       }
     },
     {
@@ -109,10 +477,102 @@
       "reserved": false,
       "decision": {
         "kind": "policy_selected",
-        "policy_version": "unique_strong_v1",
+        "eligible": true,
+        "policy_version": "unique_strong_v2",
         "reason_codes": [
-          "exact_source_identifier"
-        ]
+          "exact_identifier"
+        ],
+        "candidate": {
+          "candidate_schema_version": 2,
+          "candidate_id": "reference-candidate:61e2a0852b0687b8a7c33c7c9e6ac4b878b7ad5b112cef50ffb67f0141c5f112",
+          "target": {
+            "kind": "arxiv",
+            "arxiv_id": "2401.10001"
+          },
+          "score": 8.0,
+          "confidence": "strong",
+          "evidence": [
+            "exact_identifier"
+          ],
+          "providers": [
+            "source"
+          ],
+          "provider_records": [
+            {
+              "provider": "source",
+              "record": {
+                "arxiv_id": "2401.10001",
+                "arxiv_version": null
+              },
+              "record_key": "25e81caed1efa170426bab62636e263f90d513b877d922361a5174d8e4759c5a"
+            }
+          ],
+          "warnings": [],
+          "assessment": {
+            "identity_status": "exact_identifier",
+            "matched_fields": [
+              {
+                "field": "identifiers",
+                "relation": "exact",
+                "query_value": [
+                  "arxiv:2401.10001"
+                ],
+                "candidate_value": [
+                  "arxiv:2401.10001"
+                ],
+                "evidence_refs": [
+                  "25e81caed1efa170426bab62636e263f90d513b877d922361a5174d8e4759c5a"
+                ]
+              }
+            ],
+            "missing_fields": [
+              {
+                "field": "title",
+                "side": "query"
+              },
+              {
+                "field": "title",
+                "side": "candidate"
+              },
+              {
+                "field": "authors",
+                "side": "query"
+              },
+              {
+                "field": "authors",
+                "side": "candidate"
+              },
+              {
+                "field": "year",
+                "side": "query"
+              },
+              {
+                "field": "year",
+                "side": "candidate"
+              }
+            ],
+            "conflicts": [],
+            "reason_codes": [
+              "exact_identifier"
+            ],
+            "source_status": "arxiv_importable",
+            "auto_selection": {
+              "eligible": true,
+              "reason_codes": [
+                "exact_identifier"
+              ],
+              "policy_version": "unique_strong_v2"
+            }
+          }
+        },
+        "identity_target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10001"
+        },
+        "target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10001"
+        }
       }
     }
   ],
@@ -139,16 +599,257 @@
       ],
       "state": "imported",
       "reason": null,
+      "search": {
+        "search_schema_version": 2,
+        "resolver_version": "deterministic_v2",
+        "query": {
+          "query_schema_version": 2,
+          "parser_version": "bibliography_hints_v2",
+          "citation_keys": [
+            "b"
+          ],
+          "raw_citation_texts": [
+            "\\cite{b}"
+          ],
+          "raw_bibliography_text": "",
+          "title_hint": null,
+          "author_hints": [],
+          "year_hint": null,
+          "identifier_hints": [
+            {
+              "kind": "arxiv",
+              "raw": "2401.10002",
+              "canonical": "2401.10002",
+              "identity": "arxiv:2401.10002",
+              "version": null,
+              "valid": true,
+              "exact_eligible": true,
+              "warnings": []
+            }
+          ],
+          "field_evidence": [
+            {
+              "field": "arxiv",
+              "value": "2401.10002",
+              "evidence_id": "arxiv:2401.10001:cite:main.tex:b",
+              "excerpt": "2401.10002",
+              "rule": "stored_bibliography_identifier",
+              "confidence": "explicit"
+            }
+          ],
+          "parse_warnings": []
+        },
+        "provider_outcomes": [
+          {
+            "provider": "source",
+            "outcome": "ok"
+          }
+        ],
+        "provider_warnings": [],
+        "candidates": [
+          {
+            "candidate_schema_version": 2,
+            "candidate_id": "reference-candidate:4987ead30469ab093ca51854329f5da53678701570d56d61b6d18d62aea7e8f3",
+            "target": {
+              "kind": "arxiv",
+              "arxiv_id": "2401.10002"
+            },
+            "score": 8.0,
+            "confidence": "strong",
+            "evidence": [
+              "exact_identifier"
+            ],
+            "providers": [
+              "source"
+            ],
+            "provider_records": [
+              {
+                "provider": "source",
+                "record": {
+                  "arxiv_id": "2401.10002",
+                  "arxiv_version": null
+                },
+                "record_key": "0154ff584f81ff56b565d7db19503edde271e4ce305a8a100e81939de2157724"
+              }
+            ],
+            "warnings": [],
+            "assessment": {
+              "identity_status": "exact_identifier",
+              "matched_fields": [
+                {
+                  "field": "identifiers",
+                  "relation": "exact",
+                  "query_value": [
+                    "arxiv:2401.10002"
+                  ],
+                  "candidate_value": [
+                    "arxiv:2401.10002"
+                  ],
+                  "evidence_refs": [
+                    "0154ff584f81ff56b565d7db19503edde271e4ce305a8a100e81939de2157724"
+                  ]
+                }
+              ],
+              "missing_fields": [
+                {
+                  "field": "title",
+                  "side": "query"
+                },
+                {
+                  "field": "title",
+                  "side": "candidate"
+                },
+                {
+                  "field": "authors",
+                  "side": "query"
+                },
+                {
+                  "field": "authors",
+                  "side": "candidate"
+                },
+                {
+                  "field": "year",
+                  "side": "query"
+                },
+                {
+                  "field": "year",
+                  "side": "candidate"
+                }
+              ],
+              "conflicts": [],
+              "reason_codes": [
+                "exact_identifier"
+              ],
+              "source_status": "arxiv_importable",
+              "auto_selection": {
+                "eligible": true,
+                "reason_codes": [
+                  "exact_identifier"
+                ],
+                "policy_version": "unique_strong_v2"
+              }
+            }
+          }
+        ],
+        "boundaries": [],
+        "summary": {
+          "candidate_count": 1,
+          "total_candidate_count": 1,
+          "returned_candidate_count": 1,
+          "truncated": false,
+          "blocking_conflicts": [],
+          "strong_candidate_count": 1,
+          "ambiguous_candidate_count": 0,
+          "boundary_count": 0,
+          "provider_warning_count": 0
+        }
+      },
       "target": {
+        "kind": "arxiv",
+        "arxiv_id": "2401.10002"
+      },
+      "identity_target": {
         "kind": "arxiv",
         "arxiv_id": "2401.10002"
       },
       "decision": {
         "kind": "policy_selected",
-        "policy_version": "unique_strong_v1",
+        "eligible": true,
+        "policy_version": "unique_strong_v2",
         "reason_codes": [
-          "exact_source_identifier"
-        ]
+          "exact_identifier"
+        ],
+        "candidate": {
+          "candidate_schema_version": 2,
+          "candidate_id": "reference-candidate:4987ead30469ab093ca51854329f5da53678701570d56d61b6d18d62aea7e8f3",
+          "target": {
+            "kind": "arxiv",
+            "arxiv_id": "2401.10002"
+          },
+          "score": 8.0,
+          "confidence": "strong",
+          "evidence": [
+            "exact_identifier"
+          ],
+          "providers": [
+            "source"
+          ],
+          "provider_records": [
+            {
+              "provider": "source",
+              "record": {
+                "arxiv_id": "2401.10002",
+                "arxiv_version": null
+              },
+              "record_key": "0154ff584f81ff56b565d7db19503edde271e4ce305a8a100e81939de2157724"
+            }
+          ],
+          "warnings": [],
+          "assessment": {
+            "identity_status": "exact_identifier",
+            "matched_fields": [
+              {
+                "field": "identifiers",
+                "relation": "exact",
+                "query_value": [
+                  "arxiv:2401.10002"
+                ],
+                "candidate_value": [
+                  "arxiv:2401.10002"
+                ],
+                "evidence_refs": [
+                  "0154ff584f81ff56b565d7db19503edde271e4ce305a8a100e81939de2157724"
+                ]
+              }
+            ],
+            "missing_fields": [
+              {
+                "field": "title",
+                "side": "query"
+              },
+              {
+                "field": "title",
+                "side": "candidate"
+              },
+              {
+                "field": "authors",
+                "side": "query"
+              },
+              {
+                "field": "authors",
+                "side": "candidate"
+              },
+              {
+                "field": "year",
+                "side": "query"
+              },
+              {
+                "field": "year",
+                "side": "candidate"
+              }
+            ],
+            "conflicts": [],
+            "reason_codes": [
+              "exact_identifier"
+            ],
+            "source_status": "arxiv_importable",
+            "auto_selection": {
+              "eligible": true,
+              "reason_codes": [
+                "exact_identifier"
+              ],
+              "policy_version": "unique_strong_v2"
+            }
+          }
+        },
+        "identity_target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10002"
+        },
+        "target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10002"
+        }
       },
       "attempt_id": "attempt:2",
       "target_node": "arxiv:2401.10002"
@@ -173,16 +874,257 @@
       ],
       "state": "imported",
       "reason": null,
+      "search": {
+        "search_schema_version": 2,
+        "resolver_version": "deterministic_v2",
+        "query": {
+          "query_schema_version": 2,
+          "parser_version": "bibliography_hints_v2",
+          "citation_keys": [
+            "c"
+          ],
+          "raw_citation_texts": [
+            "\\cite{c}"
+          ],
+          "raw_bibliography_text": "",
+          "title_hint": null,
+          "author_hints": [],
+          "year_hint": null,
+          "identifier_hints": [
+            {
+              "kind": "arxiv",
+              "raw": "2401.10003",
+              "canonical": "2401.10003",
+              "identity": "arxiv:2401.10003",
+              "version": null,
+              "valid": true,
+              "exact_eligible": true,
+              "warnings": []
+            }
+          ],
+          "field_evidence": [
+            {
+              "field": "arxiv",
+              "value": "2401.10003",
+              "evidence_id": "arxiv:2401.10001:cite:main.tex:c",
+              "excerpt": "2401.10003",
+              "rule": "stored_bibliography_identifier",
+              "confidence": "explicit"
+            }
+          ],
+          "parse_warnings": []
+        },
+        "provider_outcomes": [
+          {
+            "provider": "source",
+            "outcome": "ok"
+          }
+        ],
+        "provider_warnings": [],
+        "candidates": [
+          {
+            "candidate_schema_version": 2,
+            "candidate_id": "reference-candidate:b193f1bfe99727f2af99da742be876934a268f2234fdb8f4ed450d81f1626f90",
+            "target": {
+              "kind": "arxiv",
+              "arxiv_id": "2401.10003"
+            },
+            "score": 8.0,
+            "confidence": "strong",
+            "evidence": [
+              "exact_identifier"
+            ],
+            "providers": [
+              "source"
+            ],
+            "provider_records": [
+              {
+                "provider": "source",
+                "record": {
+                  "arxiv_id": "2401.10003",
+                  "arxiv_version": null
+                },
+                "record_key": "c6022931c201dbc841f0ee2cf759b59efd65e8b0829211299f79bf748ea2b4d4"
+              }
+            ],
+            "warnings": [],
+            "assessment": {
+              "identity_status": "exact_identifier",
+              "matched_fields": [
+                {
+                  "field": "identifiers",
+                  "relation": "exact",
+                  "query_value": [
+                    "arxiv:2401.10003"
+                  ],
+                  "candidate_value": [
+                    "arxiv:2401.10003"
+                  ],
+                  "evidence_refs": [
+                    "c6022931c201dbc841f0ee2cf759b59efd65e8b0829211299f79bf748ea2b4d4"
+                  ]
+                }
+              ],
+              "missing_fields": [
+                {
+                  "field": "title",
+                  "side": "query"
+                },
+                {
+                  "field": "title",
+                  "side": "candidate"
+                },
+                {
+                  "field": "authors",
+                  "side": "query"
+                },
+                {
+                  "field": "authors",
+                  "side": "candidate"
+                },
+                {
+                  "field": "year",
+                  "side": "query"
+                },
+                {
+                  "field": "year",
+                  "side": "candidate"
+                }
+              ],
+              "conflicts": [],
+              "reason_codes": [
+                "exact_identifier"
+              ],
+              "source_status": "arxiv_importable",
+              "auto_selection": {
+                "eligible": true,
+                "reason_codes": [
+                  "exact_identifier"
+                ],
+                "policy_version": "unique_strong_v2"
+              }
+            }
+          }
+        ],
+        "boundaries": [],
+        "summary": {
+          "candidate_count": 1,
+          "total_candidate_count": 1,
+          "returned_candidate_count": 1,
+          "truncated": false,
+          "blocking_conflicts": [],
+          "strong_candidate_count": 1,
+          "ambiguous_candidate_count": 0,
+          "boundary_count": 0,
+          "provider_warning_count": 0
+        }
+      },
       "target": {
+        "kind": "arxiv",
+        "arxiv_id": "2401.10003"
+      },
+      "identity_target": {
         "kind": "arxiv",
         "arxiv_id": "2401.10003"
       },
       "decision": {
         "kind": "policy_selected",
-        "policy_version": "unique_strong_v1",
+        "eligible": true,
+        "policy_version": "unique_strong_v2",
         "reason_codes": [
-          "exact_source_identifier"
-        ]
+          "exact_identifier"
+        ],
+        "candidate": {
+          "candidate_schema_version": 2,
+          "candidate_id": "reference-candidate:b193f1bfe99727f2af99da742be876934a268f2234fdb8f4ed450d81f1626f90",
+          "target": {
+            "kind": "arxiv",
+            "arxiv_id": "2401.10003"
+          },
+          "score": 8.0,
+          "confidence": "strong",
+          "evidence": [
+            "exact_identifier"
+          ],
+          "providers": [
+            "source"
+          ],
+          "provider_records": [
+            {
+              "provider": "source",
+              "record": {
+                "arxiv_id": "2401.10003",
+                "arxiv_version": null
+              },
+              "record_key": "c6022931c201dbc841f0ee2cf759b59efd65e8b0829211299f79bf748ea2b4d4"
+            }
+          ],
+          "warnings": [],
+          "assessment": {
+            "identity_status": "exact_identifier",
+            "matched_fields": [
+              {
+                "field": "identifiers",
+                "relation": "exact",
+                "query_value": [
+                  "arxiv:2401.10003"
+                ],
+                "candidate_value": [
+                  "arxiv:2401.10003"
+                ],
+                "evidence_refs": [
+                  "c6022931c201dbc841f0ee2cf759b59efd65e8b0829211299f79bf748ea2b4d4"
+                ]
+              }
+            ],
+            "missing_fields": [
+              {
+                "field": "title",
+                "side": "query"
+              },
+              {
+                "field": "title",
+                "side": "candidate"
+              },
+              {
+                "field": "authors",
+                "side": "query"
+              },
+              {
+                "field": "authors",
+                "side": "candidate"
+              },
+              {
+                "field": "year",
+                "side": "query"
+              },
+              {
+                "field": "year",
+                "side": "candidate"
+              }
+            ],
+            "conflicts": [],
+            "reason_codes": [
+              "exact_identifier"
+            ],
+            "source_status": "arxiv_importable",
+            "auto_selection": {
+              "eligible": true,
+              "reason_codes": [
+                "exact_identifier"
+              ],
+              "policy_version": "unique_strong_v2"
+            }
+          }
+        },
+        "identity_target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10003"
+        },
+        "target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10003"
+        }
       },
       "attempt_id": "attempt:1",
       "target_node": "arxiv:2401.10003"
@@ -207,16 +1149,257 @@
       ],
       "state": "linked_existing",
       "reason": null,
+      "search": {
+        "search_schema_version": 2,
+        "resolver_version": "deterministic_v2",
+        "query": {
+          "query_schema_version": 2,
+          "parser_version": "bibliography_hints_v2",
+          "citation_keys": [
+            "a"
+          ],
+          "raw_citation_texts": [
+            "\\cite{a}"
+          ],
+          "raw_bibliography_text": "",
+          "title_hint": null,
+          "author_hints": [],
+          "year_hint": null,
+          "identifier_hints": [
+            {
+              "kind": "arxiv",
+              "raw": "2401.10001",
+              "canonical": "2401.10001",
+              "identity": "arxiv:2401.10001",
+              "version": null,
+              "valid": true,
+              "exact_eligible": true,
+              "warnings": []
+            }
+          ],
+          "field_evidence": [
+            {
+              "field": "arxiv",
+              "value": "2401.10001",
+              "evidence_id": "arxiv:2401.10002:cite:main.tex:a",
+              "excerpt": "2401.10001",
+              "rule": "stored_bibliography_identifier",
+              "confidence": "explicit"
+            }
+          ],
+          "parse_warnings": []
+        },
+        "provider_outcomes": [
+          {
+            "provider": "source",
+            "outcome": "ok"
+          }
+        ],
+        "provider_warnings": [],
+        "candidates": [
+          {
+            "candidate_schema_version": 2,
+            "candidate_id": "reference-candidate:61e2a0852b0687b8a7c33c7c9e6ac4b878b7ad5b112cef50ffb67f0141c5f112",
+            "target": {
+              "kind": "arxiv",
+              "arxiv_id": "2401.10001"
+            },
+            "score": 8.0,
+            "confidence": "strong",
+            "evidence": [
+              "exact_identifier"
+            ],
+            "providers": [
+              "source"
+            ],
+            "provider_records": [
+              {
+                "provider": "source",
+                "record": {
+                  "arxiv_id": "2401.10001",
+                  "arxiv_version": null
+                },
+                "record_key": "25e81caed1efa170426bab62636e263f90d513b877d922361a5174d8e4759c5a"
+              }
+            ],
+            "warnings": [],
+            "assessment": {
+              "identity_status": "exact_identifier",
+              "matched_fields": [
+                {
+                  "field": "identifiers",
+                  "relation": "exact",
+                  "query_value": [
+                    "arxiv:2401.10001"
+                  ],
+                  "candidate_value": [
+                    "arxiv:2401.10001"
+                  ],
+                  "evidence_refs": [
+                    "25e81caed1efa170426bab62636e263f90d513b877d922361a5174d8e4759c5a"
+                  ]
+                }
+              ],
+              "missing_fields": [
+                {
+                  "field": "title",
+                  "side": "query"
+                },
+                {
+                  "field": "title",
+                  "side": "candidate"
+                },
+                {
+                  "field": "authors",
+                  "side": "query"
+                },
+                {
+                  "field": "authors",
+                  "side": "candidate"
+                },
+                {
+                  "field": "year",
+                  "side": "query"
+                },
+                {
+                  "field": "year",
+                  "side": "candidate"
+                }
+              ],
+              "conflicts": [],
+              "reason_codes": [
+                "exact_identifier"
+              ],
+              "source_status": "arxiv_importable",
+              "auto_selection": {
+                "eligible": true,
+                "reason_codes": [
+                  "exact_identifier"
+                ],
+                "policy_version": "unique_strong_v2"
+              }
+            }
+          }
+        ],
+        "boundaries": [],
+        "summary": {
+          "candidate_count": 1,
+          "total_candidate_count": 1,
+          "returned_candidate_count": 1,
+          "truncated": false,
+          "blocking_conflicts": [],
+          "strong_candidate_count": 1,
+          "ambiguous_candidate_count": 0,
+          "boundary_count": 0,
+          "provider_warning_count": 0
+        }
+      },
       "target": {
+        "kind": "arxiv",
+        "arxiv_id": "2401.10001"
+      },
+      "identity_target": {
         "kind": "arxiv",
         "arxiv_id": "2401.10001"
       },
       "decision": {
         "kind": "policy_selected",
-        "policy_version": "unique_strong_v1",
+        "eligible": true,
+        "policy_version": "unique_strong_v2",
         "reason_codes": [
-          "exact_source_identifier"
-        ]
+          "exact_identifier"
+        ],
+        "candidate": {
+          "candidate_schema_version": 2,
+          "candidate_id": "reference-candidate:61e2a0852b0687b8a7c33c7c9e6ac4b878b7ad5b112cef50ffb67f0141c5f112",
+          "target": {
+            "kind": "arxiv",
+            "arxiv_id": "2401.10001"
+          },
+          "score": 8.0,
+          "confidence": "strong",
+          "evidence": [
+            "exact_identifier"
+          ],
+          "providers": [
+            "source"
+          ],
+          "provider_records": [
+            {
+              "provider": "source",
+              "record": {
+                "arxiv_id": "2401.10001",
+                "arxiv_version": null
+              },
+              "record_key": "25e81caed1efa170426bab62636e263f90d513b877d922361a5174d8e4759c5a"
+            }
+          ],
+          "warnings": [],
+          "assessment": {
+            "identity_status": "exact_identifier",
+            "matched_fields": [
+              {
+                "field": "identifiers",
+                "relation": "exact",
+                "query_value": [
+                  "arxiv:2401.10001"
+                ],
+                "candidate_value": [
+                  "arxiv:2401.10001"
+                ],
+                "evidence_refs": [
+                  "25e81caed1efa170426bab62636e263f90d513b877d922361a5174d8e4759c5a"
+                ]
+              }
+            ],
+            "missing_fields": [
+              {
+                "field": "title",
+                "side": "query"
+              },
+              {
+                "field": "title",
+                "side": "candidate"
+              },
+              {
+                "field": "authors",
+                "side": "query"
+              },
+              {
+                "field": "authors",
+                "side": "candidate"
+              },
+              {
+                "field": "year",
+                "side": "query"
+              },
+              {
+                "field": "year",
+                "side": "candidate"
+              }
+            ],
+            "conflicts": [],
+            "reason_codes": [
+              "exact_identifier"
+            ],
+            "source_status": "arxiv_importable",
+            "auto_selection": {
+              "eligible": true,
+              "reason_codes": [
+                "exact_identifier"
+              ],
+              "policy_version": "unique_strong_v2"
+            }
+          }
+        },
+        "identity_target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10001"
+        },
+        "target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10001"
+        }
       },
       "attempt_id": "attempt:4",
       "target_node": "arxiv:2401.10001"
@@ -241,16 +1424,257 @@
       ],
       "state": "linked_existing",
       "reason": null,
+      "search": {
+        "search_schema_version": 2,
+        "resolver_version": "deterministic_v2",
+        "query": {
+          "query_schema_version": 2,
+          "parser_version": "bibliography_hints_v2",
+          "citation_keys": [
+            "c"
+          ],
+          "raw_citation_texts": [
+            "\\cite{c}"
+          ],
+          "raw_bibliography_text": "",
+          "title_hint": null,
+          "author_hints": [],
+          "year_hint": null,
+          "identifier_hints": [
+            {
+              "kind": "arxiv",
+              "raw": "2401.10003",
+              "canonical": "2401.10003",
+              "identity": "arxiv:2401.10003",
+              "version": null,
+              "valid": true,
+              "exact_eligible": true,
+              "warnings": []
+            }
+          ],
+          "field_evidence": [
+            {
+              "field": "arxiv",
+              "value": "2401.10003",
+              "evidence_id": "arxiv:2401.10002:cite:main.tex:c",
+              "excerpt": "2401.10003",
+              "rule": "stored_bibliography_identifier",
+              "confidence": "explicit"
+            }
+          ],
+          "parse_warnings": []
+        },
+        "provider_outcomes": [
+          {
+            "provider": "source",
+            "outcome": "ok"
+          }
+        ],
+        "provider_warnings": [],
+        "candidates": [
+          {
+            "candidate_schema_version": 2,
+            "candidate_id": "reference-candidate:b193f1bfe99727f2af99da742be876934a268f2234fdb8f4ed450d81f1626f90",
+            "target": {
+              "kind": "arxiv",
+              "arxiv_id": "2401.10003"
+            },
+            "score": 8.0,
+            "confidence": "strong",
+            "evidence": [
+              "exact_identifier"
+            ],
+            "providers": [
+              "source"
+            ],
+            "provider_records": [
+              {
+                "provider": "source",
+                "record": {
+                  "arxiv_id": "2401.10003",
+                  "arxiv_version": null
+                },
+                "record_key": "c6022931c201dbc841f0ee2cf759b59efd65e8b0829211299f79bf748ea2b4d4"
+              }
+            ],
+            "warnings": [],
+            "assessment": {
+              "identity_status": "exact_identifier",
+              "matched_fields": [
+                {
+                  "field": "identifiers",
+                  "relation": "exact",
+                  "query_value": [
+                    "arxiv:2401.10003"
+                  ],
+                  "candidate_value": [
+                    "arxiv:2401.10003"
+                  ],
+                  "evidence_refs": [
+                    "c6022931c201dbc841f0ee2cf759b59efd65e8b0829211299f79bf748ea2b4d4"
+                  ]
+                }
+              ],
+              "missing_fields": [
+                {
+                  "field": "title",
+                  "side": "query"
+                },
+                {
+                  "field": "title",
+                  "side": "candidate"
+                },
+                {
+                  "field": "authors",
+                  "side": "query"
+                },
+                {
+                  "field": "authors",
+                  "side": "candidate"
+                },
+                {
+                  "field": "year",
+                  "side": "query"
+                },
+                {
+                  "field": "year",
+                  "side": "candidate"
+                }
+              ],
+              "conflicts": [],
+              "reason_codes": [
+                "exact_identifier"
+              ],
+              "source_status": "arxiv_importable",
+              "auto_selection": {
+                "eligible": true,
+                "reason_codes": [
+                  "exact_identifier"
+                ],
+                "policy_version": "unique_strong_v2"
+              }
+            }
+          }
+        ],
+        "boundaries": [],
+        "summary": {
+          "candidate_count": 1,
+          "total_candidate_count": 1,
+          "returned_candidate_count": 1,
+          "truncated": false,
+          "blocking_conflicts": [],
+          "strong_candidate_count": 1,
+          "ambiguous_candidate_count": 0,
+          "boundary_count": 0,
+          "provider_warning_count": 0
+        }
+      },
       "target": {
+        "kind": "arxiv",
+        "arxiv_id": "2401.10003"
+      },
+      "identity_target": {
         "kind": "arxiv",
         "arxiv_id": "2401.10003"
       },
       "decision": {
         "kind": "policy_selected",
-        "policy_version": "unique_strong_v1",
+        "eligible": true,
+        "policy_version": "unique_strong_v2",
         "reason_codes": [
-          "exact_source_identifier"
-        ]
+          "exact_identifier"
+        ],
+        "candidate": {
+          "candidate_schema_version": 2,
+          "candidate_id": "reference-candidate:b193f1bfe99727f2af99da742be876934a268f2234fdb8f4ed450d81f1626f90",
+          "target": {
+            "kind": "arxiv",
+            "arxiv_id": "2401.10003"
+          },
+          "score": 8.0,
+          "confidence": "strong",
+          "evidence": [
+            "exact_identifier"
+          ],
+          "providers": [
+            "source"
+          ],
+          "provider_records": [
+            {
+              "provider": "source",
+              "record": {
+                "arxiv_id": "2401.10003",
+                "arxiv_version": null
+              },
+              "record_key": "c6022931c201dbc841f0ee2cf759b59efd65e8b0829211299f79bf748ea2b4d4"
+            }
+          ],
+          "warnings": [],
+          "assessment": {
+            "identity_status": "exact_identifier",
+            "matched_fields": [
+              {
+                "field": "identifiers",
+                "relation": "exact",
+                "query_value": [
+                  "arxiv:2401.10003"
+                ],
+                "candidate_value": [
+                  "arxiv:2401.10003"
+                ],
+                "evidence_refs": [
+                  "c6022931c201dbc841f0ee2cf759b59efd65e8b0829211299f79bf748ea2b4d4"
+                ]
+              }
+            ],
+            "missing_fields": [
+              {
+                "field": "title",
+                "side": "query"
+              },
+              {
+                "field": "title",
+                "side": "candidate"
+              },
+              {
+                "field": "authors",
+                "side": "query"
+              },
+              {
+                "field": "authors",
+                "side": "candidate"
+              },
+              {
+                "field": "year",
+                "side": "query"
+              },
+              {
+                "field": "year",
+                "side": "candidate"
+              }
+            ],
+            "conflicts": [],
+            "reason_codes": [
+              "exact_identifier"
+            ],
+            "source_status": "arxiv_importable",
+            "auto_selection": {
+              "eligible": true,
+              "reason_codes": [
+                "exact_identifier"
+              ],
+              "policy_version": "unique_strong_v2"
+            }
+          }
+        },
+        "identity_target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10003"
+        },
+        "target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10003"
+        }
       },
       "attempt_id": "attempt:3",
       "target_node": "arxiv:2401.10003"
@@ -275,16 +1699,257 @@
       ],
       "state": "linked_existing",
       "reason": null,
+      "search": {
+        "search_schema_version": 2,
+        "resolver_version": "deterministic_v2",
+        "query": {
+          "query_schema_version": 2,
+          "parser_version": "bibliography_hints_v2",
+          "citation_keys": [
+            "a"
+          ],
+          "raw_citation_texts": [
+            "\\cite{a}"
+          ],
+          "raw_bibliography_text": "",
+          "title_hint": null,
+          "author_hints": [],
+          "year_hint": null,
+          "identifier_hints": [
+            {
+              "kind": "arxiv",
+              "raw": "2401.10001",
+              "canonical": "2401.10001",
+              "identity": "arxiv:2401.10001",
+              "version": null,
+              "valid": true,
+              "exact_eligible": true,
+              "warnings": []
+            }
+          ],
+          "field_evidence": [
+            {
+              "field": "arxiv",
+              "value": "2401.10001",
+              "evidence_id": "arxiv:2401.10003:cite:main.tex:a",
+              "excerpt": "2401.10001",
+              "rule": "stored_bibliography_identifier",
+              "confidence": "explicit"
+            }
+          ],
+          "parse_warnings": []
+        },
+        "provider_outcomes": [
+          {
+            "provider": "source",
+            "outcome": "ok"
+          }
+        ],
+        "provider_warnings": [],
+        "candidates": [
+          {
+            "candidate_schema_version": 2,
+            "candidate_id": "reference-candidate:61e2a0852b0687b8a7c33c7c9e6ac4b878b7ad5b112cef50ffb67f0141c5f112",
+            "target": {
+              "kind": "arxiv",
+              "arxiv_id": "2401.10001"
+            },
+            "score": 8.0,
+            "confidence": "strong",
+            "evidence": [
+              "exact_identifier"
+            ],
+            "providers": [
+              "source"
+            ],
+            "provider_records": [
+              {
+                "provider": "source",
+                "record": {
+                  "arxiv_id": "2401.10001",
+                  "arxiv_version": null
+                },
+                "record_key": "25e81caed1efa170426bab62636e263f90d513b877d922361a5174d8e4759c5a"
+              }
+            ],
+            "warnings": [],
+            "assessment": {
+              "identity_status": "exact_identifier",
+              "matched_fields": [
+                {
+                  "field": "identifiers",
+                  "relation": "exact",
+                  "query_value": [
+                    "arxiv:2401.10001"
+                  ],
+                  "candidate_value": [
+                    "arxiv:2401.10001"
+                  ],
+                  "evidence_refs": [
+                    "25e81caed1efa170426bab62636e263f90d513b877d922361a5174d8e4759c5a"
+                  ]
+                }
+              ],
+              "missing_fields": [
+                {
+                  "field": "title",
+                  "side": "query"
+                },
+                {
+                  "field": "title",
+                  "side": "candidate"
+                },
+                {
+                  "field": "authors",
+                  "side": "query"
+                },
+                {
+                  "field": "authors",
+                  "side": "candidate"
+                },
+                {
+                  "field": "year",
+                  "side": "query"
+                },
+                {
+                  "field": "year",
+                  "side": "candidate"
+                }
+              ],
+              "conflicts": [],
+              "reason_codes": [
+                "exact_identifier"
+              ],
+              "source_status": "arxiv_importable",
+              "auto_selection": {
+                "eligible": true,
+                "reason_codes": [
+                  "exact_identifier"
+                ],
+                "policy_version": "unique_strong_v2"
+              }
+            }
+          }
+        ],
+        "boundaries": [],
+        "summary": {
+          "candidate_count": 1,
+          "total_candidate_count": 1,
+          "returned_candidate_count": 1,
+          "truncated": false,
+          "blocking_conflicts": [],
+          "strong_candidate_count": 1,
+          "ambiguous_candidate_count": 0,
+          "boundary_count": 0,
+          "provider_warning_count": 0
+        }
+      },
       "target": {
+        "kind": "arxiv",
+        "arxiv_id": "2401.10001"
+      },
+      "identity_target": {
         "kind": "arxiv",
         "arxiv_id": "2401.10001"
       },
       "decision": {
         "kind": "policy_selected",
-        "policy_version": "unique_strong_v1",
+        "eligible": true,
+        "policy_version": "unique_strong_v2",
         "reason_codes": [
-          "exact_source_identifier"
-        ]
+          "exact_identifier"
+        ],
+        "candidate": {
+          "candidate_schema_version": 2,
+          "candidate_id": "reference-candidate:61e2a0852b0687b8a7c33c7c9e6ac4b878b7ad5b112cef50ffb67f0141c5f112",
+          "target": {
+            "kind": "arxiv",
+            "arxiv_id": "2401.10001"
+          },
+          "score": 8.0,
+          "confidence": "strong",
+          "evidence": [
+            "exact_identifier"
+          ],
+          "providers": [
+            "source"
+          ],
+          "provider_records": [
+            {
+              "provider": "source",
+              "record": {
+                "arxiv_id": "2401.10001",
+                "arxiv_version": null
+              },
+              "record_key": "25e81caed1efa170426bab62636e263f90d513b877d922361a5174d8e4759c5a"
+            }
+          ],
+          "warnings": [],
+          "assessment": {
+            "identity_status": "exact_identifier",
+            "matched_fields": [
+              {
+                "field": "identifiers",
+                "relation": "exact",
+                "query_value": [
+                  "arxiv:2401.10001"
+                ],
+                "candidate_value": [
+                  "arxiv:2401.10001"
+                ],
+                "evidence_refs": [
+                  "25e81caed1efa170426bab62636e263f90d513b877d922361a5174d8e4759c5a"
+                ]
+              }
+            ],
+            "missing_fields": [
+              {
+                "field": "title",
+                "side": "query"
+              },
+              {
+                "field": "title",
+                "side": "candidate"
+              },
+              {
+                "field": "authors",
+                "side": "query"
+              },
+              {
+                "field": "authors",
+                "side": "candidate"
+              },
+              {
+                "field": "year",
+                "side": "query"
+              },
+              {
+                "field": "year",
+                "side": "candidate"
+              }
+            ],
+            "conflicts": [],
+            "reason_codes": [
+              "exact_identifier"
+            ],
+            "source_status": "arxiv_importable",
+            "auto_selection": {
+              "eligible": true,
+              "reason_codes": [
+                "exact_identifier"
+              ],
+              "policy_version": "unique_strong_v2"
+            }
+          }
+        },
+        "identity_target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10001"
+        },
+        "target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.10001"
+        }
       },
       "attempt_id": "attempt:5",
       "target_node": "arxiv:2401.10001"
@@ -295,7 +1960,7 @@
       "event_id": 1,
       "kind": "created",
       "policy": {
-        "auto_select_policy": "unique_strong_v1",
+        "auto_select_policy": "unique_strong_v2",
         "max_depth": 3,
         "max_edges": 500,
         "max_new_papers": 10,
@@ -304,7 +1969,8 @@
           "arxiv",
           "crossref",
           "openalex"
-        ]
+        ],
+        "resolver_version": "deterministic_v2"
       },
       "timestamp": 0
     },
@@ -697,7 +2363,7 @@
     }
   ],
   "policy": {
-    "auto_select_policy": "unique_strong_v1",
+    "auto_select_policy": "unique_strong_v2",
     "max_depth": 3,
     "max_edges": 500,
     "max_new_papers": 10,
@@ -706,11 +2372,12 @@
       "arxiv",
       "crossref",
       "openalex"
-    ]
+    ],
+    "resolver_version": "deterministic_v2"
   },
   "policy_revisions": [
     {
-      "auto_select_policy": "unique_strong_v1",
+      "auto_select_policy": "unique_strong_v2",
       "max_depth": 3,
       "max_edges": 500,
       "max_new_papers": 10,
@@ -719,7 +2386,8 @@
         "arxiv",
         "crossref",
         "openalex"
-      ]
+      ],
+      "resolver_version": "deterministic_v2"
     }
   ],
   "reason": null,

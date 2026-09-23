@@ -30,6 +30,7 @@ def test_search_external_reference_cli_prints_json(
         providers=None,
         max_candidates=10,
         refresh=False,
+        resolver_version=None,
     ):
         seen.update(
             {
@@ -38,6 +39,7 @@ def test_search_external_reference_cli_prints_json(
                 "providers": providers,
                 "max_candidates": max_candidates,
                 "refresh": refresh,
+                "resolver_version": resolver_version,
             }
         )
         return {
@@ -63,6 +65,7 @@ def test_search_external_reference_cli_prints_json(
             "--max-candidates",
             "3",
             "--refresh",
+            "--resolver-version", "legacy_v1",
         ]
     )
 
@@ -74,6 +77,7 @@ def test_search_external_reference_cli_prints_json(
         "providers": ["crossref"],
         "max_candidates": 3,
         "refresh": True,
+        "resolver_version": "legacy_v1",
     }
 
 

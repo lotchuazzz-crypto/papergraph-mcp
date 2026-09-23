@@ -50,29 +50,29 @@ There are three separate approval boundaries:
 Use this immutable release source everywhere; never substitute a branch, a mutable default, or an unreleased revision:
 
 ```text
-git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4
+git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.5
 ```
 
 Never request credentials, upload papers, guess the identity of ambiguous references, recursively import newly discovered literature, bypass paywalls, or place a workspace database inside the Git repository. When a reference trail reaches an old paper with no electronic source, a metadata-only record, a paywalled target, or conflicting candidates, explain that PaperGraph reached a boundary and needs a user-supplied source or selection.
 
 ### What changed
 
-Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `1.1.4`; file presence alone is insufficient:
+Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `1.1.5`; file presence alone is insufficient:
 
 ```text
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.5 papergraph-mcp --version
 ```
 
 Also validate the pinned diagnostics command:
 
 ```text
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.5 papergraph-mcp doctor
 ```
 
 The expected output is:
 
 ```text
-papergraph-mcp 1.1.4
+papergraph-mcp 1.1.5
 ```
 
 Before restart, say “launch command validated”; never say “client has loaded the PaperGraph tools.” Tool loading can be confirmed only after the restarted client discovers the server.

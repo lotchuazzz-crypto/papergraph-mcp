@@ -70,7 +70,7 @@ def test_first_workspace_walkthrough_covers_mcp_and_cli_paths():
 
     for command in (
         "papergraph-mcp doctor",
-        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp doctor",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.5 papergraph-mcp doctor",
         "open_workspace",
         "workspace_add_arxiv_paper",
         "workspace_get_paper_map",
@@ -132,11 +132,11 @@ def test_reading_report_example_is_compact_and_evidence_scoped():
 def test_reference_search_example_is_compact_and_boundary_scoped():
     text = read("docs/examples/reference-search-example.json")
 
-    assert '"search_schema_version": 1' in text
+    assert '"search_schema_version": 2' in text
     assert '"candidates"' in text
     assert '"boundaries"' in text
-    assert '"metadata_only"' in text
-    assert "trail stops" in text
+    assert '"no_importable_source"' in text
+    assert '"assessment"' in text
     assert_no_placeholders(text)
 
 
@@ -175,8 +175,19 @@ def test_v1_release_checklist_is_concrete():
 
     for command in (
         "uv run pytest -q -p no:cacheprovider --basetemp .pytest-tmp",
-        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp --version",
-        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp doctor",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.5 papergraph-mcp --version",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.5 papergraph-mcp doctor",
     ):
         assert command in text
     assert_no_placeholders(text)
+
+
+def test_v115_contract_and_release_preparation_are_explicit():
+    contract = read('docs/reference/v1-core-contract.md')
+    for text in ('schema 9', 'Back up', 'unique_strong_v1', 'unique_strong_v2',
+                 'deterministic_v2', 'not probabilities', 'not independent verification'):
+        assert text in contract
+    notes = read('docs/reference/v1.1.5-release-notes.md')
+    assert 'preparation' in notes and 'schema 9' in notes
+    compatibility = read('docs/reference/client-compatibility.md')
+    assert 'documented_not_run' in compatibility

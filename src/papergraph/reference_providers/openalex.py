@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 
 import httpx
+from papergraph.reference_providers.base import failure_result, parsed_result
+from papergraph.arxiv import extract_arxiv_id_from_url, normalize_arxiv_id, InvalidArxivIdError
 
 
 class OpenAlexReferenceProvider:
@@ -27,15 +29,12 @@ class OpenAlexReferenceProvider:
                 timeout=self._timeout,
             )
             response.raise_for_status()
-            payload = response.json()
         except Exception as exc:
-            return {"provider": self.name, "records": [], "warnings": [str(exc)]}
-        records = [_record_from_work(item) for item in payload.get("results", [])]
-        return {
-            "provider": self.name,
-            "records": [record for record in records if record],
-            "warnings": [],
-        }
+            return failure_result(self.name, exc)
+        try:
+            return parsed_result(self.name, response.json()['results'], _record_from_work)
+        except (ValueError, TypeError, KeyError, AttributeError) as exc:
+            return failure_result(self.name, exc, parsing=True)
 
 
 def _record_from_work(item: dict) -> dict:
@@ -56,6 +55,7 @@ def _record_from_work(item: dict) -> dict:
         "year": str(item["publication_year"]) if item.get("publication_year") else None,
         "venue": _clean(source.get("display_name")),
         "url": _clean(location.get("landing_page_url") or item.get("id")),
+        "is_retracted": item.get("is_retracted", False),
     }
     return {key: value for key, value in record.items() if value not in (None, "", [])}
 
@@ -80,8 +80,10 @@ def _arxiv_id(value) -> str | None:
     text = _clean(value)
     if not text:
         return None
-    match = re.search(r"(\d{4}\.\d{4,5})(v\d+)?", text)
-    return match.group(1) if match else text.removeprefix("arxiv:")
+    try:
+        return extract_arxiv_id_from_url(text) if text.startswith(('http://', 'https://')) else normalize_arxiv_id(text)
+    except (ValueError, InvalidArxivIdError):
+        return text  # Preserve invalid provider evidence for the v2 assessment.
 
 
 def _clean(value) -> str | None:

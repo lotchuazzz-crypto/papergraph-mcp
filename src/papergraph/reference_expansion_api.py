@@ -75,6 +75,7 @@ def add_cli(subparsers):
         if command == "create-reference-expansion":
             parser.add_argument("--root-paper-id", action="append", required=True)
             parser.add_argument("--provider", action="append")
+            parser.add_argument("--auto-select-policy", choices=("unique_strong_v1", "unique_strong_v2"), default="unique_strong_v2")
         if command in {"create-reference-expansion", "update-reference-expansion-policy"}:
             for key in LIMITS:
                 parser.add_argument("--" + key.replace("_", "-"), type=int)
@@ -102,6 +103,7 @@ def run_cli(args, workspace_class):
         if args.command in {"create-reference-expansion", "update-reference-expansion-policy"}:
             policy = {key: getattr(args, key) for key in LIMITS if getattr(args, key) is not None}
             if args.command == "create-reference-expansion":
+                policy["auto_select_policy"] = args.auto_select_policy
                 if args.provider:
                     policy["providers"] = args.provider
                 kwargs.update(root_paper_ids=args.root_paper_id, policy=policy)

@@ -1,22 +1,22 @@
-# v1.1.4 Client Compatibility
+# v1.1.5 Client Compatibility
 
 Status vocabulary: `verified`, `documented_not_run`, `failed`. A successful
 Python/protocol test is not evidence that a particular client UI works.
 
 | Surface | Status | Version / date | Evidence |
 | --- | --- | --- | --- |
-| Offline CLI + SQLite | verified | PaperGraph 1.1.4 / 2026-09-20 | `tests/test_reference_expansion_api.py`; retained JSON/Markdown examples |
-| MCP stdio protocol | verified | SDK pinned in `uv.lock` / 2026-09-20 | Real server subprocess, initialize, list_tools, calls, saved state and errors in `tests/test_reference_expansion_api.py` |
-| Codex client | documented_not_run | Client version not measured / 2026-09-20 | Recipe below; no actual-client transcript retained |
-| Claude client | documented_not_run | Client version not measured / 2026-09-20 | Recipe below; no actual-client transcript retained |
-| AutoClaw client | documented_not_run | Client version not measured / 2026-09-20 | Generic stdio recipe only; configuration location unverified |
+| Offline CLI + SQLite | verified | PaperGraph 1.1.5 / 2026-09-23 | `tests/test_reference_quality_stdio.py` and `tests/test_reference_expansion_api.py`; retained JSON/Markdown examples |
+| MCP stdio protocol | verified | SDK pinned in `uv.lock` / 2026-09-23 | Real server subprocess, initialize, list_tools, calls, saved state and errors in `tests/test_reference_quality_stdio.py` and `tests/test_reference_expansion_api.py` |
+| Codex client | documented_not_run | Client version not measured / 2026-09-23 | Recipe below; no actual-client transcript retained |
+| Claude client | documented_not_run | Client version not measured / 2026-09-23 | Recipe below; no actual-client transcript retained |
+| AutoClaw client | documented_not_run | Client version not measured / 2026-09-23 | Generic stdio recipe only; configuration location unverified |
 
 ## Pinned launch contract
 
-After the v1.1.4 tag is published, use command `uvx` with these separate arguments:
+After the v1.1.5 tag is published, use command `uvx` with these separate arguments:
 
 ```json
-["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4", "papergraph-mcp"]
+["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.5", "papergraph-mcp"]
 ```
 
 Before publication, use command `uv` with `run --project ABSOLUTE_CHECKOUT_PATH
@@ -49,7 +49,7 @@ existing root ID:
 
 > Open workspace WORKSPACE_PATH and verify ROOT_PAPER_ID exists. Create a
 > reference expansion with max_depth=2, max_new_papers=10, max_searches=100 and
-> max_edges=500. I approve automatic selection only under unique_strong_v1.
+> max_edges=500. I approve automatic selection only under unique_strong_v2.
 > Advance it in bounded calls; keep the same run ID. If ready, continue; if a
 > budget is exhausted, stop and ask before increasing it. Report ambiguous
 > candidates and metadata boundaries without inventing identities. Let other

@@ -194,9 +194,50 @@ PaperGraph v1.1.4 can expand extracted references within an explicitly approved 
 
 ## Bounded Reference Expansion (v1.1.4)
 
-Workspace schema 8 migrates existing schema-7 workspaces. Back up important
-workspaces before upgrading; older PaperGraph versions cannot open schema 8.
+Workspace schema 9 adds immutable resolver assessments to schema-8 workspaces.
+Back up important workspaces before upgrading; older PaperGraph versions cannot
+open schema 9. Legacy search rows retain their original IDs, scores and content.
 Expansion payloads carry `expansion_schema_version: 1`.
+
+## Reference Resolver Quality (v1.1.5)
+
+Search defaults to `deterministic_v2`; `resolver_version="legacy_v1"` preserves
+the previous matching path. CLI uses `--resolver-version`; MCP takes the same
+optional `resolver_version`. Search list envelopes are version 2 and may contain
+unchanged v1 snapshots alongside v2 snapshots. Refresh appends a snapshot, never
+reranks or removes history. Cache reuse requires identical source/blocker,
+provider set, candidate limit and resolver version.
+
+New expansion policies default to `unique_strong_v2` (resolver `deterministic_v2`).
+Existing `unique_strong_v1` tasks stay on `legacy_v1`, including after reopen or
+migration. Missing resolver metadata on an old task means v1, not today's default.
+Use `--auto-select-policy unique_strong_v1` at creation for explicit compatibility;
+policy versions cannot be changed on an existing task. Numeric budget updates
+still preserve cumulative usage. Search and reports alone never import papers.
+
+V2 preserves raw reference text and parsing evidence, normalizes DOI/arXiv
+identifiers conservatively and groups only evidenced identities. Exact source
+IDs or full title/author/year corroboration can establish a strong match, but
+metadata agreement is not independent verification. Scores are not probabilities.
+Conflicting identifiers, versions, metadata and reported retraction/withdrawal
+block selection; pre-truncation ambiguity remains visible. No absence-of-retraction
+guarantee is made. DOI-only records are metadata boundaries, not importable sources.
+Only a unique conflict-free strong identity with an evidenced arXiv source is
+eligible under an approved v2 expansion policy. Local PDFs still need explicit
+user authorization. A conflicted synthesized candidate cannot be applied even
+with overwrite; choose a concrete explicit target after reviewing its evidence.
+
+Provider outcomes distinguish `ok`, `empty`, `partial`, `timeout`, `rate_limited`,
+`unavailable`, and `invalid_response`. Failure is not evidence of nonexistence or
+a paywall. Metadata corroboration cannot authorize automation when a requested
+provider fails; an exact source ID can survive an unrelated provider failure.
+Saved assessments explain matched/missing fields, conflicts, source availability
+and automatic-selection reasons. Boundaries offer review, explicit identifier,
+local PDF, refresh or skip actions. Reading them performs no provider calls.
+
+See the [offline acceptance corpus](../../tests/fixtures/reference_quality/README.md)
+and [v2 examples](../examples/reference-search-example.json). These are synthetic
+regressions, not a real-world matching-accuracy estimate.
 
 The nine Workspace methods are `create_reference_expansion`,
 `advance_reference_expansion`, `get_reference_expansion`,

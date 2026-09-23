@@ -9,11 +9,22 @@ from papergraph.identity import paper_id_from_arxiv
 LIMITS = {"max_depth": (2, 10), "max_new_papers": (10, 100),
           "max_searches": (100, 1000), "max_edges": (500, 10000)}
 PROVIDERS = {"crossref", "openalex", "arxiv"}
+POLICY_RESOLVERS = {'unique_strong_v1':'legacy_v1', 'unique_strong_v2':'deterministic_v2'}
+
+
+def resolver_for_policy(policy: dict) -> str:
+    name = policy.get('auto_select_policy', 'unique_strong_v1')
+    if name not in POLICY_RESOLVERS:
+        raise ValueError('Unsupported automatic selection policy')
+    expected = POLICY_RESOLVERS[name]
+    if policy.get('resolver_version', expected) != expected:
+        raise ValueError('Policy and resolver version disagree')
+    return expected
 
 
 def validate_policy(policy: dict | None) -> dict:
     policy = {} if policy is None else policy
-    if not isinstance(policy, dict) or set(policy) - {*LIMITS, "providers", "auto_select_policy"}:
+    if not isinstance(policy, dict) or set(policy) - {*LIMITS, "providers", "auto_select_policy", "resolver_version"}:
         raise ValueError("Unknown expansion policy fields")
     result = {key: policy.get(key, default) for key, (default, _) in LIMITS.items()}
     for key, (_, ceiling) in LIMITS.items():
@@ -23,9 +34,8 @@ def validate_policy(policy: dict | None) -> dict:
     if not isinstance(providers, list) or not providers or any(p not in PROVIDERS for p in providers):
         raise ValueError("providers must be a nonempty list of supported providers")
     result["providers"] = sorted(set(providers))
-    result["auto_select_policy"] = policy.get("auto_select_policy", "unique_strong_v1")
-    if result["auto_select_policy"] != "unique_strong_v1":
-        raise ValueError("Unsupported automatic selection policy")
+    result["auto_select_policy"] = policy.get("auto_select_policy", "unique_strong_v2")
+    result['resolver_version'] = resolver_for_policy({**policy, 'auto_select_policy':result['auto_select_policy']})
     return result
 
 
@@ -57,8 +67,13 @@ def importable_target(target: dict, *, manual: bool = False) -> dict | None:
     return None
 
 
-def select_candidate(search: dict) -> dict:
+def select_candidate(search: dict, *, policy_version: str = 'unique_strong_v1') -> dict:
     """Never interpret a search score alone as permission to import."""
+    if policy_version == 'unique_strong_v2':
+        from papergraph.reference_assessment import select_v2
+        return select_v2(search)
+    if policy_version != 'unique_strong_v1':
+        raise ValueError('Unsupported automatic selection policy')
     result = {"eligible": False, "reason_codes": [], "policy_version": "unique_strong_v1"}
     candidates = copy.deepcopy(search.get("candidates", []))
     groups = []

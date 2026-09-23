@@ -1,37 +1,458 @@
 {
-  "search_schema_version": 1,
-  "paper_id": "local:example-a",
-  "blocked_id": "external-import:blocked:example",
-  "query": {
-    "title": "Published target",
-    "authors": ["Ada Author"],
-    "year": 1978,
-    "citation_keys": ["12"],
-    "raw_text": "[12] A. Author. Published target."
+  "contradictory_bridge": {
+    "search_schema_version": 2,
+    "resolver_version": "deterministic_v2",
+    "query": {
+      "query_schema_version": 2,
+      "parser_version": "bibliography_hints_v2",
+      "citation_keys": [],
+      "raw_citation_texts": [],
+      "raw_bibliography_text": "",
+      "title_hint": null,
+      "author_hints": [],
+      "year_hint": null,
+      "identifier_hints": [],
+      "field_evidence": [],
+      "parse_warnings": []
+    },
+    "provider_outcomes": [
+      {
+        "provider": "crossref",
+        "outcome": "ok"
+      }
+    ],
+    "provider_warnings": [],
+    "candidates": [
+      {
+        "candidate_schema_version": 2,
+        "candidate_id": "reference-candidate:c0b36f0a62e91066ad8824f40df85455e0752cac7b7b0a1094832775f149cf44",
+        "target": {
+          "kind": "metadata"
+        },
+        "score": 0.0,
+        "confidence": "ambiguous",
+        "evidence": [
+          "identifier_conflict"
+        ],
+        "providers": [
+          "crossref"
+        ],
+        "provider_records": [
+          {
+            "provider": "crossref",
+            "record": {
+              "doi": "10.1000/a",
+              "arxiv_id": "2401.12345"
+            },
+            "record_key": "955a2ece9836e4ebafd41c1f34688a53a08bd253f06c4fb82fc230a12dcbffd8"
+          },
+          {
+            "provider": "crossref",
+            "record": {
+              "doi": "10.1000/b",
+              "arxiv_id": "2401.12345"
+            },
+            "record_key": "ae49de1a0f852bfac6d2c881fa198de1e61c5337ba5c069df5fa91d73e9b69f3"
+          }
+        ],
+        "warnings": [
+          "identifier_conflict"
+        ],
+        "assessment": {
+          "identity_status": "conflict",
+          "matched_fields": [],
+          "missing_fields": [
+            {
+              "field": "title",
+              "side": "query"
+            },
+            {
+              "field": "title",
+              "side": "candidate"
+            },
+            {
+              "field": "authors",
+              "side": "query"
+            },
+            {
+              "field": "authors",
+              "side": "candidate"
+            },
+            {
+              "field": "year",
+              "side": "query"
+            },
+            {
+              "field": "year",
+              "side": "candidate"
+            }
+          ],
+          "conflicts": [
+            {
+              "code": "identifier_conflict",
+              "field": "doi",
+              "values": [
+                "doi:10.1000/a",
+                "doi:10.1000/b"
+              ],
+              "evidence_refs": [
+                "955a2ece9836e4ebafd41c1f34688a53a08bd253f06c4fb82fc230a12dcbffd8",
+                "ae49de1a0f852bfac6d2c881fa198de1e61c5337ba5c069df5fa91d73e9b69f3"
+              ]
+            }
+          ],
+          "reason_codes": [
+            "identifier_conflict"
+          ],
+          "source_status": "review_required",
+          "auto_selection": {
+            "eligible": false,
+            "reason_codes": [
+              "ambiguous_candidates"
+            ],
+            "policy_version": "unique_strong_v2"
+          }
+        }
+      }
+    ],
+    "boundaries": [
+      {
+        "kind": "ambiguous_candidates",
+        "message": "Competing identities require review, including candidates outside the display limit.",
+        "evidence_refs": [
+          "reference-candidate:c0b36f0a62e91066ad8824f40df85455e0752cac7b7b0a1094832775f149cf44"
+        ],
+        "next_actions": [
+          "review_candidates"
+        ]
+      },
+      {
+        "kind": "identifier_conflict",
+        "message": "Identifier or bibliographic evidence conflicts; select an explicit target.",
+        "evidence_refs": [
+          "955a2ece9836e4ebafd41c1f34688a53a08bd253f06c4fb82fc230a12dcbffd8",
+          "ae49de1a0f852bfac6d2c881fa198de1e61c5337ba5c069df5fa91d73e9b69f3"
+        ],
+        "next_actions": [
+          "review_candidates"
+        ],
+        "candidate_id": "reference-candidate:c0b36f0a62e91066ad8824f40df85455e0752cac7b7b0a1094832775f149cf44"
+      }
+    ],
+    "summary": {
+      "candidate_count": 1,
+      "total_candidate_count": 1,
+      "returned_candidate_count": 1,
+      "truncated": false,
+      "blocking_conflicts": [
+        {
+          "kind": "identifier_conflict",
+          "candidate_ids": [
+            "reference-candidate:c0b36f0a62e91066ad8824f40df85455e0752cac7b7b0a1094832775f149cf44"
+          ]
+        }
+      ],
+      "strong_candidate_count": 0,
+      "ambiguous_candidate_count": 1,
+      "boundary_count": 2,
+      "provider_warning_count": 0
+    }
   },
-  "candidates": [
-    {
-      "candidate_id": "candidate:crossref:example",
-      "confidence": "plausible",
-      "score": 12,
-      "ambiguous": false,
-      "title": "Published target",
-      "authors": ["Ada Author"],
-      "year": 1978,
-      "doi": "10.1000/example",
-      "arxiv_id": null,
-      "url": "https://doi.org/10.1000/example",
-      "provider": "crossref",
-      "evidence": [
-        {"kind": "title_similarity", "message": "title matches the blocked reference"},
-        {"kind": "year_match", "message": "year matches extracted bibliography evidence"}
+  "exact_arxiv": {
+    "search_schema_version": 2,
+    "resolver_version": "deterministic_v2",
+    "query": {
+      "query_schema_version": 2,
+      "parser_version": "bibliography_hints_v2",
+      "citation_keys": [],
+      "raw_citation_texts": [],
+      "raw_bibliography_text": "arXiv:2401.12345",
+      "title_hint": null,
+      "author_hints": [],
+      "year_hint": null,
+      "identifier_hints": [
+        {
+          "kind": "arxiv",
+          "raw": "arxiv:2401.12345",
+          "canonical": "2401.12345",
+          "identity": "arxiv:2401.12345",
+          "version": null,
+          "valid": true,
+          "exact_eligible": true,
+          "warnings": []
+        }
+      ],
+      "field_evidence": [
+        {
+          "field": "arxiv",
+          "value": "arxiv:2401.12345",
+          "evidence_id": "bib:exact_arxiv",
+          "excerpt": "arXiv:2401.12345",
+          "rule": "explicit_identifier",
+          "confidence": "explicit"
+        }
+      ],
+      "parse_warnings": [
+        "uncertain_title"
       ]
+    },
+    "provider_outcomes": [
+      {
+        "provider": "crossref",
+        "outcome": "ok"
+      }
+    ],
+    "provider_warnings": [],
+    "candidates": [
+      {
+        "candidate_schema_version": 2,
+        "candidate_id": "reference-candidate:7e8497a01b6633b729ef7157175b4708c13097566b22988887295126e5f9fcef",
+        "target": {
+          "kind": "arxiv",
+          "arxiv_id": "2401.12345"
+        },
+        "score": 8.0,
+        "confidence": "strong",
+        "evidence": [
+          "exact_identifier"
+        ],
+        "providers": [
+          "crossref"
+        ],
+        "provider_records": [
+          {
+            "provider": "crossref",
+            "record": {
+              "arxiv_id": "2401.12345"
+            },
+            "record_key": "18bb06620390c885f135cc48405c9a9d141330ee582c96683c9a343feb7aee2d"
+          }
+        ],
+        "warnings": [],
+        "assessment": {
+          "identity_status": "exact_identifier",
+          "matched_fields": [
+            {
+              "field": "identifiers",
+              "relation": "exact",
+              "query_value": [
+                "arxiv:2401.12345"
+              ],
+              "candidate_value": [
+                "arxiv:2401.12345"
+              ],
+              "evidence_refs": [
+                "18bb06620390c885f135cc48405c9a9d141330ee582c96683c9a343feb7aee2d"
+              ]
+            }
+          ],
+          "missing_fields": [
+            {
+              "field": "title",
+              "side": "query"
+            },
+            {
+              "field": "title",
+              "side": "candidate"
+            },
+            {
+              "field": "authors",
+              "side": "query"
+            },
+            {
+              "field": "authors",
+              "side": "candidate"
+            },
+            {
+              "field": "year",
+              "side": "query"
+            },
+            {
+              "field": "year",
+              "side": "candidate"
+            }
+          ],
+          "conflicts": [],
+          "reason_codes": [
+            "exact_identifier"
+          ],
+          "source_status": "arxiv_importable",
+          "auto_selection": {
+            "eligible": true,
+            "reason_codes": [
+              "exact_identifier"
+            ],
+            "policy_version": "unique_strong_v2"
+          }
+        }
+      }
+    ],
+    "boundaries": [],
+    "summary": {
+      "candidate_count": 1,
+      "total_candidate_count": 1,
+      "returned_candidate_count": 1,
+      "truncated": false,
+      "blocking_conflicts": [],
+      "strong_candidate_count": 1,
+      "ambiguous_candidate_count": 0,
+      "boundary_count": 0,
+      "provider_warning_count": 0
     }
-  ],
-  "boundaries": [
-    {
-      "kind": "metadata_only",
-      "message": "PaperGraph found metadata for one older cited source but no DOI, arXiv ID, stable URL, or local PDF. The trail stops until the reader supplies an importable source."
+  },
+  "doi_only": {
+    "search_schema_version": 2,
+    "resolver_version": "deterministic_v2",
+    "query": {
+      "query_schema_version": 2,
+      "parser_version": "bibliography_hints_v2",
+      "citation_keys": [],
+      "raw_citation_texts": [],
+      "raw_bibliography_text": "doi:10.1000/a",
+      "title_hint": null,
+      "author_hints": [],
+      "year_hint": null,
+      "identifier_hints": [
+        {
+          "kind": "doi",
+          "raw": "doi:10.1000/a",
+          "canonical": "10.1000/a",
+          "identity": "doi:10.1000/a",
+          "version": null,
+          "valid": true,
+          "exact_eligible": true,
+          "warnings": []
+        }
+      ],
+      "field_evidence": [
+        {
+          "field": "doi",
+          "value": "doi:10.1000/a",
+          "evidence_id": "bib:doi_only",
+          "excerpt": "doi:10.1000/a",
+          "rule": "explicit_identifier",
+          "confidence": "explicit"
+        }
+      ],
+      "parse_warnings": [
+        "uncertain_title"
+      ]
+    },
+    "provider_outcomes": [
+      {
+        "provider": "crossref",
+        "outcome": "ok"
+      }
+    ],
+    "provider_warnings": [],
+    "candidates": [
+      {
+        "candidate_schema_version": 2,
+        "candidate_id": "reference-candidate:029d7f9564221351387fffef1cf0a835da1786a7ad5101bb54f4fca3ff6c13ea",
+        "target": {
+          "kind": "doi",
+          "doi": "10.1000/a"
+        },
+        "score": 8.0,
+        "confidence": "strong",
+        "evidence": [
+          "exact_identifier"
+        ],
+        "providers": [
+          "crossref"
+        ],
+        "provider_records": [
+          {
+            "provider": "crossref",
+            "record": {
+              "doi": "10.1000/a"
+            },
+            "record_key": "d1a4a93422e4eba19af7d075e53ddf0180e211d177a615caf497956f374b5aa2"
+          }
+        ],
+        "warnings": [],
+        "assessment": {
+          "identity_status": "exact_identifier",
+          "matched_fields": [
+            {
+              "field": "identifiers",
+              "relation": "exact",
+              "query_value": [
+                "doi:10.1000/a"
+              ],
+              "candidate_value": [
+                "doi:10.1000/a"
+              ],
+              "evidence_refs": [
+                "d1a4a93422e4eba19af7d075e53ddf0180e211d177a615caf497956f374b5aa2"
+              ]
+            }
+          ],
+          "missing_fields": [
+            {
+              "field": "title",
+              "side": "query"
+            },
+            {
+              "field": "title",
+              "side": "candidate"
+            },
+            {
+              "field": "authors",
+              "side": "query"
+            },
+            {
+              "field": "authors",
+              "side": "candidate"
+            },
+            {
+              "field": "year",
+              "side": "query"
+            },
+            {
+              "field": "year",
+              "side": "candidate"
+            }
+          ],
+          "conflicts": [],
+          "reason_codes": [
+            "exact_identifier"
+          ],
+          "source_status": "metadata_only",
+          "auto_selection": {
+            "eligible": false,
+            "reason_codes": [
+              "no_importable_source"
+            ],
+            "policy_version": "unique_strong_v2"
+          }
+        }
+      }
+    ],
+    "boundaries": [
+      {
+        "kind": "no_importable_source",
+        "message": "No supported importable source was found. This is not evidence of a paywall.",
+        "evidence_refs": [
+          "d1a4a93422e4eba19af7d075e53ddf0180e211d177a615caf497956f374b5aa2"
+        ],
+        "next_actions": [
+          "provide_local_pdf",
+          "skip_reference"
+        ],
+        "candidate_id": "reference-candidate:029d7f9564221351387fffef1cf0a835da1786a7ad5101bb54f4fca3ff6c13ea"
+      }
+    ],
+    "summary": {
+      "candidate_count": 1,
+      "total_candidate_count": 1,
+      "returned_candidate_count": 1,
+      "truncated": false,
+      "blocking_conflicts": [],
+      "strong_candidate_count": 1,
+      "ambiguous_candidate_count": 0,
+      "boundary_count": 1,
+      "provider_warning_count": 0
     }
-  ]
+  }
 }

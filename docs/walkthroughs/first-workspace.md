@@ -21,8 +21,8 @@ papergraph-mcp doctor
 If you do not use an MCP-capable client yet, run PaperGraph from the CLI:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.5 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.5 papergraph-mcp doctor
 ```
 
 ## Workspace Hygiene
@@ -246,6 +246,14 @@ Treat selected-paper citation evidence as evidence to inspect, not proof of logi
 
 ## Next Steps
 
+Back up existing workspaces before upgrading to schema 9; older versions cannot
+open the upgraded file. Search defaults to `deterministic_v2` and stores parsing
+evidence, matching reasons, source availability and next actions. Use
+`--resolver-version legacy_v1` only when explicitly requesting old matching.
+New expansion tasks use `unique_strong_v2`; existing v1 tasks remain v1. Reports
+read saved assessments without network access. Provider failures are not evidence
+of nonexistence, and missing sources do not establish a paywall.
+
 Use reading queues and sessions when you want to track a longer reading process:
 
 ```text
@@ -253,4 +261,4 @@ workspace_create_reading_queue(result_id=<target result id>)
 workspace_create_reading_session(paper_id=<paper id>)
 ```
 
-PaperGraph does not verify proofs, infer hidden prerequisites, perform semantic theorem matching, bypass paywalls, or perform unlimited crawling. The standalone scholarly resolver only imports or records a target when a candidate is explicitly applied. v1.1.4 additionally offers [bounded reference expansion](bounded-reference-expansion.md): an explicitly approved finite policy permits unique strong imports, with ambiguous branches waiting for review. The v1.1.4 pinned install commands in this guide require the published tag; before release use `uv run papergraph-mcp` in the development checkout.
+PaperGraph does not verify proofs, infer hidden prerequisites, perform semantic theorem matching, bypass paywalls, or perform unlimited crawling. The standalone scholarly resolver only imports or records a target when a candidate is explicitly applied. v1.1.5 additionally offers [bounded reference expansion](bounded-reference-expansion.md): an explicitly approved finite policy permits unique strong imports, with ambiguous branches waiting for review. The v1.1.5 pinned install commands in this guide require the published tag; before release use `uv run papergraph-mcp` in the development checkout.

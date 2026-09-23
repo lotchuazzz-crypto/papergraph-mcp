@@ -1,9 +1,26 @@
 # Bounded Reference Expansion
 
-v1.1.4 follows extracted references, not mathematical prerequisites. It does not
+v1.1.5 follows extracted references, not mathematical prerequisites. It does not
 verify proofs, bypass paywalls, scrape arbitrary publishers, or find every
 reference in a paper. The existing resolver remains manual; this separate
 workflow executes automatic imports only under a saved, explicitly approved policy.
+
+New runs save `unique_strong_v2` with resolver `deterministic_v2`. An existing
+`unique_strong_v1` run keeps `legacy_v1` after migration/resume. To explicitly
+create a legacy run, add `--auto-select-policy unique_strong_v1`; versions cannot
+be switched on an existing run. Back up before schema 9 migration: older
+PaperGraph releases cannot reopen the upgraded database.
+
+V2 requires a unique conflict-free identity and evidenced arXiv source. It
+explains missing/matched fields, provider failures and next actions. A reported
+retraction, version conflict or competing identity outside the displayed limit
+still blocks automation. DOI-only results require another source; a timeout or
+empty result does not prove nonexistence or a paywall. Scores are not probabilities.
+
+Run the separate matching acceptance suite with
+`uv run python scripts/reproduce_reference_quality.py`. Its synthetic examples
+include exact-ID selection and contradictory DOI/arXiv bridges. The saved
+[search examples](../examples/reference-search-example.json) show both outcomes.
 
 ## Offline acceptance example
 
@@ -27,11 +44,11 @@ interruptions, exact budget boundaries, migration and actual MCP stdio calls.
 
 ## Real workspace: approve, advance, review
 
-Use `uv run papergraph-mcp` in this checkout. After v1.1.4 is published, the same
+Use `uv run papergraph-mcp` in this checkout. After v1.1.5 is published, the same
 commands can be launched with
-`uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.4 papergraph-mcp`.
+`uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.5 papergraph-mcp`.
 Keep workspaces and exports outside your source checkout and back up existing
-SQLite files before upgrading to schema 8. Import your own root paper first.
+SQLite files before upgrading to schema 9. Import your own root paper first.
 
 ```powershell
 uv run papergraph-mcp create-reference-expansion --workspace D:/reading/papers.sqlite3 --root-paper-id local:root --max-depth 2 --max-new-papers 10

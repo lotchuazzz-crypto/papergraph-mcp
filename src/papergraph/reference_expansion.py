@@ -10,7 +10,7 @@ from functools import wraps
 from pathlib import Path
 
 from papergraph.identity import normalize_paper_id, paper_id_from_arxiv
-from papergraph.reference_expansion_policy import LIMITS, identifiers, importable_target, select_candidate, validate_policy
+from papergraph.reference_expansion_policy import LIMITS, identifiers, importable_target, select_candidate, validate_policy, resolver_for_policy
 from papergraph.reference_expansion_store import Store, dumps
 
 
@@ -208,6 +208,8 @@ class ReferenceExpansionMixin:
                     candidate = next((c for c in edge.get("search", {}).get("candidates", []) if c["candidate_id"] == decision["candidate_id"]), None)
                     if candidate is None:
                         raise ValueError("Candidate does not belong to the edge search snapshot")
+                    if candidate.get('assessment', {}).get('conflicts'):
+                        raise ValueError('Conflicted candidate: supply an explicit target after reviewing records')
                     target = candidate["target"]
                 if "existing_paper_id" in decision:
                     pid = normalize_paper_id(decision["existing_paper_id"])
@@ -299,6 +301,28 @@ class ReferenceExpansionMixin:
                 direct = ref["direct"]
                 if direct.get("warnings"):
                     edge.update(state="needs_review", reason="version_conflict")
+                elif resolver_for_policy(run['policy']) == 'deterministic_v2':
+                    from papergraph.reference_query import build_query_v2
+                    from papergraph.reference_assessment import rank_candidates_v2
+                    from papergraph.reference_identity import normalize_identifier
+                    query = build_query_v2({'evidence':ref['evidence']})
+                    # The planner's source is extracted from stored BibTeX/citation
+                    # evidence, not a provider suggestion. Keep that provenance.
+                    source_id = direct['source']['arxiv_id'] + (direct['source'].get('arxiv_version') or '')
+                    query['identifier_hints'].append(normalize_identifier(source_id, 'arxiv'))
+                    query['field_evidence'].append({'field':'arxiv', 'value':source_id,
+                        'evidence_id':ref['evidence'][0].get('id') if ref['evidence'] else None,
+                        'excerpt':source_id,'rule':'stored_bibliography_identifier','confidence':'explicit'})
+                    search = rank_candidates_v2(query, [{'provider':'source','outcome':'ok', 'records':[
+                        {'arxiv_id':direct['source']['arxiv_id'],
+                         'arxiv_version':direct['source'].get('arxiv_version')}]}])
+                    choice = select_candidate(search, policy_version='unique_strong_v2')
+                    edge['search'] = search
+                    if choice['eligible']:
+                        edge.update(state='selected',target=choice['target'],identity_target=choice['identity_target'],
+                                    decision={'kind':'policy_selected', **choice})
+                    else:
+                        edge.update(state='needs_review',reason=choice['reason_codes'][0])
                 else:
                     edge.update(state="selected", target={"kind": "arxiv", "arxiv_id": direct["source"]["arxiv_id"] + (direct["source"].get("arxiv_version") or "")},
                                 decision={"kind": "policy_selected", "policy_version": "unique_strong_v1", "reason_codes": ["exact_source_identifier"]})
@@ -321,10 +345,10 @@ class ReferenceExpansionMixin:
                 edge.update(state="retryable_failure", reason="interrupted_search")
                 store.event(run, "interrupted_search", edge_id=edge["edge_id"])
                 return
-            cached = None if edge.get("refresh") else self._latest_reference_search(edge["source"], edge["blocked_id"])
-            if cached and (sorted(cached.get("providers") or ["arxiv", "crossref", "openalex"]) != run["policy"]["providers"]
-                           or cached.get("max_candidates", 10) < 100):
-                cached = None
+            resolver = resolver_for_policy(run['policy'])
+            cached = None if edge.get('refresh') else self._compatible_reference_search(
+                edge['source'], edge['blocked_id'], providers=run['policy']['providers'],
+                max_candidates=100, resolver_version=resolver)
             if cached is None and run["usage"]["searches"] >= run["policy"]["max_searches"]:
                 run.update(state="paused", reason="search_limit")
                 return
@@ -334,9 +358,9 @@ class ReferenceExpansionMixin:
             attempt = self._expansion_attempt(run, edge, "search")
             store.save(run)
             try:
-                search = cached or self.search_external_reference(edge["source"], edge["blocked_id"], providers=run["policy"]["providers"], max_candidates=100, refresh=True)
+                search = cached or self.search_external_reference(edge["source"], edge["blocked_id"], providers=run["policy"]["providers"], max_candidates=100, refresh=True, resolver_version=resolver)
                 edge["search"] = copy.deepcopy(search)
-                choice = select_candidate(search)
+                choice = select_candidate(search, policy_version=run['policy'].get('auto_select_policy','unique_strong_v1'))
                 if choice["eligible"]:
                     edge.update(state="selected", target=choice["target"], identity_target=choice["identity_target"],
                                 decision={"kind": "policy_selected", **choice})

@@ -1,0 +1,238 @@
+{
+  "search": {
+    "search_schema_version": 1,
+    "search_run_id": "reference-search:arxiv-2401.10001-external-import-blocked-citation_record-arxiv-2401.10001-cite-main.tex-ambiguous-1-author_hints-citation_keys-ambiguous-raw_bibliography_text-raw_citation_texts-cite-ambiguous-title_hint-null-year_hint-null",
+    "source": {
+      "paper_id": "arxiv:2401.10001",
+      "blocked_id": "external-import:blocked:citation_record-arxiv-2401.10001-cite-main.tex-ambiguous"
+    },
+    "query": {
+      "author_hints": [],
+      "citation_keys": [
+        "ambiguous"
+      ],
+      "raw_bibliography_text": "",
+      "raw_citation_texts": [
+        "\\cite{ambiguous}"
+      ],
+      "title_hint": null,
+      "year_hint": null
+    },
+    "providers": null,
+    "max_candidates": 10,
+    "provider_warnings": [],
+    "boundaries": [],
+    "candidates": [
+      {
+        "candidate_schema_version": 1,
+        "candidate_id": "reference-candidate:arxiv-2401.10001-external-import-blocked-citation_record-arxiv-2401.10001-cite-main.tex-ambiguous-doi-10.1000-maps-kind-doi-title-maps:arxiv-2401.10001-external-import-blocked-citation_record-arxiv-2401.10001-cite-main.tex-ambiguous-1-author_hints-citation_keys-ambiguous-raw_bibliography_text-raw_citation_texts-cite-ambiguous-title_hint-null-year_hint-null",
+        "search_run_id": "reference-search:arxiv-2401.10001-external-import-blocked-citation_record-arxiv-2401.10001-cite-main.tex-ambiguous-1-author_hints-citation_keys-ambiguous-raw_bibliography_text-raw_citation_texts-cite-ambiguous-title_hint-null-year_hint-null",
+        "source_paper_id": "arxiv:2401.10001",
+        "blocked_id": "external-import:blocked:citation_record-arxiv-2401.10001-cite-main.tex-ambiguous",
+        "target": {
+          "doi": "10.1000/maps",
+          "kind": "doi",
+          "title": "Maps"
+        },
+        "score": 1.5,
+        "confidence": "weak",
+        "evidence": [
+          "doi_present"
+        ],
+        "provider_records": [
+          {
+            "provider": "crossref",
+            "record": {
+              "doi": "10.1000/maps",
+              "title": "Maps"
+            }
+          }
+        ],
+        "warnings": [],
+        "rank": 1
+      }
+    ],
+    "summary": {
+      "candidate_count": 1,
+      "strong_candidate_count": 0,
+      "ambiguous_candidate_count": 0,
+      "boundary_count": 0,
+      "provider_warning_count": 0
+    },
+    "created_at": "2026-09-23T14:09:57.710788+00:00"
+  },
+  "resolution": {
+    "candidate_resolution_schema_version": 1,
+    "candidate": {
+      "candidate_schema_version": 1,
+      "candidate_id": "reference-candidate:arxiv-2401.10001-external-import-blocked-citation_record-arxiv-2401.10001-cite-main.tex-ambiguous-doi-10.1000-maps-kind-doi-title-maps:arxiv-2401.10001-external-import-blocked-citation_record-arxiv-2401.10001-cite-main.tex-ambiguous-1-author_hints-citation_keys-ambiguous-raw_bibliography_text-raw_citation_texts-cite-ambiguous-title_hint-null-year_hint-null",
+      "search_run_id": "reference-search:arxiv-2401.10001-external-import-blocked-citation_record-arxiv-2401.10001-cite-main.tex-ambiguous-1-author_hints-citation_keys-ambiguous-raw_bibliography_text-raw_citation_texts-cite-ambiguous-title_hint-null-year_hint-null",
+      "source_paper_id": "arxiv:2401.10001",
+      "blocked_id": "external-import:blocked:citation_record-arxiv-2401.10001-cite-main.tex-ambiguous",
+      "target": {
+        "doi": "10.1000/maps",
+        "kind": "doi",
+        "title": "Maps"
+      },
+      "score": 1.5,
+      "confidence": "weak",
+      "evidence": [
+        "doi_present"
+      ],
+      "provider_records": [
+        {
+          "provider": "crossref",
+          "record": {
+            "doi": "10.1000/maps",
+            "title": "Maps"
+          }
+        }
+      ],
+      "warnings": [],
+      "rank": 1
+    },
+    "resolution": {
+      "resolution_schema_version": 1,
+      "resolution_id": "reference-resolution:arxiv-2401.10001-external-import-blocked-citation_record-arxiv-2401.10001-cite-main.tex-ambiguous-doi-doi-10.1000-maps-kind-doi-title-maps",
+      "source": {
+        "paper_id": "arxiv:2401.10001",
+        "blocked_id": "external-import:blocked:citation_record-arxiv-2401.10001-cite-main.tex-ambiguous",
+        "evidence": [
+          {
+            "bib_file": "refs.bib",
+            "citation_key": "ambiguous",
+            "id": "arxiv:2401.10001:cite:main.tex:ambiguous",
+            "kind": "citation_record",
+            "paper_id": "arxiv:2401.10001",
+            "proof_id": null,
+            "raw_text": "\\cite{ambiguous}",
+            "result_id": null,
+            "source": "paper.citation_evidence",
+            "source_file": "main.tex"
+          }
+        ],
+        "review": {
+          "citation_keys": [
+            "ambiguous"
+          ],
+          "evidence_summary": "Needed by 0 local results through 0 proofs; citation keys: ambiguous; cited result evidence: \\cite{ambiguous}",
+          "local_result_ids": [],
+          "proof_ids": [],
+          "raw_texts": [
+            "\\cite{ambiguous}"
+          ]
+        }
+      },
+      "target": {
+        "doi": "10.1000/maps",
+        "kind": "doi",
+        "title": "Maps"
+      },
+      "status": "resolved_not_imported",
+      "import": {
+        "attempted": false,
+        "paper_id": null,
+        "reason": "target_not_importable_without_local_source"
+      },
+      "artifacts": [],
+      "warnings": [],
+      "created_at": "2026-09-23T14:09:57.715920+00:00",
+      "updated_at": "2026-09-23T14:09:57.715920+00:00"
+    }
+  },
+  "run": {
+    "affected_paper_ids": [],
+    "attempts": [],
+    "continuation_required": false,
+    "created_at": 1790172597.720996,
+    "edges": [],
+    "events": [
+      {
+        "event_id": 1,
+        "kind": "created",
+        "policy": {
+          "auto_select_policy": "unique_strong_v1",
+          "max_depth": 2,
+          "max_edges": 500,
+          "max_new_papers": 10,
+          "max_searches": 100,
+          "providers": [
+            "arxiv",
+            "crossref",
+            "openalex"
+          ]
+        },
+        "timestamp": 1790172597.7264233
+      },
+      {
+        "event_id": -1790172597738242300,
+        "kind": "control_requested",
+        "control": "pause",
+        "timestamp": 1790172597.7382443
+      }
+    ],
+    "expansion_schema_version": 1,
+    "next_actions": [],
+    "nodes": [
+      {
+        "aliases": [
+          "arxiv:2401.10001"
+        ],
+        "cursor": 0,
+        "depth": 0,
+        "discovery": "queued",
+        "fingerprint": "015df842c0bd6de43b8a21a7e9f7ab87c91377880abec19079bff64403fc9979",
+        "node_id": "arxiv:2401.10001",
+        "paper_id": "arxiv:2401.10001",
+        "references": null
+      }
+    ],
+    "policy": {
+      "auto_select_policy": "unique_strong_v1",
+      "max_depth": 2,
+      "max_edges": 500,
+      "max_new_papers": 10,
+      "max_searches": 100,
+      "providers": [
+        "arxiv",
+        "crossref",
+        "openalex"
+      ]
+    },
+    "policy_revisions": [
+      {
+        "auto_select_policy": "unique_strong_v1",
+        "max_depth": 2,
+        "max_edges": 500,
+        "max_new_papers": 10,
+        "max_searches": 100,
+        "providers": [
+          "arxiv",
+          "crossref",
+          "openalex"
+        ]
+      }
+    ],
+    "reason": "user_pause",
+    "roots": [
+      "arxiv:2401.10001"
+    ],
+    "run_id": "expansion:940fd0364c6c40c2b2f45dceee08161c",
+    "state": "paused",
+    "summary": {
+      "needs_review": 0,
+      "boundary": 0,
+      "retryable_failure": 0,
+      "imported": 0,
+      "linked_existing": 0,
+      "skipped": 0,
+      "runnable": 1,
+      "frontier": 1
+    },
+    "usage": {
+      "edges": 0,
+      "new_papers": 0,
+      "searches": 0
+    }
+  }
+}

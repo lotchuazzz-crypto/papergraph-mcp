@@ -47,7 +47,9 @@ from papergraph.reference_search import (
     candidate_id_for,
     rank_reference_candidates,
     search_run_id,
+    validate_resolver_version,
 )
+from papergraph.reference_search_store import migrate as migrate_resolver, COLUMNS as RESOLVER_COLUMNS, save_search
 from papergraph.starter import (
     bootstrap_reading_project,
     plan_starter_project,
@@ -64,7 +66,7 @@ from papergraph.reading import (
 )
 
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 _RESOLVED_RESOLUTION_STATUSES = (
     "resolved",
     "resolved_bibliography_entry",
@@ -742,6 +744,7 @@ class Workspace(ReferenceExpansionMixin):
         if not tables:
             connection.executescript(_SCHEMA_SQL)
             migrate_expansion(connection)
+            migrate_resolver(connection)
             return
         if "workspace_meta" not in tables:
             raise WorkspaceSchemaError(
@@ -808,6 +811,9 @@ class Workspace(ReferenceExpansionMixin):
             migrate_expansion(connection)
             tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             schema_version = 8
+        if schema_version == 8:
+            migrate_resolver(connection)
+            schema_version = 9
         if schema_version != SCHEMA_VERSION:
             raise WorkspaceSchemaError(
                 f"Unsupported workspace schema version {schema_version}; "
@@ -820,7 +826,7 @@ class Workspace(ReferenceExpansionMixin):
                 + ", ".join(missing_tables)
             )
         from papergraph.reference_expansion_store import COLUMNS
-        for table, required_columns in {**_REQUIRED_TABLE_COLUMNS, **COLUMNS}.items():
+        for table, required_columns in {table: _REQUIRED_TABLE_COLUMNS.get(table, set()) | COLUMNS.get(table, set()) | RESOLVER_COLUMNS.get(table, set()) for table in _REQUIRED_TABLE_COLUMNS.keys() | COLUMNS.keys() | RESOLVER_COLUMNS.keys()}.items():
             columns = {
                 row[1]
                 for row in connection.execute(f"PRAGMA table_info({table})")
@@ -2266,98 +2272,55 @@ class Workspace(ReferenceExpansionMixin):
 
     @_synchronized
     def search_external_reference(
-        self,
-        paper_id: str,
-        blocked_id: str,
-        *,
-        providers: list[str] | None = None,
-        max_candidates: int = 10,
-        refresh: bool = False,
+        self, paper_id: str, blocked_id: str, *, providers: list[str] | None = None,
+        max_candidates: int = 10, refresh: bool = False,
+        resolver_version: str = "deterministic_v2",
     ) -> dict:
-        """Search scholarly metadata providers for one blocked reference."""
-
-        if not isinstance(max_candidates, int) or max_candidates < 1:
+        """Search metadata only; resolver version pins matching and cache semantics."""
+        validate_resolver_version(resolver_version)
+        if type(max_candidates) is not int or max_candidates < 1:
             raise ValueError("max_candidates must be a positive integer")
+        if providers is not None and (not isinstance(providers, list) or not providers or
+                any(p not in {"arxiv", "crossref", "openalex"} for p in providers)):
+            raise ValueError("Unsupported reference providers")
         normalized_paper_id = normalize_paper_id(paper_id)
         self.get_paper(normalized_paper_id)
-        blocked = _blocked_external_reference(
-            self.plan_external_imports_for_paper(normalized_paper_id),
-            blocked_id,
-        )
+        blocked = _blocked_external_reference(self.plan_external_imports_for_paper(normalized_paper_id), blocked_id)
         if not refresh:
-            cached = self._latest_reference_search(
-                normalized_paper_id,
-                blocked["blocked_id"],
-            )
+            cached = self._compatible_reference_search(normalized_paper_id, blocked["blocked_id"],
+                providers=providers, max_candidates=max_candidates, resolver_version=resolver_version)
             if cached is not None:
                 return cached
-
-        query = build_reference_search_query(blocked)
-        provider_results = self._run_reference_search_providers(query, providers)
-        ranked = rank_reference_candidates(query, provider_results, max_candidates)
-        ordinal = self._reference_search_count(
-            normalized_paper_id,
-            blocked["blocked_id"],
-        ) + 1
+        query = build_reference_search_query(blocked, resolver_version=resolver_version)
+        results = self._run_reference_search_providers(query, providers)
+        if resolver_version == "deterministic_v2":
+            expected = set(providers or ["arxiv", "crossref", "openalex"])
+            # A missing requested provider cannot count as complete corroboration.
+            actual = {r.get("provider") for r in results if isinstance(r, dict)}
+            results = results + [{"provider":p,"records":[],"outcome":"unavailable","warnings":["missing_provider"]}
+                                 for p in sorted(expected - actual)]
+        ranked = rank_reference_candidates(query, results, max_candidates, resolver_version=resolver_version)
+        ordinal = self._reference_search_count(normalized_paper_id, blocked["blocked_id"]) + 1
         run_id = search_run_id(normalized_paper_id, blocked["blocked_id"], query, ordinal)
-        timestamp = datetime.now(timezone.utc).isoformat()
-        self._connection.execute(
-            """
-            INSERT INTO reference_search_runs (
-                search_run_id, source_paper_id, blocked_id, query_json,
-                provider_json, boundary_json, created_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                run_id,
-                normalized_paper_id,
-                blocked["blocked_id"],
-                _canonical_json(query),
-                _canonical_json(
-                    {
-                        "providers": providers,
-                        "max_candidates": max_candidates,
-                        "provider_warnings": ranked["provider_warnings"],
-                    }
-                ),
-                _canonical_json(ranked["boundaries"]),
-                timestamp,
-            ),
-        )
-        for index, candidate in enumerate(ranked["candidates"], start=1):
-            candidate_id = candidate_id_for(
-                normalized_paper_id,
-                blocked["blocked_id"],
-                candidate["target"],
-            )
-            # Candidate IDs identify immutable search snapshots, including refreshes.
-            candidate_id += ":" + run_id.rsplit(":", 1)[-1]
-            self._connection.execute(
-                """
-                INSERT INTO reference_search_candidates (
-                    candidate_id, search_run_id, source_paper_id, blocked_id,
-                    target_json, score, confidence, evidence_json,
-                    provider_record_json, warning_json, rank
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    candidate_id,
-                    run_id,
-                    normalized_paper_id,
-                    blocked["blocked_id"],
-                    _canonical_json(candidate["target"]),
-                    candidate["score"],
-                    candidate["confidence"],
-                    _canonical_json(candidate["evidence"]),
-                    _canonical_json(candidate["provider_records"]),
-                    _canonical_json(candidate["warnings"]),
-                    index,
-                ),
-            )
-        self._connection.commit()
+        save_search(self._connection, run_id=run_id, paper_id=normalized_paper_id,
+            blocked_id=blocked["blocked_id"], ranked=ranked, providers=providers,
+            max_candidates=max_candidates, resolver_version=resolver_version,
+            timestamp=datetime.now(timezone.utc).isoformat())
         return self._reference_search_by_id(run_id)
+
+    def _compatible_reference_search(self, paper_id, blocked_id, *, providers,
+                                     max_candidates, resolver_version):
+        selected = sorted(set(providers or ["arxiv", "crossref", "openalex"]))
+        rows = self._connection.execute(
+            "SELECT search_run_id FROM reference_search_runs WHERE source_paper_id=? AND blocked_id=? "
+            "AND resolver_version=? ORDER BY created_at DESC, search_run_id DESC",
+            (paper_id, blocked_id, resolver_version)).fetchall()
+        for row in rows:
+            cached = self._reference_search_by_id(row[0])
+            if (sorted(set(cached.get("providers") or ["arxiv", "crossref", "openalex"])) == selected
+                    and cached.get("max_candidates", 10) == max_candidates):
+                return cached
+        return None
 
     @_synchronized
     def list_external_reference_searches(
@@ -2390,7 +2353,7 @@ class Workspace(ReferenceExpansionMixin):
         ).fetchall()
         searches = [self._reference_search_by_id(row[0]) for row in rows]
         return {
-            "search_schema_version": 1,
+            "search_schema_version": 2,
             "scope": {
                 "paper_id": normalized_paper_id,
                 "blocked_id": blocked_id,
@@ -2436,6 +2399,8 @@ class Workspace(ReferenceExpansionMixin):
             or candidate["blocked_id"] != blocked_id
         ):
             raise ValueError("candidate does not belong to the requested blocker")
+        if candidate.get("assessment", {}).get("conflicts"):
+            raise ValueError("Conflicted candidate: review provider records and supply an explicit target.")
         existing = self.list_external_reference_resolutions(normalized_paper_id)[
             "resolutions"
         ]
@@ -2485,7 +2450,8 @@ class Workspace(ReferenceExpansionMixin):
                     {
                         "provider": provider.name,
                         "records": [],
-                        "warnings": [bounded_excerpt(str(exc), limit=240)],
+                        "warnings": ["provider_unavailable"],
+                        "outcome": "unavailable",
                     }
                 )
         return results
@@ -2519,7 +2485,7 @@ class Workspace(ReferenceExpansionMixin):
             """
             SELECT
                 search_run_id, source_paper_id, blocked_id, query_json,
-                provider_json, boundary_json, created_at
+                provider_json, boundary_json, created_at, resolver_version, search_schema_version, assessment_metadata_json
             FROM reference_search_runs
             WHERE search_run_id = ?
             """,
@@ -2532,7 +2498,7 @@ class Workspace(ReferenceExpansionMixin):
             SELECT
                 candidate_id, search_run_id, source_paper_id, blocked_id,
                 target_json, score, confidence, evidence_json,
-                provider_record_json, warning_json, rank
+                provider_record_json, warning_json, rank, candidate_schema_version, assessment_json
             FROM reference_search_candidates
             WHERE search_run_id = ?
             ORDER BY rank, candidate_id
@@ -2542,8 +2508,10 @@ class Workspace(ReferenceExpansionMixin):
         candidates = [_reference_search_candidate_from_row(item) for item in candidate_rows]
         provider_payload = json.loads(row[4])
         boundaries = json.loads(row[5])
+        metadata = json.loads(row[9]) if row[9] else {}
         return {
-            "search_schema_version": 1,
+            "search_schema_version": row[8],
+            **({"resolver_version":row[7], "provider_outcomes":metadata.get("provider_outcomes", [])} if row[8] == 2 else {}),
             "search_run_id": row[0],
             "source": {
                 "paper_id": row[1],
@@ -2568,6 +2536,7 @@ class Workspace(ReferenceExpansionMixin):
                     provider_payload.get("provider_warnings", [])
                 ),
             },
+            **({"summary":metadata["summary"]} if "summary" in metadata else {}),
             "created_at": row[6],
         }
 
@@ -2577,7 +2546,7 @@ class Workspace(ReferenceExpansionMixin):
             SELECT
                 candidate_id, search_run_id, source_paper_id, blocked_id,
                 target_json, score, confidence, evidence_json,
-                provider_record_json, warning_json, rank
+                provider_record_json, warning_json, rank, candidate_schema_version, assessment_json
             FROM reference_search_candidates
             WHERE candidate_id = ?
             """,
@@ -5418,7 +5387,8 @@ def _reference_resolution_summary(resolutions: list[dict]) -> dict:
 
 def _reference_search_candidate_from_row(row: tuple) -> dict:
     return {
-        "candidate_schema_version": 1,
+        "candidate_schema_version": row[11],
+        **({"assessment":json.loads(row[12])} if row[12] else {}),
         "candidate_id": row[0],
         "search_run_id": row[1],
         "source_paper_id": row[2],

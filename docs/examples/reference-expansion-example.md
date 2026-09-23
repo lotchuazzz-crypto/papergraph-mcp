@@ -11,19 +11,19 @@ This report follows extracted citation evidence within the approved limits. It d
 ## Reference tree
 
 - `arxiv:2401.10001` (done)
-  - `expansion-edge:17f9c47e5a77d731722a47e4`: imported; policy_selected; exact_source_identifier
+  - `expansion-edge:17f9c47e5a77d731722a47e4`: imported; policy_selected; exact_identifier
     - Evidence: \cite{c} (source: main.tex)
     - `arxiv:2401.10003` (done)
-      - `expansion-edge:dc6423f3e317501b6c77aaee`: linked_existing; policy_selected; exact_source_identifier
+      - `expansion-edge:dc6423f3e317501b6c77aaee`: linked_existing; policy_selected; exact_identifier
         - Evidence: \cite{a} (source: main.tex)
         - `arxiv:2401.10001` (cycle)
-  - `expansion-edge:c8805ea19e6885be73e3528e`: imported; policy_selected; exact_source_identifier
+  - `expansion-edge:c8805ea19e6885be73e3528e`: imported; policy_selected; exact_identifier
     - Evidence: \cite{b} (source: main.tex)
     - `arxiv:2401.10002` (done)
-      - `expansion-edge:13674414681912ab6606b76e`: linked_existing; policy_selected; exact_source_identifier
+      - `expansion-edge:13674414681912ab6606b76e`: linked_existing; policy_selected; exact_identifier
         - Evidence: \cite{c} (source: main.tex)
         - `arxiv:2401.10003` (shared target; see earlier entry)
-      - `expansion-edge:c2d611171732a566a0bfbc19`: linked_existing; policy_selected; exact_source_identifier
+      - `expansion-edge:c2d611171732a566a0bfbc19`: linked_existing; policy_selected; exact_identifier
         - Evidence: \cite{a} (source: main.tex)
         - `arxiv:2401.10001` (cycle)
 

@@ -228,7 +228,7 @@ def test_schema_7_migration_is_transactional(tmp_path):
     with sqlite3.connect(path) as db:
         db.executescript(_SCHEMA_SQL)
     ws = Workspace.open(path)
-    assert ws._connection.execute("SELECT value FROM workspace_meta WHERE key='schema_version'").fetchone()[0] == "8"
+    assert ws._connection.execute("SELECT value FROM workspace_meta WHERE key='schema_version'").fetchone()[0] == "9"
     ws.close()
 
 
@@ -431,12 +431,16 @@ def test_schema_7_upgrade_preserves_papers_searches_and_resolutions(workspace, m
     records = [{"provider": "crossref", "records": [{"kind": "doi", "doi": "10.1000/example", "title": "Published target"}], "warnings": []}]
     monkeypatch.setattr(workspace, "_run_reference_search_providers", lambda *a: records)
     blocked = workspace.plan_external_imports_for_paper("local:paper")["blocked"][0]["blocked_id"]
-    searched = workspace.search_external_reference("local:paper", blocked)
+    searched = workspace.search_external_reference("local:paper", blocked, resolver_version="legacy_v1")
     resolution = workspace.resolve_external_reference("local:paper", blocked, {"kind": "doi", "doi": "10.1000/example"}, import_target=False)
     paper = workspace.get_paper("local:paper")
     with workspace._connection:
         for suffix in ("attempts", "edges", "events", "lease", "nodes", "runs"):
             workspace._connection.execute("DROP TABLE reference_expansion_" + suffix)
+        for column in ('resolver_version', 'search_schema_version', 'assessment_metadata_json'):
+            workspace._connection.execute('ALTER TABLE reference_search_runs DROP COLUMN ' + column)
+        for column in ('candidate_schema_version', 'assessment_json'):
+            workspace._connection.execute('ALTER TABLE reference_search_candidates DROP COLUMN ' + column)
         workspace._connection.execute("UPDATE workspace_meta SET value='7' WHERE key='schema_version'")
     upgraded = Workspace.open(workspace.path)
     try:

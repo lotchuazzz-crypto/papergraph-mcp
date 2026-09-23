@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import httpx
+from papergraph.reference_providers.base import failure_result, parsed_result
 
 
 class CrossrefReferenceProvider:
@@ -21,15 +22,13 @@ class CrossrefReferenceProvider:
                 timeout=self._timeout,
             )
             response.raise_for_status()
-            payload = response.json()
         except Exception as exc:
-            return {"provider": self.name, "records": [], "warnings": [str(exc)]}
-        records = [_record_from_item(item) for item in payload.get("message", {}).get("items", [])]
-        return {
-            "provider": self.name,
-            "records": [record for record in records if record],
-            "warnings": [],
-        }
+            return failure_result(self.name, exc)
+        try:
+            payload = response.json()
+            return parsed_result(self.name, payload['message']['items'], _record_from_item)
+        except (ValueError, TypeError, KeyError, AttributeError) as exc:
+            return failure_result(self.name, exc, parsing=True)
 
 
 def _record_from_item(item: dict) -> dict:

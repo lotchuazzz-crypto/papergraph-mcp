@@ -6,6 +6,9 @@ import re
 import xml.etree.ElementTree as ET
 
 import httpx
+from papergraph.reference_providers.base import failure_result, parsed_result
+from papergraph.arxiv import extract_arxiv_id_from_url
+from papergraph.identity import paper_id_from_arxiv
 
 
 class ArxivReferenceProvider:
@@ -31,12 +34,12 @@ class ArxivReferenceProvider:
             )
             response.raise_for_status()
         except Exception as exc:
-            return {"provider": self.name, "records": [], "warnings": [str(exc)]}
+            return failure_result(self.name, exc)
         try:
             records = _records_from_atom(response.text)
         except Exception as exc:
-            return {"provider": self.name, "records": [], "warnings": [str(exc)]}
-        return {"provider": self.name, "records": records, "warnings": []}
+            return failure_result(self.name, exc, parsing=True)
+        return parsed_result(self.name, records, lambda r: r if r.get('arxiv_id') else {})
 
 
 def _records_from_atom(atom: str) -> list[dict]:
@@ -45,7 +48,11 @@ def _records_from_atom(atom: str) -> list[dict]:
     records = []
     for entry in root.findall("atom:entry", namespace):
         entry_id = _text(entry.find("atom:id", namespace))
-        arxiv_id, arxiv_version = _split_arxiv_id(entry_id)
+        try:
+            arxiv_id, arxiv_version = _split_arxiv_id(entry_id)
+        except ValueError:
+            records.append({})
+            continue
         title = " ".join(_text(entry.find("atom:title", namespace)).split())
         published = _text(entry.find("atom:published", namespace))
         authors = [
@@ -66,6 +73,7 @@ def _records_from_atom(atom: str) -> list[dict]:
                 "authors": [author for author in authors if author],
                 "year": published[:4] if published else None,
                 "url": url,
+                "doi": _text(entry.find('{http://arxiv.org/schemas/atom}doi')),
             }
         )
     return [
@@ -75,10 +83,9 @@ def _records_from_atom(atom: str) -> list[dict]:
 
 
 def _split_arxiv_id(value: str) -> tuple[str, str | None]:
-    match = re.search(r"(\d{4}\.\d{4,5})(v\d+)?", value)
-    if not match:
-        return value.rsplit("/", 1)[-1], None
-    return match.group(1), match.group(2)
+    identifier = extract_arxiv_id_from_url(value) if value.startswith(('http://', 'https://')) else value
+    pid, version = paper_id_from_arxiv(identifier)
+    return pid[6:], version
 
 
 def _text(element) -> str:

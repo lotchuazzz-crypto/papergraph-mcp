@@ -39,7 +39,7 @@ def test_project_metadata_is_discoverable_and_keeps_dependencies_separated():
     configuration = read_toml("pyproject.toml")
     project = configuration["project"]
 
-    assert project["version"] == "1.1.5"
+    assert project["version"] == "1.1.6"
     assert project["dependencies"] == [
         "httpx>=0.27,<1",
         "mcp[cli]>=2,<3",
@@ -85,7 +85,7 @@ def test_lockfile_contains_project_package():
     )
 
     assert package["name"] == "papergraph-mcp"
-    assert package["version"] == "1.1.5"
+    assert package["version"] == "1.1.6"
 
 
 def test_validate_arxiv_request_module_stdout_is_json_only():
@@ -117,8 +117,8 @@ def test_runtime_and_issue_template_release_strings_remain_pinned():
         if item.get("id") == "version"
     )
 
-    assert f'PaperGraph/1.1.5 (+{REPOSITORY_URL})' in arxiv_source
-    assert version_field["attributes"]["placeholder"] == "1.1.5"
+    assert f'PaperGraph/1.1.6 (+{REPOSITORY_URL})' in arxiv_source
+    assert version_field["attributes"]["placeholder"] == "1.1.6"
 
 
 def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
@@ -159,7 +159,7 @@ def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
         for token in ('"uv"', '"pip"', '"install"', '"--python"')
     )
     assert "papergraph-mcp --version" in build_steps
-    assert "papergraph-mcp 1.1.5" in build_steps
+    assert "papergraph-mcp 1.1.6" in build_steps
     assert 'version="$(.smoke-venv/bin/papergraph-mcp --version)"' in build_steps
 
 

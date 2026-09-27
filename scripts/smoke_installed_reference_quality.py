@@ -38,9 +38,9 @@ async def protocol(path, baseline, search):
 
 def main():
     assert 'site-packages' in str(Path(papergraph.__file__).resolve())
-    assert cli('--version').strip() == 'papergraph-mcp 1.1.5'
+    assert cli('--version').strip() == 'papergraph-mcp 1.1.6'
     doctor = json.loads(cli('doctor'))
-    assert doctor['version'] == '1.1.5'
+    assert doctor['version'] == '1.1.6'
     # Outside a Git checkout, the existing diagnostic legitimately notes missing
     # Git context; this is not an installation warning.
     assert all(w.startswith('Git context unavailable;') for w in doctor['warnings'])
@@ -64,7 +64,7 @@ def main():
             baseline = ws.list_external_reference_searches('local:paper')
         assert json.loads(cli('list-external-reference-searches','--workspace',str(path),'--paper-id','local:paper')) == baseline
         asyncio.run(asyncio.wait_for(protocol(path,baseline,search), timeout=45))
-    print(json.dumps({'version':'1.1.5','installed_package':str(papergraph.__file__),
+    print(json.dumps({'version':'1.1.6','installed_package':str(papergraph.__file__),
                       'cli_snapshot_parity':True,'mcp_stdio_snapshot_parity':True,'invalid_version_rejected':True}))
 
 

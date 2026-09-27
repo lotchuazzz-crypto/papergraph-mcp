@@ -965,6 +965,120 @@ class Workspace(ReferenceExpansionMixin):
 
         self._connection.close()
 
+    def _store_paper_for_import(
+        self, paper_id: str, source_type: str, source_ref: str,
+        source_version: str | None, title: str | None, authors_json: str,
+        main_file: str, imported_at: str,
+    ) -> dict[str, list[tuple[str, str]]]:
+        """Replace generated evidence without cascading into human work."""
+
+        values = (source_type, source_ref, source_version, title, authors_json,
+                  main_file, imported_at, _parser_version(), paper_id)
+        exists = self._connection.execute(
+            "SELECT 1 FROM papers WHERE paper_id = ?", (paper_id,)
+        ).fetchone()
+        if not exists:
+            self._connection.execute(
+                """INSERT INTO papers (paper_id, source_type, source_ref,
+                   source_version, title, authors_json, main_file, imported_at,
+                   parser_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (paper_id, *values[:-1]),
+            )
+            return {}
+
+        retained_targets = {
+            table: self._connection.execute(
+                f"SELECT {key}, target_result_id FROM {table} "
+                "WHERE paper_id = ? AND target_result_id IS NOT NULL", (paper_id,)
+            ).fetchall()
+            for table, key in (("reading_sessions", "session_id"),
+                               ("reading_queues", "queue_id"))
+        }
+        # A search describes the old evidence, while human resolutions remain
+        # visible and explicitly need review against the refreshed source.
+        self._connection.execute(
+            "DELETE FROM reference_search_runs WHERE source_paper_id = ?", (paper_id,)
+        )
+        for table, column in (
+            ("theorems", "paper_id"), ("citation_evidence", "source_paper_id"),
+            ("source_spans", "paper_id"), ("results", "paper_id"),
+            ("proofs", "paper_id"), ("bibliography_entries", "paper_id"),
+            ("local_result_mentions", "paper_id"),
+            ("citation_mentions", "paper_id"),
+            ("external_result_mentions", "paper_id"),
+            ("evidence_edges", "paper_id"),
+        ):
+            self._connection.execute(f"DELETE FROM {table} WHERE {column} = ?", (paper_id,))
+        self._connection.execute(
+            """UPDATE papers SET source_type=?, source_ref=?, source_version=?,
+               title=?, authors_json=?, main_file=?, imported_at=?, parser_version=?
+               WHERE paper_id=?""", values,
+        )
+        self._mark_reimport_review(paper_id, imported_at)
+        return retained_targets
+
+    def _mark_reimport_review(self, paper_id: str, timestamp: str) -> None:
+        sessions = self._connection.execute(
+            "SELECT session_id FROM reading_sessions WHERE paper_id=?", (paper_id,)
+        ).fetchall()
+        for (session_id,) in sessions:
+            for checkpoint_id, status, payload in self._connection.execute(
+                "SELECT checkpoint_id,status,evidence_json FROM reading_checkpoints WHERE session_id=?",
+                (session_id,),
+            ).fetchall():
+                evidence = json.loads(payload)
+                evidence.setdefault("pre_reimport_status", status)
+                evidence["reimport_review_required"] = True
+                self._connection.execute(
+                    """UPDATE reading_checkpoints SET status=?, evidence_json=?,
+                       updated_at=? WHERE checkpoint_id=?""",
+                    ("skipped" if status == "skipped" else "blocked",
+                     _canonical_json(evidence), timestamp, checkpoint_id),
+                )
+            self._connection.execute(
+                """INSERT INTO reading_notes
+                   (note_id,session_id,target_kind,target_id,note_type,text,created_at)
+                   VALUES (?,?,?,?,?,?,?)""",
+                (self._new_note_id(session_id, timestamp), session_id, "session",
+                 session_id, "warning",
+                 "Source re-imported; review saved reading targets and evidence before relying on them.",
+                 timestamp),
+            )
+            self._touch_reading_session(session_id, timestamp)
+        for item_id, payload in self._connection.execute(
+            """SELECT i.item_id,i.evidence_json FROM reading_queue_items i
+               JOIN reading_queues q ON q.queue_id=i.queue_id WHERE q.paper_id=?""",
+            (paper_id,),
+        ).fetchall():
+            evidence = json.loads(payload)
+            evidence["reimport_review_required"] = True
+            self._connection.execute(
+                "UPDATE reading_queue_items SET evidence_json=? WHERE item_id=?",
+                (_canonical_json(evidence), item_id),
+            )
+        for resolution_id, payload in self._connection.execute(
+            "SELECT resolution_id,review_json FROM reference_resolutions WHERE source_paper_id=?",
+            (paper_id,),
+        ).fetchall():
+            review = json.loads(payload)
+            review["reimport_review_required"] = True
+            self._connection.execute(
+                "UPDATE reference_resolutions SET review_json=?,updated_at=? WHERE resolution_id=?",
+                (_canonical_json(review), timestamp, resolution_id),
+            )
+
+    def _restore_reading_targets(self, retained: dict[str, list[tuple[str, str]]]) -> None:
+        for table, key in (("reading_sessions", "session_id"),
+                           ("reading_queues", "queue_id")):
+            for owner_id, result_id in retained.get(table, []):
+                if self._connection.execute(
+                    "SELECT 1 FROM results WHERE result_id=?", (result_id,)
+                ).fetchone():
+                    self._connection.execute(
+                        f"UPDATE {table} SET target_result_id=? WHERE {key}=?",
+                        (result_id, owner_id),
+                    )
+
     @_synchronized
     def import_project(
         self,
@@ -1021,28 +1135,9 @@ class Workspace(ReferenceExpansionMixin):
 
         with self._connection:
             self._check_expansion_import(normalized_paper_id)
-            self._connection.execute(
-                "DELETE FROM papers WHERE paper_id = ?",
-                (normalized_paper_id,),
-            )
-            self._connection.execute(
-                """
-                INSERT INTO papers (
-                    paper_id, source_type, source_ref, source_version, title,
-                    authors_json, main_file, imported_at, parser_version
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    normalized_paper_id,
-                    source_type,
-                    source_ref,
-                    source_version,
-                    project.title,
-                    authors_json,
-                    main_file,
-                    imported_at,
-                    _parser_version(),
-                ),
+            retained_targets = self._store_paper_for_import(
+                normalized_paper_id, source_type, source_ref, source_version,
+                project.title, authors_json, main_file, imported_at,
             )
             self._connection.executemany(
                 """
@@ -1107,6 +1202,7 @@ class Workspace(ReferenceExpansionMixin):
                 ),
             )
             _insert_evidence_document(self._connection, evidence_document)
+            self._restore_reading_targets(retained_targets)
             self._connection.execute(
                 """
                 UPDATE citation_evidence
@@ -1186,31 +1282,14 @@ class Workspace(ReferenceExpansionMixin):
 
         with self._connection:
             self._check_expansion_import(normalized_paper_id)
-            self._connection.execute(
-                "DELETE FROM papers WHERE paper_id = ?",
-                (normalized_paper_id,),
-            )
-            self._connection.execute(
-                """
-                INSERT INTO papers (
-                    paper_id, source_type, source_ref, source_version, title,
-                    authors_json, main_file, imported_at, parser_version
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    normalized_paper_id,
-                    document.source_type,
-                    document.source_ref,
-                    document.source_version,
-                    document.title,
-                    authors_json,
-                    document.main_file,
-                    imported_at,
-                    _parser_version(),
-                ),
+            retained_targets = self._store_paper_for_import(
+                normalized_paper_id, document.source_type, document.source_ref,
+                document.source_version, document.title, authors_json,
+                document.main_file, imported_at,
             )
 
             _insert_evidence_document(self._connection, document)
+            self._restore_reading_targets(retained_targets)
 
         return WorkspaceImportResult(
             paper_id=normalized_paper_id,
@@ -2121,6 +2200,17 @@ class Workspace(ReferenceExpansionMixin):
         )
         existing = self._reference_resolution_by_id(resolution_id)
         if existing is not None:
+            if existing["source"]["review"].get("reimport_review_required"):
+                confirmed_review = {**existing["source"]["review"], **review}
+                confirmed_review.pop("reimport_review_required", None)
+                with self._connection:
+                    self._connection.execute(
+                        """UPDATE reference_resolutions SET evidence_json=?,
+                           review_json=?, updated_at=? WHERE resolution_id=?""",
+                        (_canonical_json(evidence), _canonical_json(confirmed_review),
+                         datetime.now(timezone.utc).isoformat(), resolution_id),
+                    )
+                return self._reference_resolution_by_id(resolution_id)
             return existing
 
         timestamp = datetime.now(timezone.utc).isoformat()
@@ -2281,7 +2371,8 @@ class Workspace(ReferenceExpansionMixin):
         if type(max_candidates) is not int or max_candidates < 1:
             raise ValueError("max_candidates must be a positive integer")
         if providers is not None and (not isinstance(providers, list) or not providers or
-                any(p not in {"arxiv", "crossref", "openalex"} for p in providers)):
+                any(not isinstance(p, str) or p not in {"arxiv", "crossref", "openalex"}
+                    for p in providers)):
             raise ValueError("Unsupported reference providers")
         normalized_paper_id = normalize_paper_id(paper_id)
         self.get_paper(normalized_paper_id)

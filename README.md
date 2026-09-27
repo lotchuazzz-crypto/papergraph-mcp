@@ -11,6 +11,8 @@
 
 PaperGraph v1.1.5 is the stable evidence-first reading workflow for math papers: start with a Paper Map, inspect source-backed proof and citation evidence, use Evidence Triage to understand sparse extraction, search scholarly metadata for blocked references, then export Markdown Reading Reports or Cross-Paper Reading Plans.
 
+The v1.1.6 development branch fixes source re-import data loss and resolver input boundaries; it is not yet a published release. See the [bugfix notes](docs/reference/v1.1.6-release-notes.md). Installation commands below stay pinned to released v1.1.5 until v1.1.6 is published.
+
 It helps AI agents turn arXiv papers, local LaTeX projects, and born-digital PDFs into a local theorem-centered workspace so a researcher can inspect where every claim came from.
 
 [English](#english) | [中文](#中文)
@@ -33,7 +35,7 @@ v1.1.4 introduced **bounded reference expansion**: approve a finite policy, then
 
 v1.1.5 improves **reference identity quality**: traceable bibliography hints, conservative DOI/arXiv normalization, explicit conflicts, provider outcomes and saved matching explanations. New runs use `unique_strong_v2`; existing `unique_strong_v1` tasks keep their legacy resolver. Back up workspaces before upgrading to schema 9; older versions cannot open them. Scores are not probabilities, and metadata agreement is not independent verification. See the [release preparation notes](docs/reference/v1.1.5-release-notes.md) and [offline quality corpus](tests/fixtures/reference_quality/README.md).
 
-See the [expansion walkthrough](docs/walkthroughs/bounded-reference-expansion.md), [offline JSON](docs/examples/reference-expansion-example.json), [reference tree](docs/examples/reference-expansion-example.md), and [client verification matrix](docs/reference/client-compatibility.md). This branch prepares v1.1.5; the pinned tag commands below become available only after that release is published. Until then, use `uv run papergraph-mcp` from this checkout.
+See the [expansion walkthrough](docs/walkthroughs/bounded-reference-expansion.md), [offline JSON](docs/examples/reference-expansion-example.json), [reference tree](docs/examples/reference-expansion-example.md), and [client verification matrix](docs/reference/client-compatibility.md). The pinned commands below install the already published v1.1.5; use `uv run papergraph-mcp` from this checkout to test the v1.1.6 changes.
 
 ### Why Researchers Use It
 
@@ -127,7 +129,9 @@ flowchart LR
 
 PaperGraph v1.1.5 是稳定的 evidence-first 数学论文阅读工作流：先看 Paper Map，再检查 proof 和 citation 证据，用 Evidence Triage 理解稀疏抽取结果，对被阻塞的外部引用做 scholarly metadata 搜索，然后把选定候选闭环到用户确认的 arXiv、本地 PDF、DOI、URL 或出版信息。
 
-v1.1.4 引入有界引用扩展：默认最多追踪 2 层、导入 10 篇新论文。v1.1.5 进一步改善引用身份匹配：保留解析证据，审慎规范化 DOI/arXiv，明确冲突、服务状态和选择理由。新任务默认 `unique_strong_v2`，已有 `unique_strong_v1` 任务保持旧行为。升级到 schema 9 前请备份 workspace，旧版本无法打开新 schema。分数不是概率，多来源元数据一致也不代表独立验证。只支持 arXiv 源码和明确提供的本地 PDF，不绕过付费墙。见[完整操作示例](docs/walkthroughs/bounded-reference-expansion.md)及[客户端验证状态](docs/reference/client-compatibility.md)。当前为发布准备；v1.1.5 标签发布前请使用 `uv run papergraph-mcp`。
+v1.1.6 开发分支修复重新导入时丢失阅读数据及引用解析输入边界；目前尚未发布。下方安装命令仍固定到已发布的 v1.1.5；参见[修复说明](docs/reference/v1.1.6-release-notes.md)。
+
+v1.1.4 引入有界引用扩展：默认最多追踪 2 层、导入 10 篇新论文。v1.1.5 进一步改善引用身份匹配：保留解析证据，审慎规范化 DOI/arXiv，明确冲突、服务状态和选择理由。新任务默认 `unique_strong_v2`，已有 `unique_strong_v1` 任务保持旧行为。升级到 schema 9 前请备份 workspace，旧版本无法打开新 schema。分数不是概率，多来源元数据一致也不代表独立验证。只支持 arXiv 源码和明确提供的本地 PDF，不绕过付费墙。见[完整操作示例](docs/walkthroughs/bounded-reference-expansion.md)及[客户端验证状态](docs/reference/client-compatibility.md)。
 
 ### 为什么适合数学论文阅读
 

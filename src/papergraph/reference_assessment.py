@@ -67,7 +67,11 @@ def _provider_results(results):
                 ('authors' in record and not (isinstance(record['authors'], list) and all(isinstance(a, str) for a in record['authors'])))):
                 invalid = True
             else:
-                valid.append(copy.deepcopy(record))
+                try:
+                    stable_key(record)
+                    valid.append(copy.deepcopy(record))
+                except (TypeError, ValueError, RecursionError, OverflowError):
+                    invalid = True
         outcome = result.get('outcome', 'unavailable' if result.get('warnings') else 'ok' if valid else 'empty')
         if not isinstance(outcome, str) or outcome not in OUTCOMES:
             outcome = 'invalid_response'

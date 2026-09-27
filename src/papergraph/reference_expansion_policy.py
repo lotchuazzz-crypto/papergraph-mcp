@@ -31,7 +31,9 @@ def validate_policy(policy: dict | None) -> dict:
         if type(result[key]) is not int or not 1 <= result[key] <= ceiling:
             raise ValueError(f"{key} must be an integer between 1 and {ceiling}")
     providers = policy.get("providers", sorted(PROVIDERS))
-    if not isinstance(providers, list) or not providers or any(p not in PROVIDERS for p in providers):
+    if not isinstance(providers, list) or not providers or any(
+        not isinstance(p, str) or p not in PROVIDERS for p in providers
+    ):
         raise ValueError("providers must be a nonempty list of supported providers")
     result["providers"] = sorted(set(providers))
     result["auto_select_policy"] = policy.get("auto_select_policy", "unique_strong_v2")

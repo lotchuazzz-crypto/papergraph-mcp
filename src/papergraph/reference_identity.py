@@ -32,7 +32,7 @@ def normalize_identifier(value: str, kind: str, *, version: str | None = None) -
         text = text[1:-1].strip()
     warnings = result['warnings']
     try:
-        if text.startswith(('https://', 'http://')):
+        if text.lower().startswith(('https://', 'http://')):
             parsed = urlsplit(text)
             if parsed.username or parsed.password or parsed.query or parsed.fragment:
                 warnings.append('identifier_url_components')

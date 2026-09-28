@@ -5,7 +5,7 @@ Present this prompt before asking for installation permission:
 ```text
 请使用 PaperGraph MCP 分析这些 LaTeX 论文，并建立一个多论文工作区。
 
-工作区数据库保存在临时目录，不要放进 Git 仓库。依次导入我提供的论文，然后：
+工作区数据库保存在 Git 仓库外的合适数据目录，不要放进 Git 仓库。依次导入我提供的论文，然后：
 
 开始分析前，请先调用 `get_environment_diagnostics` 或运行 `papergraph-mcp doctor`，并在回答里说明 PaperGraph 版本。
 
@@ -19,4 +19,4 @@ Present this prompt before asking for installation permission:
 6. 不要把文本相似性描述成已经证明的数学关系。
 ```
 
-When translating the prompt, preserve all six numbered requirements, the requirement to keep the workspace database in a temporary directory outside Git, and the warning that textual similarity is not a proved mathematical relationship.
+When translating the prompt, preserve all six numbered requirements, the requirement to keep the workspace database outside Git, and the warning that textual similarity is not a proved mathematical relationship.

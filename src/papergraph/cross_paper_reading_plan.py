@@ -6,6 +6,11 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from papergraph.identity import normalize_paper_id
+from papergraph.report_format import (
+    code_or_none as _code_or_none,
+    compact_json as _compact_json,
+    source_position as _source_position,
+)
 
 if TYPE_CHECKING:
     from papergraph.workspace import Workspace
@@ -701,29 +706,6 @@ def _render_warnings(
                 f"{_text(warning['message'])}"
             )
     return lines
-
-
-def _source_position(location: dict[str, Any] | None) -> tuple[int, int, int, str]:
-    if not location:
-        return (0, 0, 0, "")
-    return (
-        int(location.get("page") or 0),
-        int(location.get("block_index") or 0),
-        int(location.get("start_offset") or 0),
-        str(location.get("span_id") or ""),
-    )
-
-
-def _compact_json(value: Any) -> str:
-    if value is None:
-        return "`None`"
-    return "`" + json.dumps(value, sort_keys=True, ensure_ascii=False) + "`"
-
-
-def _code_or_none(value: str | None) -> str:
-    if value is None:
-        return "`None`"
-    return f"`{value}`"
 
 
 def _text(value: Any) -> str:

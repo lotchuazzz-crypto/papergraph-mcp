@@ -44,9 +44,9 @@ interruptions, exact budget boundaries, migration and actual MCP stdio calls.
 
 ## Real workspace: approve, advance, review
 
-Use `uv run papergraph-mcp` in this checkout. After v1.1.5 is published, the same
+Use `uv run papergraph-mcp` in this checkout. For the published release, the same
 commands can be launched with
-`uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.5 papergraph-mcp`.
+`uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.6 papergraph-mcp`.
 Keep workspaces and exports outside your source checkout and back up existing
 SQLite files before upgrading to schema 9. Import your own root paper first.
 

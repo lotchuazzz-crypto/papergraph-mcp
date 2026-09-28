@@ -44,7 +44,6 @@ from papergraph.reference_expansion import ReferenceExpansionMixin
 from papergraph.reference_expansion_store import TABLES as EXPANSION_TABLES, migrate as migrate_expansion
 from papergraph.reference_search import (
     build_reference_search_query,
-    candidate_id_for,
     rank_reference_candidates,
     search_run_id,
     validate_resolver_version,
@@ -2557,19 +2556,6 @@ class Workspace(ReferenceExpansionMixin):
             (paper_id, blocked_id),
         ).fetchone()
         return int(row[0] if row else 0)
-
-    def _latest_reference_search(self, paper_id: str, blocked_id: str) -> dict | None:
-        row = self._connection.execute(
-            """
-            SELECT search_run_id
-            FROM reference_search_runs
-            WHERE source_paper_id = ? AND blocked_id = ?
-            ORDER BY created_at DESC, search_run_id DESC
-            LIMIT 1
-            """,
-            (paper_id, blocked_id),
-        ).fetchone()
-        return self._reference_search_by_id(row[0]) if row else None
 
     def _reference_search_by_id(self, search_run_id: str) -> dict:
         row = self._connection.execute(

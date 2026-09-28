@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import httpx
-from papergraph.reference_providers.base import failure_result, parsed_result
+from papergraph.reference_providers.base import clean_text as _clean, failure_result, parsed_result
 
 
 class CrossrefReferenceProvider:
@@ -80,10 +80,3 @@ def _first(value) -> str | None:
     if isinstance(value, list) and value:
         return _clean(value[0])
     return _clean(value)
-
-
-def _clean(value) -> str | None:
-    if value is None:
-        return None
-    text = str(value).strip()
-    return text or None

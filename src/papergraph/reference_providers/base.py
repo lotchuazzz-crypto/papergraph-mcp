@@ -6,6 +6,13 @@ from typing import Protocol
 import httpx
 
 
+def clean_text(value) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
 def failure_result(provider: str, error: Exception, *, parsing: bool = False) -> dict:
     """Never return exception strings containing query URLs or credentials."""
     if isinstance(error, httpx.TimeoutException):

@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / ".agents" / "skills" / "setting-up-papergraph"
-PIN = "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.6"
+PIN = "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.7"
 
 
 def read(path: Path) -> str:
@@ -125,7 +125,7 @@ def test_checker_runs_the_exact_pinned_launch_command():
 
     class Result:
         returncode = 0
-        stdout = "papergraph-mcp 1.1.6\n"
+        stdout = "papergraph-mcp 1.1.7\n"
         stderr = ""
 
     def runner(command, **kwargs):
@@ -142,7 +142,7 @@ def test_checker_runs_the_exact_pinned_launch_command():
         "--version",
     ]
     assert result["ok"] is True
-    assert result["version"] == "papergraph-mcp 1.1.6"
+    assert result["version"] == "papergraph-mcp 1.1.7"
 
 
 def test_checker_rejects_an_unexpected_version_even_on_exit_zero():
@@ -188,7 +188,7 @@ def test_checker_main_smoke_test_emits_successful_launch_json(monkeypatch, capsy
         "commands": {"git": "/tools/git", "uv": "/tools/uv", "uvx": "/tools/uvx"},
         "ready_for_smoke_test": True,
     }
-    launch = {"ok": True, "reason": "ok", "version": "papergraph-mcp 1.1.6"}
+    launch = {"ok": True, "reason": "ok", "version": "papergraph-mcp 1.1.7"}
     monkeypatch.setattr(checker, "inspect_prerequisites", lambda: prerequisites)
     monkeypatch.setattr(checker, "validate_launch", lambda: launch)
 
@@ -369,4 +369,4 @@ def test_all_onboarding_source_pins_match_latest_published_release():
     )
     refs = re.findall(r"papergraph-mcp\.git@(v[^\s\"'\],)]+)", combined)
     assert refs
-    assert set(refs) == {"v1.1.6"}
+    assert set(refs) == {"v1.1.7"}

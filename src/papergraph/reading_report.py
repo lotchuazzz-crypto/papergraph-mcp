@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING, Any
 
 from papergraph.evidence_triage import (
     build_evidence_triage,
     render_evidence_triage_markdown,
 )
+from papergraph.report_format import code_or_none as _code_or_none, compact_json as _compact_json
 
 if TYPE_CHECKING:
     from papergraph.workspace import Workspace
@@ -436,18 +436,6 @@ def _render_warnings(warnings: list[dict[str, Any]]) -> list[str]:
         if warning.get("evidence"):
             lines.append(f"  - Evidence: {_compact_json(warning['evidence'])}")
     return lines
-
-
-def _compact_json(value: Any) -> str:
-    if value is None:
-        return "`None`"
-    return "`" + json.dumps(value, sort_keys=True, ensure_ascii=False) + "`"
-
-
-def _code_or_none(value: str | None) -> str:
-    if value is None:
-        return "`None`"
-    return f"`{value}`"
 
 
 def _text(value: Any) -> str:

@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import re
-
 import httpx
-from papergraph.reference_providers.base import failure_result, parsed_result
+from papergraph.reference_providers.base import clean_text as _clean, failure_result, parsed_result
 from papergraph.arxiv import extract_arxiv_id_from_url, normalize_arxiv_id, InvalidArxivIdError
 
 
@@ -84,10 +82,3 @@ def _arxiv_id(value) -> str | None:
         return extract_arxiv_id_from_url(text) if text.startswith(('http://', 'https://')) else normalize_arxiv_id(text)
     except (ValueError, InvalidArxivIdError):
         return text  # Preserve invalid provider evidence for the v2 assessment.
-
-
-def _clean(value) -> str | None:
-    if value is None:
-        return None
-    text = str(value).strip()
-    return text or None

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from papergraph.identity import normalize_paper_id
+from papergraph.report_format import source_position as _source_position
 
 if TYPE_CHECKING:
     from papergraph.workspace import Workspace
@@ -505,17 +506,6 @@ def _count_rows(workspace: Workspace, table: str, paper_id: str) -> int:
         (paper_id,),
     ).fetchone()
     return int(row[0])
-
-
-def _source_position(location: dict[str, Any] | None) -> tuple[int, int, int, str]:
-    if not location:
-        return (0, 0, 0, "")
-    return (
-        int(location.get("page") or 0),
-        int(location.get("block_index") or 0),
-        int(location.get("start_offset") or 0),
-        str(location.get("span_id") or ""),
-    )
 
 
 def _statement_preview(statement: str | None, limit: int = 160) -> str:

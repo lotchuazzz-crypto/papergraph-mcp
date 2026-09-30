@@ -6,6 +6,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/lotchuazzz-crypto/papergraph-mcp)](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases)
+![MCPVault: claimed](https://mcpvault.io/servers/papergraph-mcp/health?utm_source=external_badge&utm_medium=referral&utm_campaign=mcp_health_report)
 
 **Read math papers with evidence, not guesses.**
 

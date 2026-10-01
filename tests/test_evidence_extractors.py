@@ -2,6 +2,55 @@ from papergraph.evidence import SourceSpanEvidence
 from papergraph.evidence_extractors import build_pdf_evidence_document
 
 
+def test_uncited_pdf_bibliography_keeps_direct_source_evidence(tmp_path):
+    from papergraph.workspace import Workspace
+    document = build_pdf_evidence_document(
+        "local:paper-a", "paper.pdf", (
+            span(0, "Theorem 1.1. Main result."),
+            span(1, "Proof. Direct."),
+            span(2, "References"),
+            span(3, "[Uncited] A. Author. A background source."),
+        ))
+    entry = document.bibliography_entries[0]
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        workspace.import_evidence_document(document)
+        evidence = workspace.get_evidence(entry.entry_id)
+        assert evidence["spans"][0]["page"] == 1
+        assert evidence["spans"][0]["block_index"] == 3
+        assert evidence["metadata"]["raw_text"] == entry.raw_text
+        assert any(s.span_id == entry.entry_id and s.text == entry.raw_text
+                   for s in document.spans)
+        assert workspace.get_result_proof(document.results[0].result_id)["known"]["proof"]
+    finally:
+        workspace.close()
+
+
+def test_grouped_pdf_bibliography_does_not_cross_assign_identifiers(tmp_path):
+    from papergraph.workspace import Workspace
+    text = "[Ale94] A. Author. Old paper.\n[Bir20] B. Author. New paper. arXiv:2006.11238."
+    document = build_pdf_evidence_document("local:paper-a", "paper.pdf", (
+        span(0, "Theorem 1.1. Assertion."),
+        span(1, "Proof. By [Ale94, Theorem 6.9]."),
+        span(2, "References"), span(3, text),
+    ))
+    assert [e.raw_label for e in document.bibliography_entries] == ["Ale94", "Bir20"]
+    assert document.bibliography_entries[0].arxiv_id is None
+    assert document.bibliography_entries[1].arxiv_id == "2006.11238"
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        workspace.import_evidence_document(document)
+        plan = workspace.plan_external_imports_for_result(document.results[0].result_id)
+        assert plan["candidates"] == []
+        assert plan["blocked"]
+        entry = document.bibliography_entries[1]
+        direct = next(s for s in document.spans if s.span_id == entry.entry_id)
+        assert text[direct.start_offset:direct.end_offset] == direct.text
+        assert "Ale94" not in direct.text
+    finally:
+        workspace.close()
+
+
 def span(index: int, text: str) -> SourceSpanEvidence:
     return SourceSpanEvidence(
         paper_id="local:paper-a",

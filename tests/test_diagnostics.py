@@ -15,6 +15,16 @@ def test_environment_diagnostics_reports_version_and_release_source():
     assert isinstance(result["warnings"], list)
 
 
+def test_diagnostics_distinguishes_statement_graph_proof_evidence_and_doi():
+    result = environment_diagnostics()
+    capabilities = result["dependency_capabilities"]
+    assert capabilities["statement_graph"]["basis"] == result["dependency_extraction_basis"]
+    assert "workspace_get_proof_dependencies" in capabilities["proof_local"]["tools"]
+    assert capabilities["proof_local"]["complete_mathematical_dependencies"] is False
+    assert result["paper_input_capabilities"]["doi_is_fulltext"] is False
+    assert "local_pdf" in result["paper_input_capabilities"]["importable_sources"]
+
+
 def test_environment_diagnostics_tolerates_missing_git(monkeypatch):
     import papergraph.diagnostics as diagnostics
 

@@ -24,6 +24,7 @@ from papergraph.loader import load_latex_project
 from papergraph.parser import parse_latex
 from papergraph.pdf import PdfExtractionError
 from papergraph.project import load_project
+from papergraph.published import discover_doi, import_doi_candidate, import_root_doi
 from papergraph.workspace import SCHEMA_VERSION, Workspace, WorkspaceError
 from papergraph.reference_expansion_api import (
     COMMANDS as EXPANSION_COMMANDS, add_cli as add_expansion_cli,
@@ -205,6 +206,34 @@ def workspace_add_pdf_paper(path: str, paper_id: str) -> dict:
         }
     except _WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+def discover_doi_paper(doi: str) -> dict:
+    """Find exact DOI metadata and public body candidates; never download links."""
+    return discover_doi(doi)
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_import_doi_candidate(doi: str, candidate_id: str, confirmed: bool = False) -> dict:
+    """Import a selected root DOI PDF only after explicit review/confirmation.
+
+    This is not permission to download newly discovered external references.
+    Candidate provider identity is evidence, not a verification of PDF contents.
+    """
+    return import_doi_candidate(require_workspace(), doi, candidate_id, confirmed=confirmed)
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_add_doi_paper(doi: str) -> dict:
+    """Load a user-requested root DOI when one public PDF candidate is eligible.
+
+    Multiple candidates require user selection. Do not use for newly discovered
+    external references: those require an import plan and review first.
+    """
+    return import_root_doi(require_workspace(), doi)
 
 
 @mcp.tool()
@@ -443,6 +472,24 @@ def workspace_get_result_reading_path(
             result_id,
             recursive=recursive,
         )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_get_dependency_reading(
+    paper_id: str, target_result_id: str | None = None,
+    recursive: bool = True, max_candidates: int = 5,
+) -> dict:
+    """List main-result candidates or read a user-selected target with evidence.
+
+    Statement references and proof-local dependencies remain separate. External
+    references produce reviewable plans only; empty evidence is not independence.
+    """
+    try:
+        return require_workspace().get_dependency_reading(
+            paper_id, target_result_id, recursive, max_candidates)
     except _WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc
 
@@ -1386,6 +1433,22 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     subparsers = parser.add_subparsers(dest="command")
     add_expansion_cli(subparsers)
+    doi_parser = subparsers.add_parser('discover-doi', help='Discover DOI body candidates without downloading.')
+    doi_parser.add_argument('doi')
+    doi_import_parser = subparsers.add_parser('import-doi-candidate', help='Import a reviewed public root PDF candidate.')
+    doi_import_parser.add_argument('workspace')
+    doi_import_parser.add_argument('doi')
+    doi_import_parser.add_argument('candidate_id')
+    doi_import_parser.add_argument('--confirm', action='store_true')
+    doi_root_parser = subparsers.add_parser('add-doi-paper', help='Load a user-requested root DOI with one eligible public PDF.')
+    doi_root_parser.add_argument('workspace')
+    doi_root_parser.add_argument('doi')
+    dependency_parser = subparsers.add_parser('get-dependency-reading', help='Read separated dependency evidence for a chosen result.')
+    dependency_parser.add_argument('workspace')
+    dependency_parser.add_argument('paper_id')
+    dependency_parser.add_argument('--target-result-id')
+    dependency_parser.add_argument('--direct', action='store_true')
+    dependency_parser.add_argument('--max-candidates', type=int, default=5)
     subparsers.add_parser(
         "doctor",
         help="Print PaperGraph environment diagnostics as JSON.",
@@ -1656,6 +1719,22 @@ def main(argv: Sequence[str] | None = None) -> None:
         return
     if args.command == "doctor":
         _print_json(environment_diagnostics())
+        return
+    if args.command == 'discover-doi':
+        _print_json(discover_doi(args.doi))
+        return
+    if args.command == 'import-doi-candidate':
+        _run_workspace_cli_command(args.command, args.workspace,
+            lambda workspace: import_doi_candidate(workspace, args.doi, args.candidate_id, confirmed=args.confirm))
+        return
+    if args.command == 'add-doi-paper':
+        _run_workspace_cli_command(args.command, args.workspace,
+            lambda workspace: import_root_doi(workspace, args.doi))
+        return
+    if args.command == 'get-dependency-reading':
+        _run_workspace_cli_command(args.command, args.workspace,
+            lambda workspace: workspace.get_dependency_reading(args.paper_id, args.target_result_id,
+                recursive=not args.direct, max_candidates=args.max_candidates))
         return
     if args.command == "validate-arxiv":
         _print_json(

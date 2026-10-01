@@ -23,6 +23,54 @@ It helps AI agents turn arXiv papers, local LaTeX projects, and born-digital PDF
 
 ---
 
+### Local v1.2.0 development (unreleased)
+
+In the v1.2.0 development checkout, `discover-doi DOI` (MCP
+`discover_doi_paper`) finds exact DOI metadata and public body candidates without
+downloading. Review reported access, identity evidence and version before using
+`import-doi-candidate WORKSPACE DOI CANDIDATE_ID --confirm` (MCP
+`workspace_import_doi_candidate`, `confirmed=true`). Import only a user-selected
+root paper. For a user-requested root DOI, `add-doi-paper WORKSPACE DOI` (MCP
+`workspace_add_doi_paper`) imports automatically when exactly one eligible public
+PDF candidate is available. Multiple candidates require selection. External
+references still require a reviewable import plan.
+
+Provider metadata is not full text. A reported public PDF may be unavailable or
+belong to a different version; neither discovery nor extraction verifies its
+mathematical contents. Unavailable providers, conflicting DOI identities and
+missing public PDFs are reported separately. Use `workspace_add_pdf_paper` for a
+legally obtained local PDF when no usable candidate is available. HTTPS PDF
+downloads are bounded to 50 MiB and preserve source/version/hash receipts beside
+the workspace. Published installation examples remain pinned to v1.1.7.
+
+`get-dependency-reading WORKSPACE PAPER_ID` (MCP
+`workspace_get_dependency_reading`) lists results and source-backed main-result
+candidates without choosing a definitive main theorem. Add `--target-result-id`
+to inspect a chosen result's statement references, direct/recursive proof-local
+dependencies, reading order and external import plan. `--direct` limits analysis
+to the selected proof. Reading paths preserve `top_down` exploration and provide
+`bottom_up` prerequisite order over extracted local evidence, including shared
+dependencies. Direct `bottom_up` includes immediate dependencies; direct
+`top_down` retains its root-only legacy shape. Cycles return `cycle_blocked`, an
+empty `bottom_up`, and cycle evidence. Unknown and external prerequisites stay
+visible; empty dependency evidence does not prove mathematical independence.
+
+An explicit introductory declaration such as `Theorem 1.1 (= Theorem 3.1)`
+provides a traced `author_declared_correspondence` proof entry when its target is
+unique. Both statements remain separate; the proof keeps its original owner.
+This records the author's declaration, not verified mathematical equivalence.
+Own proofs take priority; ambiguous, missing, cyclic or over-eight-hop entries
+remain unresolved and block a purported complete local reading order.
+
+For PDF papers, `result_count`, `proof_count`, `result_kinds` and `evidence_counts`
+report extracted evidence. Legacy theorem/citation graph counters retain their
+LaTeX statement-graph meaning. `import_state` describes body import separately
+from `metadata`; a `display_title` from DOI providers is labeled
+`provider_metadata`, with its reported version and provenance receipt.
+Formal declarations are retained even when numbers repeat; discussion mentions
+do not create new results. Nested external citation evidence remains visible in
+Triage with the original review state and confidence.
+
 ## English
 
 ### What PaperGraph Helps You Do
@@ -80,7 +128,7 @@ Restart the MCP client after changing its configuration. The server uses stdio, 
 
 Give a coding agent this request:
 
-> I use an MCP-capable agent/client. Clone https://github.com/lotchuazzz-crypto/papergraph-mcp and help me configure PaperGraph for it. After cloning, read .agents/skills/setting-up-papergraph/SKILL.md and follow it.
+> I use an MCP-capable agent/client. Clone (or inspect an existing checkout of) https://github.com/lotchuazzz-crypto/papergraph-mcp and help me configure PaperGraph. Before reading setup instructions, fetch and verify the remote default revision; updating an old feature branch does not make its instructions current. Preserve existing branches and local changes, using a separate clean checkout if needed. Unless I request a historical version, read .agents/skills/setting-up-papergraph/SKILL.md from that current revision and follow it. If the fetch fails, tell me freshness is unknown.
 
 Compatible agents can follow the repository-local [`setting-up-papergraph`](.agents/skills/setting-up-papergraph/SKILL.md) skill. The agent should show you a reusable PaperGraph prompt, explain why `uv` is needed, and ask before installing software, changing client configuration, or restarting the client.
 
@@ -174,7 +222,7 @@ uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.7 pa
 
 你可以把这段话发给 coding agent：
 
-> 我使用的是支持 MCP 的 agent/client。请克隆 https://github.com/lotchuazzz-crypto/papergraph-mcp，并帮我把 PaperGraph 配置进去。克隆后请先阅读 .agents/skills/setting-up-papergraph/SKILL.md 并按它执行。
+> 我使用的是支持 MCP 的 agent/client。请克隆（如已有则先检查）https://github.com/lotchuazzz-crypto/papergraph-mcp，帮我配置 PaperGraph。读取安装说明前，请先拉取并确认远端默认分支的最新提交；更新旧功能分支不代表安装说明已更新。保留原有分支和本地改动，必要时另建干净的检出目录。除非我指定历史版本，请从这个已确认的默认分支提交读取 .agents/skills/setting-up-papergraph/SKILL.md 并按它执行。若拉取失败，请明确说明无法确认是否最新。
 
 支持本仓库 skill 的 agent 会读取 [`setting-up-papergraph`](.agents/skills/setting-up-papergraph/SKILL.md)，展示可复用提示词，解释为什么需要 `uv`，并在安装软件、修改客户端配置或重启客户端前询问你。
 

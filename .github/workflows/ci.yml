@@ -81,3 +81,4 @@ jobs:
         run: |
           cd "$(mktemp -d)"
           PYTHONPATH= "$GITHUB_WORKSPACE/.smoke-venv/bin/python" "$GITHUB_WORKSPACE/scripts/smoke_installed_reference_quality.py"
+          PYTHONPATH= "$GITHUB_WORKSPACE/.smoke-venv/bin/python" "$GITHUB_WORKSPACE/scripts/smoke_v120_local.py"

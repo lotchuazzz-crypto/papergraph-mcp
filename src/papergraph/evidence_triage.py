@@ -31,7 +31,16 @@ def build_evidence_triage(
     route = paper_map.get("reading_route", [])
     external_risks = paper_map.get("external_risks", {})
     external_summary = external_risks.get("summary", {})
-    supported_chains = _supported_local_chains(route)
+    if 'local_dependency_evidence' in paper_map:
+        supported_chains = [{'source_result_id': edge['source_result_id'],
+                             'target_result_id': edge['target_result_id'],
+                             'evidence': ('author_declared_correspondence_then_proof_local_mentions'
+                                          if edge.get('proof_result_id') else 'source_backed_proof_local_mentions'),
+                             **({key: edge[key] for key in ('proof_result_id', 'author_correspondences')}
+                                if edge.get('proof_result_id') else {})}
+                            for edge in paper_map['local_dependency_evidence']]
+    else:
+        supported_chains = _supported_local_chains(route)
     local_edge_count = len(supported_chains)
     blocked_count = int(external_summary.get("blocked_count", 0) or 0)
     resolution_summary = (reference_resolutions or {}).get("summary", {})
@@ -58,6 +67,7 @@ def build_evidence_triage(
             "external_blocked_count": blocked_count,
         },
         "supported_local_chains": supported_chains,
+        "dependency_order": paper_map.get('dependency_order', {'order_status': 'unknown', 'cycle_paths': []}),
         "candidate_starting_point": _candidate_starting_point(paper_map),
         "extraction_limits": _extraction_limits(local_edge_count),
         "external_blockers": _external_blockers(external_risks.get("blocked", [])),
@@ -86,6 +96,9 @@ def build_evidence_triage(
         "next_actions": [],
     }
     triage["next_actions"] = _next_actions(triage)
+    if triage['dependency_order'].get('cycle_paths'):
+        triage['extraction_limits'].append({'kind': 'dependency_cycle',
+            'message': 'Local proof evidence contains a cycle; no prerequisite reading order is available.'})
     return triage
 
 
@@ -210,9 +223,11 @@ def _headline(status: str) -> str:
 def _supported_local_chains(route: list[dict[str, Any]]) -> list[dict[str, str]]:
     chains = []
     for item in route:
-        if item.get("reason") not in {"local_dependency", "proof_evidence"}:
+        if item.get("reason") != "local_dependency":
             continue
         evidence = item.get("evidence") or {}
+        if not evidence.get('result_id') or evidence['result_id'] == item['target_id']:
+            continue
         chains.append(
             {
                 "source_result_id": str(evidence.get("result_id") or item["target_id"]),
@@ -245,18 +260,31 @@ def _extraction_limits(local_edge_count: int) -> list[dict[str, str]]:
     return [{"kind": "empty_dependency_scope", "message": EMPTY_DEPENDENCY_MESSAGE}]
 
 
-def _external_blockers(blocked: list[dict[str, Any]]) -> list[dict[str, str]]:
+def _external_blockers(blocked: list[dict[str, Any]]) -> list[dict[str, Any]]:
     blockers = []
     for item in blocked:
+        raw_evidence = item.get('evidence', [])
+        observed = raw_evidence if isinstance(raw_evidence, list) else [raw_evidence]
+        keys = sorted({str(value) for evidence in observed if isinstance(evidence, dict)
+                       for value in [evidence.get('citation_key')] if value})
+        locations = sorted({str(value) for evidence in observed if isinstance(evidence, dict)
+                            for value in [evidence.get('location'), evidence.get('proof_id'),
+                                          evidence.get('result_id')] if value})
         blockers.append(
             {
                 "citation_key": str(
                     item.get("citation_key")
                     or item.get("key")
+                    or ', '.join(keys)
                     or item.get("raw_citation")
                     or "unknown"
                 ),
-                "location": str(item.get("location") or item.get("result_id") or ""),
+                "citation_keys": keys,
+                "location": str(item.get("location") or item.get("result_id") or ', '.join(locations)),
+                "locations": locations,
+                "evidence": raw_evidence,
+                "confidence": item.get('confidence'),
+                "status": item.get('status', 'blocked'),
                 "reason": str(item.get("reason") or item.get("message") or "blocked"),
                 "next_action": EXTERNAL_BLOCKER_ACTION,
             }
@@ -267,7 +295,10 @@ def _external_blockers(blocked: list[dict[str, Any]]) -> list[dict[str, str]]:
 def _next_actions(triage: dict[str, Any]) -> list[dict[str, str]]:
     actions = []
     chains = triage.get("supported_local_chains", [])
-    if chains:
+    if triage.get('dependency_order', {}).get('cycle_paths'):
+        actions.append({'kind': 'review_dependency_cycle',
+                        'label': 'Review the source-backed cycle before choosing a prerequisite reading order.'})
+    elif chains:
         chain = chains[0]
         actions.append(
             {

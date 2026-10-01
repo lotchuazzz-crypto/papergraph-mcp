@@ -72,7 +72,7 @@ def build_paper_reading_report(
         "report_schema_version": REPORT_SCHEMA_VERSION,
         "format": "markdown",
         "paper_id": paper_map["paper"]["paper_id"],
-        "title": paper_map["paper"].get("title"),
+        "title": paper_map["paper"].get('display_title') or paper_map["paper"].get("title"),
         "summary": summary,
         "evidence_triage": evidence_triage,
         "sections": sections,
@@ -100,7 +100,9 @@ def render_paper_reading_report_markdown(report_model: dict[str, Any]) -> str:
         "",
         f"- Paper ID: `{paper['paper_id']}`",
         f"- Source type: `{paper['source_type']}`",
-        f"- Title: {_text(paper.get('title') or 'Unknown')}",
+        f"- Title: {_text(paper.get('display_title') or paper.get('title') or 'Unknown')}",
+        f"- Title source: `{paper.get('display_title_basis') or 'stored_import_metadata'}`",
+        f"- Body import state: {_text(paper.get('import_state', {}).get('status') or 'imported')}",
         f"- Result count: {paper['result_count']}",
         f"- Proof count: {paper['proof_count']}",
         f"- Citation count: {paper['citation_count']}",
@@ -128,8 +130,17 @@ def render_paper_reading_report_markdown(report_model: dict[str, Any]) -> str:
     lines.extend(_render_main_candidates(paper_map["main_result_candidates"]))
     lines.extend(["", "## Candidate Reading Route", ""])
     lines.extend(_render_reading_route(paper_map["reading_route"]))
+    lines.extend(["", "### Local Prerequisite Reading Order", "",
+                  "Candidate orders cover extracted local proof evidence only. External and unknown prerequisites remain outside these orders.", ""])
+    for candidate in paper_map["main_result_candidates"]:
+        path = candidate["reading_path"]
+        lines.append(f"- Candidate `{candidate['result_id']}`: `{path['order_status']}`.")
+        if path['cycle_paths']:
+            lines.append('  Cycle prevents prerequisite ordering: ' + _compact_json(path['cycle_paths']))
+        else:
+            lines.append('  Read: ' + ' → '.join(f"`{item}`" for item in path['bottom_up_result_ids']))
     lines.extend(["", "## Supported Local Logic Chain", ""])
-    lines.extend(_render_logic_chain(paper_map["reading_route"]))
+    lines.extend(_render_logic_chain(paper_map["local_dependency_evidence"]))
     lines.extend(["", "## External Reading Risks", ""])
     lines.extend(_render_external_risks(paper_map["external_risks"]))
     lines.extend(["", "### Resolved External References", ""])
@@ -258,22 +269,24 @@ def _render_reading_route(route: list[dict[str, Any]]) -> list[str]:
     return lines
 
 
-def _render_logic_chain(route: list[dict[str, Any]]) -> list[str]:
-    dependencies = [
-        item for item in route if item["reason"] in {"local_dependency", "proof_evidence"}
-    ]
+def _render_logic_chain(dependencies: list[dict[str, Any]]) -> list[str]:
     if not dependencies:
         return [
             "No local dependency evidence was extracted for the candidate route."
         ]
     lines = []
     for item in dependencies:
-        evidence = item.get("evidence") or {}
-        source = evidence.get("source", "reading_route")
-        result_id = evidence.get("result_id") or item["target_id"]
+        if item.get('proof_result_id'):
+            lines.append(
+                f"- `{item['source_result_id']}` points through author-declared correspondence "
+                f"to the proof of `{item['proof_result_id']}`, which mentions "
+                f"`{item['target_result_id']}`. Mathematical equivalence is not verified: "
+                f"{_compact_json(item.get('via_mentions', []))}."
+            )
+            continue
         lines.append(
-            f"- `{result_id}` uses local evidence involving `{item['target_id']}` "
-            f"from `{source}`."
+            f"- `{item['source_result_id']}` explicitly mentions `{item['target_result_id']}` "
+            f"in proof-local evidence: {_compact_json(item.get('via_mentions', []))}."
         )
     return lines
 

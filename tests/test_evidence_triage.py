@@ -87,6 +87,25 @@ def test_triage_reports_sparse_dependencies_and_supported_chain():
     ]
 
 
+def test_nested_blocker_evidence_preserves_observed_keys_and_review_state():
+    paper_map = sparse_paper_map()
+    evidence = [{'citation_key': 'Ale94', 'proof_id': 'proof:17', 'result_id': 'result:1'},
+                {'citation_key': 'CS20', 'result_id': 'result:2'}]
+    paper_map['external_risks']['blocked'] = [
+        {'reason': 'missing_arxiv_id', 'status': 'blocked', 'confidence': 0.4,
+         'evidence': evidence}]
+    triage = build_evidence_triage(paper_map)
+    blocker = triage['external_blockers'][0]
+    assert blocker['citation_keys'] == ['Ale94', 'CS20']
+    assert blocker['citation_key'] == 'Ale94, CS20'
+    assert blocker['locations'] == ['proof:17', 'result:1', 'result:2']
+    assert blocker['evidence'] == evidence
+    assert blocker['confidence'] == 0.4
+    assert blocker['status'] == 'blocked'
+    assert triage['status'] == 'external_blocked'
+    assert 'unknown' not in '\n'.join(render_evidence_triage_markdown(triage))
+
+
 def test_triage_labels_candidate_start_without_mathematical_recommendation():
     triage = build_evidence_triage(sparse_paper_map())
 

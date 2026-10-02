@@ -8,7 +8,7 @@ def test_candidate_has_no_fictional_release_tag(monkeypatch):
     result = diagnostics.environment_diagnostics()
     assert result['release_tag'] is None
     assert result['build_identity']['channel'] == 'development_candidate'
-    assert result['recommended_source'].endswith('@v1.1.7')
+    assert result['recommended_source'].endswith('@v1.2.0')
     assert result['recommended_source_role'] == 'stable_release_not_running_candidate'
 
 

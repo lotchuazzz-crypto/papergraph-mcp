@@ -31,15 +31,15 @@ Before loading arXiv papers:
 
 For a published DOI, do not pass it to an arXiv loader or claim metadata is an imported paper. Explain the supported inputs: arXiv source, local LaTeX, or a local born-digital PDF. Identify an unambiguous legally accessible full-text source, or ask for the user's local PDF; never bypass a paywall. A root paper requested by the user is distinct from newly discovered external references, which still require a reviewable import plan before downloads.
 
-For a local development server advertising `discover_doi_paper`, use it to find
+For v1.2.0 servers advertising `discover_doi_paper`, use it to find
 exact DOI metadata/body candidates without downloading. Review access reports,
 provider outcomes and reported versions. When the user's reading policy allows
 automatic loading of a requested root, use `workspace_add_doi_paper`: it imports
 only when one exact-identity public PDF candidate is eligible. For multiple
 candidates ask the user to select, then use `workspace_import_doi_candidate` with
 `confirmed=true`. Report actual import state and provenance. Never treat this as
-permission for recursive external-reference downloads. Do not expect these
-unreleased tools in the pinned v1.1.7 package.
+permission for recursive external-reference downloads. These tools are available
+in the pinned v1.2.0 package; historical versions may not provide them.
 
 If available, `workspace_get_dependency_reading` lists source-backed main-result
 candidates without silently choosing one. Pass a user-selected target to separate
@@ -82,18 +82,19 @@ For ordinary installation, use this immutable release source; never substitute a
 branch, a mutable default, or an unreleased revision:
 
 ```text
-git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.7
+git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0
 ```
 
-An explicitly requested development/release-preparation test is separate: the
-local package is `1.2.0`, with publication pending. Use the requested checkout's
-locked development environment or install its built wheel in a separate environment,
+The v1.2.0 Git tag is available and its pinned launch has been verified. The
+separate GitHub Release page is still pending; it is not needed for Git-source
+installation. An explicitly requested development test is separate: use the
+requested checkout's locked environment or install its built wheel in a separate environment,
 then launch that exact interpreter. Check CLI version, `doctor.build_identity`
 (source commit, tracked changes and source-tree digest), and MCP initialization
 version. A dirty build's commit is its base; unknown build provenance is unknown.
-Release diagnostics name `v1.2.0`, but do not establish that its tag is available;
-do not execute that pinned command until publication is verified. The ordinary
-setup command below continues to launch v1.1.7 until the v1.2.0 tag/release exists.
+Release diagnostics name the package version's tag but do not themselves establish
+tag availability. Ordinary setup uses the verified v1.2.0 tag below; future tags
+must be checked before they are recommended.
 Keep the user's active MCP registration intact unless they explicitly authorize a
 configuration change, and never invent a development release/tag.
 
@@ -106,22 +107,22 @@ Never request credentials, upload papers, guess the identity of ambiguous refere
 
 ### What changed
 
-Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `1.1.7`; file presence alone is insufficient:
+Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `1.2.0`; file presence alone is insufficient:
 
 ```text
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.7 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp --version
 ```
 
 Also validate the pinned diagnostics command:
 
 ```text
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.7 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp doctor
 ```
 
 The expected output is:
 
 ```text
-papergraph-mcp 1.1.7
+papergraph-mcp 1.2.0
 ```
 
 Before restart, say “launch command validated”; never say “client has loaded the PaperGraph tools.” Tool loading can be confirmed only after the restarted client discovers the server.

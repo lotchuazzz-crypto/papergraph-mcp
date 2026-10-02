@@ -13,7 +13,7 @@ from papergraph.build_identity import runtime_build_identity
 
 PACKAGE_NAME = "papergraph-mcp"
 REPOSITORY_SOURCE = "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git"
-STABLE_RELEASE_TAG = "v1.1.7"
+STABLE_RELEASE_TAG = "v1.2.0"
 
 
 def _git_output(args: list[str], cwd: Path) -> str:

@@ -5,14 +5,14 @@
 - `pyproject.toml` reports `1.2.0`.
 - `uv.lock` reports package version `1.2.0`.
 - Runtime diagnostics report `version: 1.2.0` and `release_tag: v1.2.0`.
-- Active install commands keep published `v1.1.7` until the `v1.2.0` tag and release exist; update them separately after publication.
+- Active install commands pin the available and publicly validated `v1.2.0` Git tag. Installation examples are updated separately after tag publication; the GitHub Release page is a distinct publication step.
 - Historical specs and release history may keep old versions.
 
 ## Installation Validation
 
-The tag commands below are post-publication checks. Before publishing v1.2.0,
-build the wheel with `uv build` and test it in an isolated environment. Do not
-claim an unpublished tag was installed.
+The tag commands below require an available Git tag. Before publishing a future
+tag, build the wheel with `uv build` and test it in an isolated environment. Do
+not claim an unpublished tag was installed.
 
 ```powershell
 uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp --version
@@ -48,7 +48,7 @@ uv run papergraph-mcp <command> --help
 - Verify merge-commit CI, then create tag `v1.2.0` from that exact commit; never move an existing tag.
 - Publish a formal GitHub release using an English introduction and Highlights, Compatibility, Verification and Install sections. Describe first use, DOI bodies and dependency reading with explicit coverage/identity boundaries.
 - Existing recent releases have no uploaded assets; do not add a new distribution channel.
-- After publication, verify the public pinned launch, version/diagnostics, release flags and tag target, then update active installation examples to the available v1.2.0 tag.
+- After tag publication, verify the exact tag target and public pinned launch/version/diagnostics before updating active installation examples. Verify formal GitHub release flags and its tag separately after creating the release page.
 
 ## Post-v1 Scope
 

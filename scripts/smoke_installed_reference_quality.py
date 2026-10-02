@@ -26,7 +26,8 @@ async def protocol(path, baseline, search):
     params = StdioServerParameters(command=sys.executable, args=['-m','papergraph.server'], env=dict(os.environ))
     async with stdio_client(params) as (reader, writer):
         async with ClientSession(reader, writer) as session:
-            await session.initialize()
+            initialized = await session.initialize()
+            assert initialized.server_info.version == '1.2.0.dev0'
             assert not (await session.call_tool('open_workspace', {'path':str(path)})).is_error
             result = await session.call_tool('workspace_list_external_reference_searches', {'paper_id':'local:paper'})
             assert not result.is_error
@@ -38,12 +39,19 @@ async def protocol(path, baseline, search):
 
 def main():
     assert 'site-packages' in str(Path(papergraph.__file__).resolve())
-    assert cli('--version').strip() == 'papergraph-mcp 1.1.7'
+    assert cli('--version').strip() == 'papergraph-mcp 1.2.0.dev0'
     doctor = json.loads(cli('doctor'))
-    assert doctor['version'] == '1.1.7'
+    assert doctor['version'] == '1.2.0.dev0'
+    assert doctor['release_tag'] is None
+    assert doctor['recommended_source'].endswith('@v1.1.7')
+    assert doctor['build_identity']['channel'] == 'development_candidate'
+    assert len(doctor['build_identity']['source_tree_sha256']) == 64
+    if os.environ.get('GITHUB_SHA'):
+        assert doctor['build_identity']['source_commit'] == os.environ['GITHUB_SHA']
+        assert doctor['build_identity']['tracked_dirty'] is False
     # Outside a Git checkout, the existing diagnostic legitimately notes missing
     # Git context; this is not an installation warning.
-    assert all(w.startswith('Git context unavailable;') for w in doctor['warnings'])
+    assert all(w.startswith(('Git context unavailable;', 'Unreleased development candidate;')) for w in doctor['warnings'])
     with tempfile.TemporaryDirectory(prefix='papergraph-wheel-') as temp:
         root = Path(temp)
         pdf = root/'source.pdf'
@@ -64,7 +72,8 @@ def main():
             baseline = ws.list_external_reference_searches('local:paper')
         assert json.loads(cli('list-external-reference-searches','--workspace',str(path),'--paper-id','local:paper')) == baseline
         asyncio.run(asyncio.wait_for(protocol(path,baseline,search), timeout=45))
-    print(json.dumps({'version':'1.1.7','installed_package':str(papergraph.__file__),
+    print(json.dumps({'version':doctor['version'],'build_identity':doctor['build_identity'],
+                      'installed_package':str(papergraph.__file__),
                       'cli_snapshot_parity':True,'mcp_stdio_snapshot_parity':True,'invalid_version_rejected':True}))
 
 

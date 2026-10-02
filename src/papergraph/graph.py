@@ -5,6 +5,21 @@ from papergraph.models import (
 )
 
 
+def recursive_reference_ids(root: str, adjacency: dict[str, list[str]]) -> list[str]:
+    """Preserve reference DFS order without Python recursion or DAG assumptions."""
+    result, visited = [], set()
+    stack = [iter(adjacency.get(root, []))]
+    while stack:
+        target = next(stack[-1], None)
+        if target is None:
+            stack.pop()
+        elif target not in visited:
+            visited.add(target)
+            result.append(target)
+            stack.append(iter(adjacency.get(target, [])))
+    return result
+
+
 class PaperGraph:
     def __init__(self, nodes: list[TheoremNode]):
         self.nodes = nodes
@@ -40,29 +55,8 @@ class PaperGraph:
                 for node_id in direct_ids
             ]
 
-        result: list[TheoremNode] = []
-        visited: set[str] = set()
-
-        def visit(node_id: str) -> None:
-            node = self.get(node_id)
-
-            for ref in node.refs:
-                if ref not in self.by_id:
-                    continue
-
-                if ref in visited:
-                    continue
-
-                visited.add(ref)
-
-                dependency = self.by_id[ref]
-                result.append(dependency)
-
-                visit(ref)
-
-        visit(theorem_id)
-
-        return result
+        adjacency = {node.id: [ref for ref in node.refs if ref in self.by_id] for node in self.nodes}
+        return [self.by_id[node_id] for node_id in recursive_reference_ids(theorem_id, adjacency)]
 
     def where_used(
         self,

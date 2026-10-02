@@ -460,7 +460,7 @@ def test_workspace_resolve_external_reference_candidate_applies_resolution(
                         "kind": "doi",
                         "doi": "10.1000/example",
                         "title": "Published target",
-                        "authors": ["A. Author"],
+                        "authors": ["A. Author", "B. Writer"],
                         "year": "2020",
                     }
                 ],

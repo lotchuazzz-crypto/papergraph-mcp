@@ -39,18 +39,41 @@ def _boundary(kind, refs=(), candidate_id=None):
 def _author(name):
     parts = re.findall(r'[^\W\d_]+', norm(name))
     if not parts:
-        return '', ''
+        return '', ()
     if ',' in str(name):
         family, given = str(name).split(',', 1)
-        return norm(family), ''.join(p[0] for p in re.findall(r'[^\W\d_]+', norm(given)))
-    return parts[-1], ''.join(p[0] for p in parts[:-1])
+        return norm(family), tuple(re.findall(r'[^\W\d_]+', norm(given)))
+    return parts[-1], tuple(parts[:-1])
+
+
+def _author_matches(a, b):
+    if not a[0] or a[0] != b[0]:
+        return False
+    # Abbreviations are compatible with full names; two different full given
+    # names are not equivalent merely because their initials agree.
+    return all(x == y or len(x) == 1 and y.startswith(x) or
+               len(y) == 1 and x.startswith(y) for x, y in zip(a[1], b[1]))
+
+
+def _matched_author_count(left, right):
+    left, right = list(map(_author, left)), list(map(_author, right))
+    assigned = {}
+
+    def assign(i, visited):
+        for j, candidate in enumerate(right):
+            if j in visited or not _author_matches(left[i], candidate):
+                continue
+            visited.add(j)
+            if j not in assigned or assign(assigned[j], visited):
+                assigned[j] = i
+                return True
+        return False
+
+    return sum(assign(i, set()) for i in range(len(left)))
 
 
 def authors_compatible(left, right):
-    pairs = [(a, b) for a in map(_author, left) for b in map(_author, right) if a[0] and a[0] == b[0]]
-    if not pairs:
-        return False
-    return all(not a[1] or not b[1] or a[1].startswith(b[1]) or b[1].startswith(a[1]) for a, b in pairs)
+    return bool(left and len(left) == len(right) == _matched_author_count(left, right))
 
 
 def _provider_results(results):
@@ -131,8 +154,15 @@ def _assess(query, group, healthy):
             if field == 'title':
                 ratio = min(SequenceMatcher(None, norm(source), norm(v)).ratio() for v in values)
             relation = 'exact' if all(source == v for v in values) else 'normalized_equivalent' if equivalent else 'fuzzy' if field == 'title' and ratio >= .85 else 'conflicting'
-            matched.append({'field':field, 'relation':relation, 'query_value':source,
-                            'candidate_value':values, 'evidence_refs':refs})
+            author_count = min(_matched_author_count(source, v) for v in values) if field == 'authors' else None
+            if field == 'authors' and not equivalent and author_count:
+                relation = 'partial_overlap'
+            match = {'field':field, 'relation':relation, 'query_value':source,
+                     'candidate_value':values, 'evidence_refs':refs}
+            if field == 'authors':
+                match['matched_author_count'] = author_count
+                match['full_list_equivalent'] = equivalent
+            matched.append(match)
             if not equivalent and not (field == 'title' and ratio >= .85):
                 conflict('metadata_conflict', field, [source, *values])
     if exact:

@@ -166,7 +166,9 @@ def test_checker_main_defaults_to_json_without_launching(monkeypatch, capsys):
         "commands": {"git": "/tools/git", "uv": None, "uvx": None},
         "ready_for_smoke_test": False,
     }
-    monkeypatch.setattr(checker, "inspect_prerequisites", lambda: prerequisites)
+    monkeypatch.setattr(checker, "inspect_prerequisites", lambda: dict(prerequisites))
+    repository = {"available": False, "freshness_verified": False}
+    monkeypatch.setattr(checker, "inspect_repository", lambda path: repository)
 
     def unexpected_launch():
         raise AssertionError("default checker invocation must not launch PaperGraph")
@@ -177,7 +179,7 @@ def test_checker_main_defaults_to_json_without_launching(monkeypatch, capsys):
     payload = json.loads(capsys.readouterr().out)
 
     assert returncode == 0
-    assert payload == prerequisites
+    assert payload == {**prerequisites, "repository": repository}
     assert "launch" not in payload
 
 
@@ -189,14 +191,16 @@ def test_checker_main_smoke_test_emits_successful_launch_json(monkeypatch, capsy
         "ready_for_smoke_test": True,
     }
     launch = {"ok": True, "reason": "ok", "version": "papergraph-mcp 1.1.7"}
-    monkeypatch.setattr(checker, "inspect_prerequisites", lambda: prerequisites)
+    monkeypatch.setattr(checker, "inspect_prerequisites", lambda: dict(prerequisites))
+    repository = {"available": True, "freshness_verified": False}
+    monkeypatch.setattr(checker, "inspect_repository", lambda path: repository)
     monkeypatch.setattr(checker, "validate_launch", lambda: launch)
 
     returncode = checker.main(["--smoke-test"])
     payload = json.loads(capsys.readouterr().out)
 
     assert returncode == 0
-    assert payload == {**prerequisites, "launch": launch}
+    assert payload == {**prerequisites, "repository": repository, "launch": launch}
 
 
 def test_checker_main_failed_smoke_test_emits_json_and_returns_nonzero(
@@ -209,14 +213,16 @@ def test_checker_main_failed_smoke_test_emits_json_and_returns_nonzero(
         "ready_for_smoke_test": True,
     }
     launch = {"ok": False, "reason": "nonzero_exit", "returncode": 1}
-    monkeypatch.setattr(checker, "inspect_prerequisites", lambda: prerequisites)
+    monkeypatch.setattr(checker, "inspect_prerequisites", lambda: dict(prerequisites))
+    repository = {"available": True, "freshness_verified": False}
+    monkeypatch.setattr(checker, "inspect_repository", lambda path: repository)
     monkeypatch.setattr(checker, "validate_launch", lambda: launch)
 
     returncode = checker.main(["--smoke-test"])
     payload = json.loads(capsys.readouterr().out)
 
     assert returncode != 0
-    assert payload == {**prerequisites, "launch": launch}
+    assert payload == {**prerequisites, "repository": repository, "launch": launch}
 
 
 def test_skill_orders_the_four_response_phases():

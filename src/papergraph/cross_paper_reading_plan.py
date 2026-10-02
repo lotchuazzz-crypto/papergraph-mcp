@@ -39,6 +39,7 @@ WARNING_ORDER = {
     "external_dependencies": 4,
     "unresolved_references": 5,
     "edge_resolution_limited": 6,
+    "dependency_cycle": 7,
 }
 
 
@@ -94,6 +95,7 @@ def build_cross_paper_reading_plan(
         "papers": papers,
         "cross_paper_edges": cross_edges,
         "recommended_sequence": recommended_sequence,
+        "sequence_policy": "heuristic_exploration_not_topological",
         "external_risks": external_risks,
         "warnings": warnings,
         "evidence_boundaries": REQUIRED_BOUNDARIES,
@@ -126,6 +128,8 @@ def render_cross_paper_reading_plan_markdown(
     ]
     lines.extend(_render_paper_set(plan_model["papers"]))
     lines.extend(["", "## Recommended Reading Sequence", ""])
+    lines.append('This is a heuristic exploration sequence, not a topological prerequisite order. Review local cycles and evidence gaps separately.')
+    lines.append('')
     lines.extend(_render_sequence(plan_model["recommended_sequence"]))
     lines.extend(["", "## Cross-Paper Evidence", ""])
     lines.extend(_render_edges(plan_model["cross_paper_edges"]))
@@ -197,11 +201,13 @@ def _paper_summaries(paper_maps: list[dict[str, Any]]) -> list[dict[str, Any]]:
         papers.append(
             {
                 "paper_id": paper["paper_id"],
-                "title": paper.get("title"),
+            "title": paper.get("display_title") or paper.get("title"),
+            "title_basis": paper.get("display_title_basis"),
                 "paper_map_summary": paper_map["summary"],
                 "paper": paper,
                 "main_result_candidates": paper_map["main_result_candidates"],
                 "reading_route_preview": paper_map["reading_route"][:5],
+                "dependency_order": paper_map["dependency_order"],
                 "single_paper_report_command": (
                     "papergraph-mcp --workspace <WORKSPACE> "
                     f"export-paper-reading-report --paper-id {paper['paper_id']}"
@@ -497,6 +503,12 @@ def _warnings(
     focus_matched: bool,
 ) -> list[dict[str, Any]]:
     warnings = []
+    cycle_papers = [paper_map['paper']['paper_id'] for paper_map in paper_maps
+                    if any(candidate['reading_path']['cycle_paths'] for candidate in paper_map['main_result_candidates'])]
+    if cycle_papers:
+        warnings.append({'kind': 'dependency_cycle',
+                         'message': 'Local proof-evidence cycles prevent prerequisite ordering in selected papers.',
+                         'evidence': {'paper_ids': cycle_papers}})
     if focus and not focus_matched:
         warnings.append(
             {

@@ -23,6 +23,8 @@ from papergraph.evidence import (
     source_span_payload,
 )
 from papergraph.evidence_extractors import build_pdf_evidence_document
+from papergraph.pdf_coverage import with_pdf_coverage
+from papergraph.graph import recursive_reference_ids
 from papergraph.identity import (
     global_theorem_id,
     normalize_paper_id,
@@ -1348,11 +1350,11 @@ class Workspace(ReferenceExpansionMixin):
             parameters,
         ).fetchall()
         return [
-            {
+            with_pdf_coverage(self, {
                 **_result_from_row(row),
                 "source_type": row[13],
                 "first_location": self._first_result_location(row[0]),
-            }
+            }, 'statement', self._source_spans_for_result(row[0]))
             for row in rows
         ]
 
@@ -1373,23 +1375,27 @@ class Workspace(ReferenceExpansionMixin):
         ).fetchone()
         if row is None:
             raise KeyError(f"Unknown result id: {result_id}")
-        return {
+        spans = self._source_spans_for_result(result_id)
+        return with_pdf_coverage(self, {
             **_result_from_row(row),
-            "spans": self._source_spans_for_result(result_id),
-        }
+            "spans": spans,
+        }, 'statement', spans)
 
     @_synchronized
     def get_result_proof(self, result_id: str) -> dict:
         """Return known and inferred proof evidence for one result."""
 
         self._ensure_result_exists(result_id)
-        proof = self._proof_for_result(result_id)
+        from papergraph.author_correspondence import resolve_proof_entry, entry_payload, entry_warning
+        entry = resolve_proof_entry(self, result_id)
+        proof = entry['proof']
         if proof is None:
             return {
                 "known": {},
                 "inferred": [],
                 "unresolved": {"proof": "not_found"},
-                "warnings": ["No proof evidence was found for this result."],
+                "warnings": ["No proof evidence was found for this result."] + entry_warning(entry),
+                "proof_entry": entry_payload(entry),
             }
         return {
             "known": {"proof": proof},
@@ -1401,7 +1407,8 @@ class Workspace(ReferenceExpansionMixin):
                 }
             ],
             "unresolved": {},
-            "warnings": [],
+            "warnings": entry_warning(entry) + ([proof['text_coverage']['warning']] if proof.get('text_coverage') else []),
+            "proof_entry": entry_payload(entry),
         }
 
     @_synchronized
@@ -1413,7 +1420,9 @@ class Workspace(ReferenceExpansionMixin):
         """Return dependency evidence extracted from the associated proof."""
 
         self._ensure_result_exists(result_id)
-        proof = self._proof_for_result(result_id)
+        from papergraph.author_correspondence import resolve_proof_entry, entry_payload, entry_warning
+        entry = resolve_proof_entry(self, result_id)
+        proof = entry['proof']
         if proof is None:
             return {
                 "result_id": result_id,
@@ -1425,12 +1434,14 @@ class Workspace(ReferenceExpansionMixin):
                 },
                 "inferred": [],
                 "unresolved": {"proof": "not_found"},
-                "warnings": ["No proof evidence was found for this result."],
+                "warnings": ["No proof evidence was found for this result."] + entry_warning(entry),
+                "proof_entry": entry_payload(entry),
             }
 
         proof_ids = [proof["proof_id"]]
         if recursive:
             proof_ids.extend(self._recursive_dependency_proof_ids(result_id))
+        proof_ids = list(dict.fromkeys(proof_ids))
 
         resolved_local_result_ids: list[str] = []
         resolved_local_mentions_by_result: dict[str, list[dict]] = {}
@@ -1521,7 +1532,9 @@ class Workspace(ReferenceExpansionMixin):
                 else:
                     unresolved_external.append(mention)
 
-        warnings = []
+        warnings = entry_warning(entry)
+        if proof.get('text_coverage'):
+            warnings.append(proof['text_coverage']['warning'])
         if not resolved_local_result_ids and not known_external_mentions:
             warnings.append(EVIDENCE_EMPTY_DEPENDENCY_WARNING)
         return {
@@ -1553,6 +1566,8 @@ class Workspace(ReferenceExpansionMixin):
                 "external_result_mentions": unresolved_external,
             },
             "warnings": warnings,
+            "proof_entry": entry_payload(entry),
+            "proof_coverage": proof.get('text_coverage', {'status': 'not_assessed'}),
         }
 
     @_synchronized
@@ -1629,6 +1644,9 @@ class Workspace(ReferenceExpansionMixin):
                     node_or_edge_id,
                     metadata,
                 )
+                if evidence_type in ('result', 'proof'):
+                    metadata = with_pdf_coverage(self, metadata,
+                                                'statement' if evidence_type == 'result' else 'proof', spans)
                 return {
                     "id": node_or_edge_id,
                     "type": evidence_type,
@@ -1784,6 +1802,7 @@ class Workspace(ReferenceExpansionMixin):
         result = self.get_result(result_id)
         proof_payload = self.get_result_proof(result_id)
         dependencies = self.get_proof_dependencies(result_id)
+        reading_path = self.get_result_reading_path(result_id, recursive=True)
         handles = [
             source_handle(
                 "result_id",
@@ -1807,16 +1826,14 @@ class Workspace(ReferenceExpansionMixin):
             "result": result_to_reading_result(result, handles[:1]),
             "proof": proof_payload,
             "dependencies": dependencies,
-            "reading_path_preview": self.get_result_reading_path(
-                result_id,
-                recursive=True,
-            ),
+            "reading_path_preview": reading_path,
             "source_slice_handles": _dedupe_source_handles(handles),
             "interpretation_prompts": interpretation_prompts(),
             "warnings": _dedupe_strings(
                 [
                     *proof_payload.get("warnings", []),
                     *dependencies.get("warnings", []),
+                    *reading_path.get("warnings", []),
                 ]
             ),
         }
@@ -1829,63 +1846,17 @@ class Workspace(ReferenceExpansionMixin):
     ) -> dict:
         """Return deterministic top-down and bottom-up local reading paths."""
 
-        self._ensure_result_exists(result_id)
-        top_down = []
-        edges = []
-        external_stops = []
-        unresolved_stops = []
-        cycles = []
-        visited: set[str] = set()
-        active: set[str] = set()
+        from papergraph.dependency_reading import build_result_reading_path
+        return build_result_reading_path(self, result_id, recursive, _parser_version())
 
-        def visit(current_id: str) -> None:
-            if current_id in active:
-                cycles.append(current_id)
-                return
-            if current_id in visited:
-                return
-            active.add(current_id)
-            visited.add(current_id)
-            top_down.append(self.get_result(current_id))
-            dependencies = self.get_proof_dependencies(current_id)
-            for dependency in dependencies["known"]["resolved_local_results"]:
-                target_id = dependency["result_id"]
-                edges.append(
-                    {
-                        "source_result_id": current_id,
-                        "target_result_id": target_id,
-                        "relation": "uses_local_result",
-                    }
-                )
-                if recursive:
-                    visit(target_id)
-            external_stops.extend(
-                dependencies["known"].get("external_result_mentions", [])
-            )
-            for key, mentions in dependencies.get("unresolved", {}).items():
-                if mentions:
-                    unresolved_stops.append(
-                        {
-                            "result_id": current_id,
-                            "kind": key,
-                            "mentions": mentions,
-                        }
-                    )
-            active.remove(current_id)
-
-        visit(result_id)
-        return {
-            **base_bridge_payload(_parser_version()),
-            "result_id": result_id,
-            "recursive": recursive,
-            "top_down": top_down,
-            "bottom_up": list(reversed(top_down)),
-            "edges": edges,
-            "external_stops": external_stops,
-            "unresolved_stops": unresolved_stops,
-            "cycles": cycles,
-            "warnings": [],
-        }
+    @_synchronized
+    def get_dependency_reading(
+        self, paper_id: str, target_result_id: str | None = None,
+        recursive: bool = True, max_candidates: int = 5,
+    ) -> dict:
+        """List evidence-backed candidates or read a user-selected dependency target."""
+        from papergraph.dependency_reading import build_dependency_reading
+        return build_dependency_reading(self, paper_id, target_result_id, recursive, max_candidates)
 
     @_synchronized
     def create_reading_queue(
@@ -1981,10 +1952,16 @@ class Workspace(ReferenceExpansionMixin):
     def get_reading_queue(self, queue_id: str) -> dict:
         """Return one reading queue with deterministic item ordering."""
 
-        return {
-            "queue": self._reading_queue_payload(queue_id),
-            "items": self._reading_queue_items(queue_id),
-        }
+        queue = self._reading_queue_payload(queue_id)
+        items = self._reading_queue_items(queue_id)
+        recursive = next((item['evidence'].get('recursive', True) for item in items
+                          if item['reason'] == 'selected_result'), True)
+        path = self.get_result_reading_path(queue['target_result_id'], recursive=recursive) if queue['target_result_id'] else None
+        return {'queue': queue, 'items': items,
+                'reading_order': {'order_status': path['order_status'] if path else 'target_unavailable',
+                                  'bottom_up_result_ids': [node['result_id'] for node in path['bottom_up']] if path else [],
+                                  'cycle_paths': path['cycle_paths'] if path else [],
+                                  'scope': 'current_extracted_local_evidence_not_queue_positions'}}
 
     @_synchronized
     def apply_reading_queue_to_session(
@@ -2778,7 +2755,8 @@ class Workspace(ReferenceExpansionMixin):
             ORDER BY papers.paper_id
             """
         ).fetchall()
-        return [_paper_from_row(row) for row in rows]
+        from papergraph.paper_summary import augment_paper_summary
+        return [augment_paper_summary(self, _paper_from_row(row)) for row in rows]
 
     @_synchronized
     def create_reading_session(
@@ -3258,6 +3236,7 @@ class Workspace(ReferenceExpansionMixin):
             "created_at": row[5],
             "updated_at": row[6],
             "counts": {"items": item_count},
+            "sequence_policy": "exploration_queue_not_topological",
         }
 
     def _reading_queue_items(self, queue_id: str) -> list[dict]:
@@ -3330,7 +3309,7 @@ class Workspace(ReferenceExpansionMixin):
                 },
             )
 
-        for dependency in path["top_down"]:
+        for dependency in path["top_down"] + path.get("direct_dependencies", []):
             dependency_id = dependency["result_id"]
             if dependency_id == result_id:
                 continue
@@ -3340,7 +3319,7 @@ class Workspace(ReferenceExpansionMixin):
                 "recommended",
                 "local_dependency_result",
                 {
-                    "source": "reading_path.top_down",
+                    "source": "reading_path.top_down" if recursive else "reading_path.direct_dependencies",
                     "result_id": result_id,
                     "dependency_result_id": dependency_id,
                 },
@@ -3436,7 +3415,8 @@ class Workspace(ReferenceExpansionMixin):
                 (normalized_paper_id,),
             )
         }
-        return result
+        from papergraph.paper_summary import augment_paper_summary
+        return augment_paper_summary(self, result)
 
     @_synchronized
     def search_theorems(
@@ -3537,18 +3517,7 @@ class Workspace(ReferenceExpansionMixin):
             adjacency.setdefault(source_global_id, []).append(target_global_id)
 
         if recursive:
-            dependency_ids: list[str] = []
-            visited: set[str] = set()
-
-            def visit(theorem_id: str) -> None:
-                for dependency_id in adjacency.get(theorem_id, ()):
-                    if dependency_id in visited:
-                        continue
-                    visited.add(dependency_id)
-                    dependency_ids.append(dependency_id)
-                    visit(dependency_id)
-
-            visit(normalized_global_id)
+            dependency_ids = recursive_reference_ids(normalized_global_id, adjacency)
         else:
             dependency_ids = adjacency.get(normalized_global_id, [])
 
@@ -3689,6 +3658,15 @@ class Workspace(ReferenceExpansionMixin):
 
     @_synchronized
     def _proof_for_result(self, result_id: str) -> dict | None:
+        from papergraph.author_correspondence import resolve_proof_entry, entry_payload
+        entry = resolve_proof_entry(self, result_id)
+        proof = entry['proof']
+        if proof is not None and entry['status'] != 'direct':
+            return {**proof, 'proof_entry': entry_payload(entry)}
+        return proof
+
+    @_synchronized
+    def _direct_proof_for_result(self, result_id: str) -> dict | None:
         row = self._connection.execute(
             """
             SELECT
@@ -3705,7 +3683,7 @@ class Workspace(ReferenceExpansionMixin):
             return None
         proof = _proof_from_row(row)
         proof["spans"] = self._source_spans_for_proof(proof["proof_id"])
-        return proof
+        return with_pdf_coverage(self, proof, 'proof', proof['spans'])
 
     @_synchronized
     def _proofs_for_paper(self, paper_id: str) -> list[dict]:
@@ -3726,7 +3704,7 @@ class Workspace(ReferenceExpansionMixin):
             proof["source_handles"] = [
                 source_handle("proof_id", proof["proof_id"], paper_id, "proof")
             ]
-            proofs.append(proof)
+            proofs.append(with_pdf_coverage(self, proof, 'proof', self._source_spans_for_proof(proof['proof_id'])))
         return proofs
 
     @_synchronized
@@ -3780,8 +3758,10 @@ class Workspace(ReferenceExpansionMixin):
             if result["result_id"] not in locally_used
             and result["result_id"] in result_ids
         ]
-        if external_deps or unresolved_count:
-            self_containment = "low" if unresolved_count else "medium"
+        from papergraph.dependency_reading import find_dependency_cycles
+        cycles = find_dependency_cycles(dependency_index)
+        if external_deps or unresolved_count or cycles:
+            self_containment = "low" if unresolved_count or cycles else "medium"
         else:
             self_containment = "high"
         return {
@@ -3789,7 +3769,9 @@ class Workspace(ReferenceExpansionMixin):
             "self_containment": self_containment,
             "external_deps": external_deps,
             "isolated_results": isolated,
-            "circular_deps": [],
+            "circular_deps": cycles,
+            "acyclic": not bool(cycles),
+            "assessment_scope": "exported_proof_dependency_index_not_mathematical_completeness",
             "summary": "requires_consumer_interpretation",
         }
 
@@ -4202,23 +4184,24 @@ class Workspace(ReferenceExpansionMixin):
         queue = [result_id]
         while queue:
             current_result_id = queue.pop(0)
+            current_proof = self._proof_for_result(current_result_id)
+            if current_proof is None:
+                continue
             resolved_status_placeholders = ", ".join(
                 "?" for _ in _RESOLVED_RESOLUTION_STATUSES
             )
             rows = self._connection.execute(
                 f"""
                 SELECT DISTINCT local_result_mentions.target_result_id
-                FROM proofs
-                JOIN local_result_mentions
-                  ON local_result_mentions.proof_id = proofs.proof_id
-                WHERE proofs.result_id = ?
+                FROM local_result_mentions
+                WHERE local_result_mentions.proof_id = ?
                   AND local_result_mentions.target_result_id IS NOT NULL
                   AND local_result_mentions.resolution_status IN (
                       {resolved_status_placeholders}
                   )
                 ORDER BY local_result_mentions.target_result_id
                 """,
-                (current_result_id, *_RESOLVED_RESOLUTION_STATUSES),
+                (current_proof['proof_id'], *_RESOLVED_RESOLUTION_STATUSES),
             ).fetchall()
             for (target_result_id,) in rows:
                 if target_result_id in visited_results:

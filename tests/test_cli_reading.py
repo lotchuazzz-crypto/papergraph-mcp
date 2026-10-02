@@ -150,7 +150,12 @@ def test_get_result_reading_path_cli_supports_direct_mode(tmp_path: Path, capsys
         "local:paper::pdf:theorem:1.3"
     ]
     assert [node["result_id"] for node in payload["bottom_up"]] == [
+        "local:paper::pdf:lemma:1.2",
         "local:paper::pdf:theorem:1.3"
+    ]
+    assert payload["order_status"] == "direct_dependencies_first"
+    assert [node["result_id"] for node in payload["direct_dependencies"]] == [
+        "local:paper::pdf:lemma:1.2"
     ]
     assert payload["edges"] == [
         {

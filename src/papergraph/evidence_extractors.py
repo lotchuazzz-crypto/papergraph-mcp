@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 
 from papergraph.arxiv import InvalidArxivIdError, normalize_arxiv_id
+from papergraph.author_correspondence import declared_target, RELATION
 from papergraph.evidence import (
     BibliographyEntryEvidence,
     CitationMentionEvidence,
     EvidenceDocument,
+    EvidenceEdge,
     ExternalResultMentionEvidence,
     LocalResultMentionEvidence,
     ProofEvidence,
@@ -111,8 +114,11 @@ def extract_result_blocks(
     for span_index, span in enumerate(spans[:limit]):
         text = _normalized_text(span.text)
         match = RESULT_RE.match(text)
-        if match is None:
+        if match is None or not _formal_result_heading(span.text, text, match):
             continue
+
+        result_span_indices = _statement_span_indices(spans, span_index, limit)
+        text = '\n'.join(_normalized_text(spans[i].text) for i in result_span_indices)
 
         raw_kind = match.group("raw")
         visible_number = match.group("number") or None
@@ -141,13 +147,53 @@ def extract_result_blocks(
                 visible_number=visible_number,
                 title=None,
                 statement=text,
-                span_indices=(span_index,),
+                span_indices=result_span_indices,
                 method="pdf_heading_regex",
                 confidence=0.85,
             )
         )
 
     return tuple(results)
+
+
+def _formal_result_heading(raw_text, normalized, match):
+    """Require an explicit heading boundary, never deduplicate by numbering."""
+    remainder = normalized[match.end('number'):].lstrip()
+    if remainder.startswith(('.', ':', '(')):
+        return True
+    first_line = _normalized_text(raw_text.splitlines()[0])
+    return first_line == normalized[:match.end('number')]
+
+
+def _statement_span_indices(spans, start, limit):
+    """Collect a small lexical/layout continuation window, never certify entirety."""
+    included = [start]
+    heading = _normalized_text(spans[start].text)
+    match = RESULT_RE.match(heading)
+    isolated = bool(re.fullmatch(r'\s*(?:\([^)]*\)\s*)?[.:]?\s*', heading[match.end('number'):]))
+    for following in range(start + 1, min(limit, start + 8)):
+        candidate, previous = spans[following], spans[included[-1]]
+        next_text = _normalized_text(candidate.text)
+        if candidate.page is not None and spans[start].page is not None and candidate.page > spans[start].page + 1:
+            break
+        # Do not discard a mathematical denominator merely because it is numeric.
+        if candidate.block_index == 0 and (next_text.isupper() or next_text == str(candidate.page)):
+            continue
+        if (PROOF_RE.match(next_text) or RESULT_RE.match(next_text)
+                or next_text.casefold() in ('references', 'bibliography')
+                or re.match(r'^\d+(?:\.\d+)*\.?\s+[A-Z]', next_text)):
+            break
+        if previous.page == candidate.page and previous.bbox and candidate.bbox:
+            if candidate.bbox[1] - previous.bbox[3] > 36 or candidate.bbox[0] > previous.bbox[2] or candidate.bbox[2] < previous.bbox[0]:
+                break
+        explicit_continuation = re.match(r'^(?:Then\b|Moreover\b|Furthermore\b|In particular\b|where\b|such that\b|\([0-9]+\))', next_text)
+        if not isolated and _normalized_text(previous.text).endswith(('.', '!', '?')) and not explicit_continuation:
+            break
+        if sum(len(spans[i].text) for i in included) + len(candidate.text) > 12000:
+            break
+        included.append(following)
+        isolated = False
+    return tuple(included)
 
 
 def _result_lookup(
@@ -263,14 +309,10 @@ def extract_bibliography_entries(
     paper_id: str,
     spans: tuple[SourceSpanEvidence, ...],
 ) -> tuple[BibliographyEntryEvidence, ...]:
-    """Extract numeric bibliography entries after a bibliography heading."""
-
-    bibliography_index = _bibliography_start_index(spans)
-    if bibliography_index is None:
-        return ()
+    """Extract bracket-labelled entries without mixing grouped PDF blocks."""
 
     entries: list[BibliographyEntryEvidence] = []
-    for span in spans[bibliography_index + 1 :]:
+    for span in _bibliography_entry_spans(spans):
         text = _normalized_text(span.text)
         match = _BIBLIOGRAPHY_ENTRY_RE.match(text)
         if match is None:
@@ -287,7 +329,7 @@ def extract_bibliography_entries(
                 paper_id=paper_id,
                 raw_label=label,
                 raw_text=text,
-                entry_type="numeric",
+                entry_type="numeric" if label.isdecimal() else "keyed",
                 title=None,
                 authors=(),
                 year=None,
@@ -304,6 +346,25 @@ def extract_bibliography_entries(
             )
         )
 
+    return tuple(entries)
+
+
+def _bibliography_entry_spans(spans):
+    """Split at source line labels; preserve exact block-relative offsets."""
+    bibliography_index = _bibliography_start_index(spans)
+    if bibliography_index is None:
+        return ()
+    entries = []
+    for span in spans[bibliography_index + 1:]:
+        markers = list(re.finditer(r"(?m)^\s*\[[^\]\n]+\]\s*", span.text))
+        for index, marker in enumerate(markers):
+            start = marker.start()
+            end = markers[index + 1].start() if index + 1 < len(markers) else len(span.text)
+            entries.append(replace(
+                span, text=span.text[start:end],
+                start_offset=(span.start_offset or 0) + start,
+                end_offset=(span.start_offset or 0) + end,
+            ))
     return tuple(entries)
 
 
@@ -589,6 +650,18 @@ def build_pdf_evidence_document(
     results = extract_result_blocks(paper_id, spans)
     proofs = extract_proof_blocks(paper_id, spans, results)
     bibliography_entries = extract_bibliography_entries(paper_id, spans)
+    # Bibliography entries can be uncited in extracted proof blocks. Keep their
+    # actual PDF block locations so import validation does not require a citation
+    # to establish traceability. Append copies to preserve all result/proof indices.
+    bibliography_blocks = {
+        _normalized_text(span.text): span
+        for span in _bibliography_entry_spans(spans)
+    }
+    bibliography_spans = tuple(
+        replace(bibliography_blocks[entry.raw_text], span_id=entry.entry_id,
+                method="pdf_bibliography_block", confidence=entry.confidence)
+        for entry in bibliography_entries
+    )
     local_result_mentions = extract_local_result_mentions(paper_id, proofs, results)
     citation_mentions = extract_citation_mentions(
         paper_id,
@@ -599,6 +672,18 @@ def build_pdf_evidence_document(
         paper_id,
         citation_mentions,
     )
+    correspondence_edges = []
+    lookup = _result_lookup(results)
+    for result in results:
+        target = declared_target(result.statement)
+        matches = lookup.get(target, []) if target else []
+        if len(matches) == 1:
+            correspondence_edges.append(EvidenceEdge(
+                edge_id=result.result_id + '::author-correspondence', paper_id=paper_id,
+                source_id=result.result_id, target_id=matches[0].result_id,
+                relation=RELATION, evidence_ids=(result.result_id,),
+                method='pdf_explicit_author_declaration', confidence=0.95,
+            ))
 
     return EvidenceDocument(
         paper_id=paper_id,
@@ -608,13 +693,13 @@ def build_pdf_evidence_document(
         title=title,
         authors=authors,
         main_file=source_ref,
-        spans=spans,
+        spans=(*spans, *bibliography_spans),
         results=results,
         proofs=proofs,
         bibliography_entries=bibliography_entries,
         local_result_mentions=local_result_mentions,
         citation_mentions=citation_mentions,
         external_result_mentions=external_result_mentions,
-        edges=(),
+        edges=tuple(correspondence_edges),
         warnings=(),
     )

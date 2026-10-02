@@ -19,6 +19,32 @@ def test_presence_is_not_matching():
     assert not c['assessment']['auto_selection']['eligible']
 
 
+def test_shared_author_is_partial_overlap_not_equivalent_or_corroborated():
+    query = {'title_hint': 'Maps', 'author_hints': ['P. Cascini', 'C. Spicer'], 'year_hint': '2021'}
+    record = {'title': 'Maps', 'authors': ['Calum Spicer', 'Roberto Svaldi'],
+              'year': '2021', 'arxiv_id': '2104.11540'}
+    candidate, = rank(query, [provider([record], p) for p in ['crossref', 'openalex']])['candidates']
+    authors = next(f for f in candidate['assessment']['matched_fields'] if f['field'] == 'authors')
+    assert authors['relation'] == 'partial_overlap'
+    assert authors['matched_author_count'] == 1
+    assert candidate['confidence'] == 'ambiguous'
+    assert not candidate['assessment']['auto_selection']['eligible']
+    assert candidate['score'] == 5
+    assert any(c['field'] == 'authors' for c in candidate['assessment']['conflicts'])
+
+
+@pytest.mark.parametrize('left,right,equivalent', [
+    (['P. Cascini', 'C. Spicer'], ['Calum Spicer', 'Cascini, Paolo'], True),
+    (['A. Smith', 'B. Smith'], ['Bob Smith', 'Alice Smith'], True),
+    (['A. Smith', 'A. Smith'], ['Alice Smith', 'Bob Smith'], False),
+    (['Calum Spicer'], ['Calum Spicer', 'Roberto Svaldi'], False),
+    (['Peter Author'], ['Paolo Author'], False),
+])
+def test_author_equivalence_requires_complete_one_to_one_name_forms(left, right, equivalent):
+    from papergraph.reference_assessment import authors_compatible
+    assert authors_compatible(left, right) is equivalent
+
+
 def test_truncated_ambiguity_stays_blocked():
     q = {'title_hint':'Maps', 'author_hints':['A. Author'], 'year_hint':'2020'}
     records = [{'title':'Maps','authors':['A. Author'],'year':'2020','arxiv_id':a}

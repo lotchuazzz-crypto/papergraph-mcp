@@ -17,6 +17,16 @@ def build_graph() -> PaperGraph:
     )
 
 
+def test_long_reference_chain_and_cycle_do_not_hit_python_recursion_limit():
+    from dataclasses import replace
+    seed = build_graph().nodes[0]
+    nodes = [replace(seed, id=f'node:{i}', refs=[f'node:{i + 1}'] if i < 1100 else ['node:0'])
+             for i in range(1101)]
+    graph = PaperGraph(nodes)
+    dependencies = graph.dependencies('node:0', recursive=True)
+    assert [node.id for node in dependencies] == [f'node:{i}' for i in range(1, 1101)] + ['node:0']
+
+
 def test_direct_dependencies():
     graph = build_graph()
 

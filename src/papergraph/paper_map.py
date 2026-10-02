@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from papergraph.pdf_coverage import with_pdf_coverage
+
 from typing import TYPE_CHECKING, Any
 
 from papergraph.identity import normalize_paper_id
@@ -25,6 +27,7 @@ WARNING_ORDER = {
     "external_dependencies": 3,
     "unresolved_references": 4,
     "sparse_pdf_text": 5,
+    "dependency_cycle": 6,
 }
 COUNT_TABLES = {
     "proofs",
@@ -57,6 +60,7 @@ def build_paper_map(
     reading_route = (
         _reading_route(workspace, recommended_start) if recommended_start else []
     )
+    selected_path = workspace.get_result_reading_path(recommended_start) if recommended_start else None
     external_risks = workspace.plan_external_imports_for_paper(normalized_paper_id)
     evidence_quality = _evidence_quality(
         paper,
@@ -78,6 +82,12 @@ def build_paper_map(
             "paper_id": paper["paper_id"],
             "source_type": paper["source_type"],
             "title": paper.get("title"),
+            "display_title": paper.get('display_title'),
+            "display_title_basis": paper.get('display_title_basis'),
+            "metadata": paper.get('metadata'),
+            "import_state": paper.get('import_state'),
+            "evidence_counts": paper.get('evidence_counts'),
+            "legacy_counts_basis": paper.get('legacy_counts_basis'),
             "arxiv_id": (
                 paper.get("source_ref")
                 if paper.get("source_type") == "arxiv"
@@ -102,6 +112,16 @@ def build_paper_map(
         "main_result_candidates": candidates,
         "structure": structure,
         "reading_route": reading_route,
+        "local_dependency_evidence": selected_path['edge_evidence'] if selected_path else [],
+        "dependency_order": {
+            "target_result_id": recommended_start,
+            "order_status": selected_path['order_status'] if selected_path else 'no_target',
+            "bottom_up_result_ids": [node['result_id'] for node in selected_path['bottom_up']] if selected_path else [],
+            "cycle_paths": selected_path['cycle_paths'] if selected_path else [],
+            "scope": "extracted_local_proof_evidence_only",
+            "proof_entries": selected_path['proof_entries'] if selected_path else {},
+            "proof_entry_stops": selected_path['proof_entry_stops'] if selected_path else [],
+        },
         "external_risks": external_risks,
         "evidence_quality": evidence_quality,
     }
@@ -128,7 +148,7 @@ def _list_all_results(workspace: Workspace, paper_id: str) -> list[dict[str, Any
         JOIN papers ON papers.paper_id = results.paper_id
         LEFT JOIN result_source_spans
           ON result_source_spans.result_id = results.result_id
-         AND result_source_spans.position = 1
+         AND result_source_spans.position = 0
         LEFT JOIN source_spans
           ON source_spans.id = result_source_spans.span_id
         WHERE results.paper_id = ?
@@ -141,7 +161,7 @@ def _list_all_results(workspace: Workspace, paper_id: str) -> list[dict[str, Any
         (paper_id,),
     ).fetchall()
     return [
-        {
+        with_pdf_coverage(workspace, {
             "result_id": row[0],
             "paper_id": row[1],
             "local_id": row[2],
@@ -157,7 +177,7 @@ def _list_all_results(workspace: Workspace, paper_id: str) -> list[dict[str, Any
             "confidence": row[12],
             "source_type": row[13],
             "first_location": workspace._first_result_location(row[0]),
-        }
+        }, 'statement', workspace._source_spans_for_result(row[0]))
         for row in rows
     ]
 
@@ -240,6 +260,8 @@ def _candidate_payload(
         "label": result.get("label"),
         "title": result.get("title") or result.get("visible_number"),
         "statement_preview": _statement_preview(result.get("statement")),
+        "statement_complete": result.get('statement_complete'),
+        "text_coverage": result.get('text_coverage'),
         "score": score,
         "status": "candidate",
         "reasons": reasons,
@@ -314,7 +336,8 @@ def _candidate_reasons(
 def _reading_path_summary(path: dict[str, Any]) -> dict[str, Any]:
     return {
         "local_result_count": len(path["top_down"]),
-        "proof_count": len(path["top_down"]),
+        "proof_count": len({entry['proof_result_id'] for entry in path.get('proof_entries', {}).values()
+                            if entry.get('status') in ('direct', 'corresponding_proof')}),
         "external_stop_count": len(path["external_stops"]),
         "unresolved_stop_count": len(path["unresolved_stops"]),
         "top_down_result_ids": [
@@ -327,6 +350,12 @@ def _reading_path_summary(path: dict[str, Any]) -> dict[str, Any]:
             f"{stop['result_id']}:{stop['kind']}"
             for stop in path["unresolved_stops"]
         ],
+        "order_status": path["order_status"],
+        "bottom_up_result_ids": [result["result_id"] for result in path["bottom_up"]],
+        "cycle_paths": path["cycle_paths"],
+        "order_scope": "extracted_local_proof_dependencies_only",
+        "proof_entry": path.get('proof_entries', {}).get(path['result_id'], {}),
+        "proof_entry_stops": path.get('proof_entry_stops', []),
     }
 
 
@@ -445,6 +474,12 @@ def _evidence_quality(
         for result_id, proof_payload in proofs_by_result.items()
         if not proof_payload.get("known")
     ]
+    cycle_candidates = [candidate['result_id'] for candidate in candidates
+                        if candidate['reading_path']['cycle_paths']]
+    if cycle_candidates:
+        warnings.append({'kind': 'dependency_cycle',
+                         'message': 'A local proof-evidence cycle prevents prerequisite ordering; exploration remains available.',
+                         'evidence': {'result_ids': cycle_candidates}})
     if missing_proofs and candidates:
         warnings.append(
             {

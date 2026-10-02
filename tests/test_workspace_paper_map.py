@@ -6,6 +6,32 @@ import pytest
 from papergraph.workspace import Workspace
 
 
+def test_early_candidate_signal_uses_first_source_span_not_kind_sort(tmp_path):
+    pdf = tmp_path / "source-order.pdf"
+    document = fitz.open()
+    page = document.new_page()
+    for index, line in enumerate([
+        "Theorem 1.1. Initial assertion.", "Proof. Direct.",
+        "Lemma 2.1. Later assertion.", "Proof. Direct.",
+        "Lemma 2.2. Another assertion.", "Proof. Direct.",
+        "Corollary 3.1. Final assertion.", "Proof. Direct.",
+    ]):
+        page.insert_text((72, 72 + index * 20), line)
+    document.save(pdf)
+    document.close()
+    workspace = Workspace.open(tmp_path / "workspace.sqlite3")
+    try:
+        workspace.import_pdf(pdf, "local:source-order")
+        reading = workspace.get_dependency_reading("local:source-order")
+        assert reading["results"][0]["visible_number"] == "1.1"
+        assert reading["main_result_candidates"][0]["result_id"].endswith("theorem:1.1")
+        late = next(c for c in reading["main_result_candidates"]
+                    if c["result_id"].endswith("corollary:3.1"))
+        assert "early_theorem_signal" not in {r["kind"] for r in late["reasons"]}
+    finally:
+        workspace.close()
+
+
 def write_paper_map_pdf(path: Path) -> None:
     document = fitz.open()
     page = document.new_page()

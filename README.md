@@ -129,6 +129,13 @@ uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 pa
 
 Pinning the `v1.2.0` tag keeps MCP client installations reproducible.
 
+PyPI distribution is being prepared for consumers that cannot use Git. It is not
+published or verified yet: keep the available Git-tag command above. The proposed
+post-publication command is `uvx --from papergraph-mcp==1.2.0 papergraph-mcp`; it
+needs uv/uvx and index access, without Git. The read-only checker supports
+`--install-source pypi` and blocks launch until publication is verified. See
+[PyPI preparation and no-Git acceptance](docs/reference/pypi-preparation.md).
+
 Add PaperGraph to an MCP client that accepts JSON-style stdio configuration:
 
 ```json

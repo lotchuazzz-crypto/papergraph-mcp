@@ -252,6 +252,35 @@ Citation evidence does not imply logical dependency unless supported by reading-
 
 Empty dependencies or empty cross-paper edges mean no supported extraction evidence was found, not that no mathematical relationship exists.
 
+## Published Inputs and Dependency Reading (v1.2.0)
+
+`discover_doi_paper` / `discover-doi` distinguish exact DOI identity, metadata,
+public body candidates, reported versions and provider outcomes without downloading.
+`workspace_add_doi_paper` / `add-doi-paper` can import a user-requested root only
+when its reading policy permits loading and one eligible public PDF candidate is
+available. Multiple candidates require explicit selection through
+`workspace_import_doi_candidate` / `import-doi-candidate`, with confirmation.
+Metadata is not body content or verified published-version equivalence. Existing
+DOI-only reference closure records remain metadata boundaries unless an actual
+supported source is imported. Newly discovered references remain reviewable plans.
+
+`workspace_get_dependency_reading` / `get-dependency-reading` lists results and
+source-backed main-result candidates without silently choosing a definitive main
+theorem. An explicit target separates statement references, direct/recursive
+proof-local evidence, reading order and external import plans. `bottom_up` orders
+known local prerequisites before dependents, including shared prerequisites;
+cycles block ordering and return an empty order with evidence. `top_down` and
+queue/Paper Map exploration routes are not certified prerequisite orders.
+
+An explicit author declaration of introductory correspondence provides bounded
+proof navigation while retaining both statements and the actual proof owner.
+It is not verified mathematical equivalence; missing, ambiguous, cyclic or bounded
+entries remain unresolved. PDF statements/proofs carry unverified `text_coverage`
+and continuation locators, not a completeness guarantee. Adjacent source context
+does not automatically become proof evidence or a dependency. Author matching
+distinguishes complete compatible lists from `partial_overlap`; overlap alone
+does not promote automatic selection. Schema 9 and evidence boundaries remain.
+
 ## Post-v1 Scope
 
 These features are intentionally outside the v1 core contract:

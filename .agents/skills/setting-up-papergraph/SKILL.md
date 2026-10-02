@@ -85,14 +85,15 @@ branch, a mutable default, or an unreleased revision:
 git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.7
 ```
 
-An explicitly requested candidate-development test is separate: the local
-candidate is `1.2.0.dev0`, not a published release. Use the requested checkout's
+An explicitly requested development/release-preparation test is separate: the
+local package is `1.2.0`, with publication pending. Use the requested checkout's
 locked development environment or install its built wheel in a separate environment,
 then launch that exact interpreter. Check CLI version, `doctor.build_identity`
 (source commit, tracked changes and source-tree digest), and MCP initialization
 version. A dirty build's commit is its base; unknown build provenance is unknown.
-The candidate's `recommended_source` still launches stable v1.1.7 and is labelled
-`stable_release_not_running_candidate`; it cannot validate candidate features.
+Release diagnostics name `v1.2.0`, but do not establish that its tag is available;
+do not execute that pinned command until publication is verified. The ordinary
+setup command below continues to launch v1.1.7 until the v1.2.0 tag/release exists.
 Keep the user's active MCP registration intact unless they explicitly authorize a
 configuration change, and never invent a development release/tag.
 

@@ -175,8 +175,8 @@ def test_v1_release_checklist_is_concrete():
 
     for command in (
         "uv run pytest -q -p no:cacheprovider --basetemp .pytest-tmp",
-        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.5 papergraph-mcp --version",
-        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.5 papergraph-mcp doctor",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp --version",
+        "uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp doctor",
     ):
         assert command in text
     assert_no_placeholders(text)

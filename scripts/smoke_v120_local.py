@@ -1,4 +1,4 @@
-"""Actual CLI and stdio MCP smoke for local unreleased v1.2.0 work.
+"""Actual CLI and stdio MCP smoke for v1.2.0.
 
 Uses a generated paper fixture and temporary workspace, not a downloaded paper.
 Run from the development checkout with its .venv Python.

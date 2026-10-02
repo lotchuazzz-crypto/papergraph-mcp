@@ -23,25 +23,29 @@ It helps AI agents turn arXiv papers, local LaTeX projects, and born-digital PDF
 
 ---
 
-### Local v1.2.0 development (unreleased)
+### v1.2.0 release preparation
 
-The candidate package identifies itself as `1.2.0.dev0`. This is an unreleased
-development build; the default installation below still launches published
-v1.1.7. To test this checkout in isolation, use `uv sync --locked --dev`, then
+The release preparation package identifies itself as `1.2.0`. Publication is
+pending; the default installation below still launches published v1.1.7 until the
+v1.2.0 tag and release are available. To test this checkout in isolation, use `uv sync --locked --dev`, then
 `uv run papergraph-mcp --version` and `uv run papergraph-mcp doctor`. To test a
-wheel, build with `uv build`, install the resulting `1.2.0.dev0` wheel in a separate
+wheel, build with `uv build`, install the resulting `1.2.0` wheel in a separate
 environment, and launch that environment's `papergraph-mcp`. Do not reuse the
-stable `uvx --from ...@v1.1.7` command to test candidate features.
+stable `uvx --from ...@v1.1.7` command to test the new features.
+
+See the [v1.2.0 preparation notes](docs/reference/v1.2.0-release-notes.md) for
+compatibility and release verification boundaries.
 
 CLI, diagnostics and MCP initialization report the same package version.
 Diagnostics `build_identity` records the build's full source commit when available,
 tracked changes and a source-tree SHA-256; an installed wheel keeps its build-time
 identity even when launched from another checkout. A dirty build's commit identifies
-its base, not all its contents. Unknown source provenance stays unknown. For a
-candidate, `release_tag` is null and `recommended_source_role` explicitly labels
-the stable installation recommendation. There is no `v1.2.0.dev0` release/tag.
+its base, not all its contents. Unknown source provenance stays unknown. Release
+diagnostics name the version's tag; this field does not check publication or tag
+availability. Development builds have a null `release_tag` and explicitly label
+their stable installation recommendation. There is no `v1.2.0.dev0` release/tag.
 
-In the v1.2.0 development checkout, `discover-doi DOI` (MCP
+In v1.2.0, `discover-doi DOI` (MCP
 `discover_doi_paper`) finds exact DOI metadata and public body candidates without
 downloading. Review reported access, identity evidence and version before using
 `import-doi-candidate WORKSPACE DOI CANDIDATE_ID --confirm` (MCP

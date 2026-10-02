@@ -11,7 +11,7 @@
 
 **Read math papers with evidence, not guesses.**
 
-PaperGraph v1.1.7 is the stable evidence-first reading workflow for math papers: start with a Paper Map, inspect source-backed proof and citation evidence, use Evidence Triage to understand sparse extraction, search scholarly metadata for blocked references, then export Markdown Reading Reports or Cross-Paper Reading Plans.
+PaperGraph v1.2.0 is the stable evidence-first reading workflow for math papers: discover public full-text candidates for DOI papers, inspect source-backed proof and citation evidence, review direct and recursive dependencies, then export Markdown Reading Reports or Cross-Paper Reading Plans.
 
 v1.1.6 fixed source re-import data loss and resolver input boundaries; v1.1.7 is a maintenance cleanup without workflow changes. See the [v1.1.6 bugfix notes](docs/reference/v1.1.6-release-notes.md) and [v1.1.7 release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.1.7).
 
@@ -23,17 +23,17 @@ It helps AI agents turn arXiv papers, local LaTeX projects, and born-digital PDF
 
 ---
 
-### v1.2.0 release preparation
+### v1.2.0: DOI inputs and dependency reading
 
-The release preparation package identifies itself as `1.2.0`. Publication is
-pending; the default installation below still launches published v1.1.7 until the
-v1.2.0 tag and release are available. To test this checkout in isolation, use `uv sync --locked --dev`, then
-`uv run papergraph-mcp --version` and `uv run papergraph-mcp doctor`. To test a
-wheel, build with `uv build`, install the resulting `1.2.0` wheel in a separate
-environment, and launch that environment's `papergraph-mcp`. Do not reuse the
-stable `uvx --from ...@v1.1.7` command to test the new features.
+The immutable [v1.2.0 Git tag](https://github.com/lotchuazzz-crypto/papergraph-mcp/tree/v1.2.0)
+is available, and its pinned `uvx` version/diagnostics checks have passed. The
+installation examples below launch `1.2.0`; the separate GitHub Release page is
+still pending. To test subsequent checkout changes in isolation, use
+`uv sync --locked --dev`, then `uv run papergraph-mcp --version` and
+`uv run papergraph-mcp doctor`. For a wheel, build with `uv build`, install it in a
+separate environment, and launch that environment's `papergraph-mcp`.
 
-See the [v1.2.0 preparation notes](docs/reference/v1.2.0-release-notes.md) for
+See the [v1.2.0 notes](docs/reference/v1.2.0-release-notes.md) for
 compatibility and release verification boundaries.
 
 CLI, diagnostics and MCP initialization report the same package version.
@@ -61,7 +61,7 @@ mathematical contents. Unavailable providers, conflicting DOI identities and
 missing public PDFs are reported separately. Use `workspace_add_pdf_paper` for a
 legally obtained local PDF when no usable candidate is available. HTTPS PDF
 downloads are bounded to 50 MiB and preserve source/version/hash receipts beside
-the workspace. Published installation examples remain pinned to v1.1.7.
+the workspace. Installation examples pin the available v1.2.0 tag.
 
 `get-dependency-reading WORKSPACE PAPER_ID` (MCP
 `workspace_get_dependency_reading`) lists results and source-backed main-result
@@ -105,7 +105,7 @@ v1.1.4 introduced **bounded reference expansion**: approve a finite policy, then
 
 v1.1.5 improves **reference identity quality**: traceable bibliography hints, conservative DOI/arXiv normalization, explicit conflicts, provider outcomes and saved matching explanations. New runs use `unique_strong_v2`; existing `unique_strong_v1` tasks keep their legacy resolver. Back up workspaces before upgrading to schema 9; older versions cannot open them. Scores are not probabilities, and metadata agreement is not independent verification. See the [release preparation notes](docs/reference/v1.1.5-release-notes.md) and [offline quality corpus](tests/fixtures/reference_quality/README.md).
 
-See the [expansion walkthrough](docs/walkthroughs/bounded-reference-expansion.md), [offline JSON](docs/examples/reference-expansion-example.json), [reference tree](docs/examples/reference-expansion-example.md), and [v1.1.5 client verification matrix](docs/reference/client-compatibility.md). The pinned commands below install the published v1.1.7 release.
+See the [expansion walkthrough](docs/walkthroughs/bounded-reference-expansion.md), [offline JSON](docs/examples/reference-expansion-example.json), [reference tree](docs/examples/reference-expansion-example.md), and [v1.1.5 client verification matrix](docs/reference/client-compatibility.md). The pinned commands below install the available v1.2.0 Git tag.
 
 ### Why Researchers Use It
 
@@ -120,14 +120,14 @@ PaperGraph does not verify proofs, perform semantic theorem matching, or claim t
 
 ### Quick Start
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the pinned GitHub release without cloning:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the pinned Git tag without cloning:
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.7 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.7 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp doctor
 ```
 
-Pinning the `v1.1.7` tag keeps MCP client installations reproducible.
+Pinning the `v1.2.0` tag keeps MCP client installations reproducible.
 
 Add PaperGraph to an MCP client that accepts JSON-style stdio configuration:
 
@@ -136,7 +136,7 @@ Add PaperGraph to an MCP client that accepts JSON-style stdio configuration:
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.7", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0", "papergraph-mcp"]
     }
   }
 }
@@ -197,11 +197,13 @@ flowchart LR
 | --- | --- | --- | --- |
 | 在选择阅读目标前，先看到 main-result candidates、结果结构、proof-path evidence 和 external reading risks。 | 查看 proof-local references、citation stops、source slices 和 dependency diagnostics，并保留证据来源。 | 导出确定性的 Markdown report，方便放进 Git、笔记或交接会话。 | 对一组显式给定的小规模相关论文，导出跨论文阅读计划、选中论文之间的 citation evidence 和剩余风险。 |
 
-PaperGraph v1.1.7 是稳定的 evidence-first 数学论文阅读工作流：先看 Paper Map，再检查 proof 和 citation 证据，用 Evidence Triage 理解稀疏抽取结果，对被阻塞的外部引用做 scholarly metadata 搜索，然后把选定候选闭环到用户确认的 arXiv、本地 PDF、DOI、URL 或出版信息。
+PaperGraph v1.2.0 是稳定的 evidence-first 数学论文阅读工作流：先看 Paper Map，再检查 proof 和 citation 证据，用 Evidence Triage 理解稀疏抽取结果，对被阻塞的外部引用做 scholarly metadata 搜索，然后把选定候选闭环到用户确认的 arXiv、本地 PDF、DOI、URL 或出版信息。
 
-v1.1.6 修复了重新导入时丢失阅读数据及引用解析输入边界；v1.1.7 仅做维护清扫，不改变既有工作流。下方安装命令固定到已发布的 v1.1.7；参见 [v1.1.6 修复说明](docs/reference/v1.1.6-release-notes.md) 和 [v1.1.7 Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.1.7)。
+v1.2.0 改善首次使用诊断、DOI 公开正文入口和证明依赖阅读。Git 标签已可安装，正式 GitHub Release 页面仍待创建。根 DOI 论文仅在阅读策略允许且存在唯一合格公开 PDF 时直接导入；其他候选需要选择，新发现的外部引用仍先审阅。直接与递归依赖、共享前置结果、环和未知证据分别报告，不推断隐藏的数学关系。见 [v1.2.0 说明](docs/reference/v1.2.0-release-notes.md)。
 
-v1.1.4 引入有界引用扩展：默认最多追踪 2 层、导入 10 篇新论文。v1.1.5 进一步改善引用身份匹配：保留解析证据，审慎规范化 DOI/arXiv，明确冲突、服务状态和选择理由。新任务默认 `unique_strong_v2`，已有 `unique_strong_v1` 任务保持旧行为。升级到 schema 9 前请备份 workspace，旧版本无法打开新 schema。分数不是概率，多来源元数据一致也不代表独立验证。只支持 arXiv 源码和明确提供的本地 PDF，不绕过付费墙。见[完整操作示例](docs/walkthroughs/bounded-reference-expansion.md)及[客户端验证状态](docs/reference/client-compatibility.md)。
+v1.1.6 修复了重新导入时丢失阅读数据及引用解析输入边界；v1.1.7 仅做维护清扫，不改变既有工作流。下方安装命令固定到已发布的 v1.2.0 Git 标签；参见 [v1.1.6 修复说明](docs/reference/v1.1.6-release-notes.md) 和 [v1.1.7 Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.1.7)。
+
+v1.1.4 引入有界引用扩展：默认最多追踪 2 层、导入 10 篇新论文。v1.1.5 进一步改善引用身份匹配：保留解析证据，审慎规范化 DOI/arXiv，明确冲突、服务状态和选择理由。新任务默认 `unique_strong_v2`，已有 `unique_strong_v1` 任务保持旧行为。升级到 schema 9 前请备份 workspace，旧版本无法打开新 schema。分数不是概率，多来源元数据一致也不代表独立验证。导入需要可访问正文，不绕过付费墙。见[完整操作示例](docs/walkthroughs/bounded-reference-expansion.md)及[客户端验证状态](docs/reference/client-compatibility.md)。
 
 ### 为什么适合数学论文阅读
 
@@ -219,8 +221,8 @@ PaperGraph does not verify proofs，也不做 semantic theorem matching；它不
 先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，然后验证固定版本：
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.7 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.7 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp doctor
 ```
 
 如果你的 MCP client 使用 JSON 风格的 stdio server 配置，可以添加：
@@ -230,7 +232,7 @@ uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.7 pa
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.7", "papergraph-mcp"]
+      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0", "papergraph-mcp"]
     }
   }
 }

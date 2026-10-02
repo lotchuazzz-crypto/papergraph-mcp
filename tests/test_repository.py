@@ -108,7 +108,7 @@ def test_validate_arxiv_request_module_stdout_is_json_only():
     assert payload["selected_id"] is None
 
 
-def test_runtime_and_issue_template_distinguish_preparation_from_published_install():
+def test_runtime_and_issue_template_report_the_available_release_version():
     from papergraph.arxiv import _USER_AGENT
     bug_report = read_yaml(".github/ISSUE_TEMPLATE/bug_report.yml")
     version_field = next(
@@ -118,8 +118,8 @@ def test_runtime_and_issue_template_distinguish_preparation_from_published_insta
     )
 
     assert _USER_AGENT == f'PaperGraph/1.2.0 (+{REPOSITORY_URL})'
-    assert '1.1.7 (stable)' in version_field["attributes"]["placeholder"]
-    assert '1.2.0 (release preparation)' in version_field["attributes"]["placeholder"]
+    assert '1.2.0 (stable Git tag)' in version_field["attributes"]["placeholder"]
+    assert 'doctor build_identity' in version_field["attributes"]["placeholder"]
 
 
 def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
@@ -268,7 +268,7 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     pinned_source = (
         "git+https://github.com/lotchuazzz-crypto/"
-        "papergraph-mcp.git@v1.1.7"
+        "papergraph-mcp.git@v1.2.0"
     )
 
     for badge in ("CI", "Python", "MIT", "Release"):
@@ -280,9 +280,9 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     assert f"uvx --from {pinned_source} papergraph-mcp doctor" in readme
     assert '"command": "uvx"' in readme
     assert pinned_source in readme
-    assert "PaperGraph v1.1.7" in readme
+    assert "PaperGraph v1.2.0" in readme
     assert (
-        "PaperGraph v1.1.7 is the stable evidence-first reading workflow"
+        "PaperGraph v1.2.0 is the stable evidence-first reading workflow"
         in readme
     )
 
@@ -490,8 +490,8 @@ def test_onboarding_uses_latest_release_pin_and_mentions_id_url_conflicts():
         ROOT / ".agents/skills/setting-up-papergraph/references/usage-prompt.md"
     ).read_text(encoding="utf-8")
 
-    assert "papergraph-mcp.git@v1.1.7" in skill
-    assert "papergraph-mcp 1.1.7" in skill
+    assert "papergraph-mcp.git@v1.2.0" in skill
+    assert "papergraph-mcp 1.2.0" in skill
     assert "validate_arxiv_request" in skill
     assert "load_arxiv_request" in skill
     assert "If a user provides both an arXiv ID and an arXiv URL" in skill

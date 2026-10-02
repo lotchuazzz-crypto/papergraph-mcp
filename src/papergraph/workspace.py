@@ -23,6 +23,7 @@ from papergraph.evidence import (
     source_span_payload,
 )
 from papergraph.evidence_extractors import build_pdf_evidence_document
+from papergraph.pdf_coverage import with_pdf_coverage
 from papergraph.graph import recursive_reference_ids
 from papergraph.identity import (
     global_theorem_id,
@@ -1349,11 +1350,11 @@ class Workspace(ReferenceExpansionMixin):
             parameters,
         ).fetchall()
         return [
-            {
+            with_pdf_coverage(self, {
                 **_result_from_row(row),
                 "source_type": row[13],
                 "first_location": self._first_result_location(row[0]),
-            }
+            }, 'statement', self._source_spans_for_result(row[0]))
             for row in rows
         ]
 
@@ -1374,10 +1375,11 @@ class Workspace(ReferenceExpansionMixin):
         ).fetchone()
         if row is None:
             raise KeyError(f"Unknown result id: {result_id}")
-        return {
+        spans = self._source_spans_for_result(result_id)
+        return with_pdf_coverage(self, {
             **_result_from_row(row),
-            "spans": self._source_spans_for_result(result_id),
-        }
+            "spans": spans,
+        }, 'statement', spans)
 
     @_synchronized
     def get_result_proof(self, result_id: str) -> dict:
@@ -1405,7 +1407,7 @@ class Workspace(ReferenceExpansionMixin):
                 }
             ],
             "unresolved": {},
-            "warnings": entry_warning(entry),
+            "warnings": entry_warning(entry) + ([proof['text_coverage']['warning']] if proof.get('text_coverage') else []),
             "proof_entry": entry_payload(entry),
         }
 
@@ -1531,6 +1533,8 @@ class Workspace(ReferenceExpansionMixin):
                     unresolved_external.append(mention)
 
         warnings = entry_warning(entry)
+        if proof.get('text_coverage'):
+            warnings.append(proof['text_coverage']['warning'])
         if not resolved_local_result_ids and not known_external_mentions:
             warnings.append(EVIDENCE_EMPTY_DEPENDENCY_WARNING)
         return {
@@ -1563,6 +1567,7 @@ class Workspace(ReferenceExpansionMixin):
             },
             "warnings": warnings,
             "proof_entry": entry_payload(entry),
+            "proof_coverage": proof.get('text_coverage', {'status': 'not_assessed'}),
         }
 
     @_synchronized
@@ -1639,6 +1644,9 @@ class Workspace(ReferenceExpansionMixin):
                     node_or_edge_id,
                     metadata,
                 )
+                if evidence_type in ('result', 'proof'):
+                    metadata = with_pdf_coverage(self, metadata,
+                                                'statement' if evidence_type == 'result' else 'proof', spans)
                 return {
                     "id": node_or_edge_id,
                     "type": evidence_type,
@@ -3675,7 +3683,7 @@ class Workspace(ReferenceExpansionMixin):
             return None
         proof = _proof_from_row(row)
         proof["spans"] = self._source_spans_for_proof(proof["proof_id"])
-        return proof
+        return with_pdf_coverage(self, proof, 'proof', proof['spans'])
 
     @_synchronized
     def _proofs_for_paper(self, paper_id: str) -> list[dict]:
@@ -3696,7 +3704,7 @@ class Workspace(ReferenceExpansionMixin):
             proof["source_handles"] = [
                 source_handle("proof_id", proof["proof_id"], paper_id, "proof")
             ]
-            proofs.append(proof)
+            proofs.append(with_pdf_coverage(self, proof, 'proof', self._source_spans_for_proof(proof['proof_id'])))
         return proofs
 
     @_synchronized

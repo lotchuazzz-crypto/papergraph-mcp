@@ -662,7 +662,8 @@ def test_external_mentions_and_evidence_are_queryable(tmp_path: Path):
         external_dependency = dependencies["known"]["resolved_external_results"][0]
         assert external_dependency["evidence_id"] == "local:paper-a::external:target-thm"
         assert external_dependency["spans"][0]["page"] == 1
-        assert dependencies["warnings"] == []
+        assert any('PDF text may be incomplete' in warning for warning in dependencies['warnings'])
+        assert dependencies['proof_coverage']['completeness_verified'] is False
 
         evidence = workspace.get_evidence("local:paper-a::external:target-thm")
         assert evidence["metadata"]["raw_text"] == "Theorem A of [1]"

@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import subprocess
+import re
 from importlib.metadata import version as distribution_version
 from pathlib import Path
 
 from papergraph.models import DEPENDENCY_EXTRACTION_BASIS
+from papergraph.build_identity import runtime_build_identity
 
 
 PACKAGE_NAME = "papergraph-mcp"
 REPOSITORY_SOURCE = "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git"
+STABLE_RELEASE_TAG = "v1.1.7"
 
 
 def _git_output(args: list[str], cwd: Path) -> str:
@@ -43,9 +46,14 @@ def environment_diagnostics(cwd: Path | None = None) -> dict:
     """Return deterministic setup information for agents and users."""
 
     version = distribution_version(PACKAGE_NAME)
-    release_tag = f"v{version}"
+    candidate = not bool(re.fullmatch(r'\d+\.\d+\.\d+', version))
+    release_tag = None if candidate else f"v{version}"
+    build_identity = runtime_build_identity()
+    build_identity['channel'] = 'development_candidate' if candidate else 'release_version'
     git = _git_context((cwd or Path.cwd()).resolve())
     warnings: list[str] = []
+    if candidate:
+        warnings.append('Unreleased development candidate; recommended_source launches the stable release, not this build.')
 
     if git is None:
         warnings.append(
@@ -57,7 +65,9 @@ def environment_diagnostics(cwd: Path | None = None) -> dict:
         "package_name": PACKAGE_NAME,
         "version": version,
         "release_tag": release_tag,
-        "recommended_source": f"{REPOSITORY_SOURCE}@{release_tag}",
+        "recommended_source": f"{REPOSITORY_SOURCE}@{STABLE_RELEASE_TAG if candidate else release_tag}",
+        "recommended_source_role": 'stable_release_not_running_candidate' if candidate else 'running_release',
+        "build_identity": build_identity,
         "dependency_extraction_basis": DEPENDENCY_EXTRACTION_BASIS,
         "dependency_capabilities": {
             "statement_graph": {

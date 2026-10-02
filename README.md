@@ -25,6 +25,22 @@ It helps AI agents turn arXiv papers, local LaTeX projects, and born-digital PDF
 
 ### Local v1.2.0 development (unreleased)
 
+The candidate package identifies itself as `1.2.0.dev0`. This is an unreleased
+development build; the default installation below still launches published
+v1.1.7. To test this checkout in isolation, use `uv sync --locked --dev`, then
+`uv run papergraph-mcp --version` and `uv run papergraph-mcp doctor`. To test a
+wheel, build with `uv build`, install the resulting `1.2.0.dev0` wheel in a separate
+environment, and launch that environment's `papergraph-mcp`. Do not reuse the
+stable `uvx --from ...@v1.1.7` command to test candidate features.
+
+CLI, diagnostics and MCP initialization report the same package version.
+Diagnostics `build_identity` records the build's full source commit when available,
+tracked changes and a source-tree SHA-256; an installed wheel keeps its build-time
+identity even when launched from another checkout. A dirty build's commit identifies
+its base, not all its contents. Unknown source provenance stays unknown. For a
+candidate, `release_tag` is null and `recommended_source_role` explicitly labels
+the stable installation recommendation. There is no `v1.2.0.dev0` release/tag.
+
 In the v1.2.0 development checkout, `discover-doi DOI` (MCP
 `discover_doi_paper`) finds exact DOI metadata and public body candidates without
 downloading. Review reported access, identity evidence and version before using
@@ -338,11 +354,31 @@ The repository includes a small fixture under `tests/fixtures/workspace_tex_proj
 <details>
 <summary><strong>Safety, Privacy, And Limits</strong></summary>
 
-PaperGraph only constructs remote downloads from arXiv's fixed e-print endpoint; arbitrary URLs are not accepted for downloads. Scholarly reference search queries public metadata services and records candidates before any resolution/import is applied. It limits compressed responses to **100 MiB**, expanded content to **500 MiB**, and archives to **10,000** members. Absolute paths, parent traversal, symbolic links, hard links, devices, FIFOs, and other special archive members are rejected.
+arXiv source downloads use its fixed e-print endpoint. The development DOI flow
+also accepts discovered public HTTPS PDF candidates, validates public addresses
+and each redirect, pins the validated connection address, checks PDF content and
+limits downloads to **50 MiB**, **8 seconds** per socket operation and a **60-second**
+elapsed budget. Synchronous DNS lookup cannot be interrupted by that elapsed
+budget. External-reference discovery does not download papers. arXiv archives
+limit compressed responses to **100 MiB**, expanded content to **500 MiB**, and
+archives to **10,000** members. Absolute paths, parent traversal, symbolic links,
+hard links, devices, FIFOs, and other special archive members are rejected.
 
 Workspaces are ordinary local SQLite files. Local PDFs remain local. Extracted PDF text, source spans, and proof evidence are written only to the workspace you choose. Do not commit databases, private manuscripts, cache data, credentials, tokens, generated distributions, or raw local logs.
 
 PDF extraction is best for born-digital PDFs; scanned PDFs or OCR-heavy files may produce sparse text and missing evidence. Complex projects may need an explicit `main_file`; the parser is not a full TeX engine.
+
+PDF statements join only bounded adjacent source blocks, retaining their locations.
+PDF result/proof responses report `text_coverage.status: unverified` and
+`statement_complete: false` / `proof_complete: false`: completeness has not been
+established. These flags do not assert that every text is truncated. Use
+`text_coverage.continuation_source` to inspect adjoining blocks; this context is
+not automatically proof evidence or a dependency. Mathematical layout is not
+reconstructed, and delayed proofs without a supported association stay unresolved.
+
+Reference assessments distinguish full author-list compatibility from
+`partial_overlap`. Shared authors alone do not establish equivalent lists,
+increase the full-author score, or authorize automatic candidate selection.
 
 </details>
 

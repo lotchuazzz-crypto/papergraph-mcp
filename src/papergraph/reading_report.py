@@ -9,6 +9,7 @@ from papergraph.evidence_triage import (
     render_evidence_triage_markdown,
 )
 from papergraph.report_format import code_or_none as _code_or_none, compact_json as _compact_json
+from papergraph.pdf_coverage import PDF_COVERAGE_WARNING
 
 if TYPE_CHECKING:
     from papergraph.workspace import Workspace
@@ -122,6 +123,10 @@ def render_paper_reading_report_markdown(report_model: dict[str, Any]) -> str:
         "",
     ]
     lines.extend(render_evidence_triage_markdown(report_model["evidence_triage"]))
+    if paper['source_type'] == 'pdf':
+        lines.extend(['', '## PDF Text Coverage', '', PDF_COVERAGE_WARNING,
+                      'Statement/proof completeness and mathematical layout are unverified. '
+                      'Use each result/proof continuation_source to inspect adjacent blocks.'])
     if report_model.get("reference_expansions"):
         lines.extend(["", "## Reference Expansion", ""])
         for run in report_model["reference_expansions"]:

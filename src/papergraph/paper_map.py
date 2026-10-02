@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from papergraph.pdf_coverage import with_pdf_coverage
+
 from typing import TYPE_CHECKING, Any
 
 from papergraph.identity import normalize_paper_id
@@ -159,7 +161,7 @@ def _list_all_results(workspace: Workspace, paper_id: str) -> list[dict[str, Any
         (paper_id,),
     ).fetchall()
     return [
-        {
+        with_pdf_coverage(workspace, {
             "result_id": row[0],
             "paper_id": row[1],
             "local_id": row[2],
@@ -175,7 +177,7 @@ def _list_all_results(workspace: Workspace, paper_id: str) -> list[dict[str, Any
             "confidence": row[12],
             "source_type": row[13],
             "first_location": workspace._first_result_location(row[0]),
-        }
+        }, 'statement', workspace._source_spans_for_result(row[0]))
         for row in rows
     ]
 
@@ -258,6 +260,8 @@ def _candidate_payload(
         "label": result.get("label"),
         "title": result.get("title") or result.get("visible_number"),
         "statement_preview": _statement_preview(result.get("statement")),
+        "statement_complete": result.get('statement_complete'),
+        "text_coverage": result.get('text_coverage'),
         "score": score,
         "status": "candidate",
         "reasons": reasons,

@@ -39,7 +39,7 @@ def test_project_metadata_is_discoverable_and_keeps_dependencies_separated():
     configuration = read_toml("pyproject.toml")
     project = configuration["project"]
 
-    assert project["version"] == "1.1.7"
+    assert project["version"] == "1.2.0.dev0"
     assert project["dependencies"] == [
         "httpx>=0.27,<1",
         "mcp[cli]>=2,<3",
@@ -85,7 +85,7 @@ def test_lockfile_contains_project_package():
     )
 
     assert package["name"] == "papergraph-mcp"
-    assert package["version"] == "1.1.7"
+    assert package["version"] == "1.2.0.dev0"
 
 
 def test_validate_arxiv_request_module_stdout_is_json_only():
@@ -108,8 +108,8 @@ def test_validate_arxiv_request_module_stdout_is_json_only():
     assert payload["selected_id"] is None
 
 
-def test_runtime_and_issue_template_release_strings_remain_pinned():
-    arxiv_source = (ROOT / "src/papergraph/arxiv.py").read_text(encoding="utf-8")
+def test_runtime_and_issue_template_distinguish_candidate_from_stable():
+    from papergraph.arxiv import _USER_AGENT
     bug_report = read_yaml(".github/ISSUE_TEMPLATE/bug_report.yml")
     version_field = next(
         item
@@ -117,8 +117,9 @@ def test_runtime_and_issue_template_release_strings_remain_pinned():
         if item.get("id") == "version"
     )
 
-    assert f'PaperGraph/1.1.7 (+{REPOSITORY_URL})' in arxiv_source
-    assert version_field["attributes"]["placeholder"] == "1.1.7"
+    assert _USER_AGENT == f'PaperGraph/1.2.0.dev0 (+{REPOSITORY_URL})'
+    assert '1.1.7 (stable)' in version_field["attributes"]["placeholder"]
+    assert '1.2.0.dev0 (candidate)' in version_field["attributes"]["placeholder"]
 
 
 def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
@@ -159,7 +160,7 @@ def test_ci_workflow_is_cross_platform_locked_and_least_privilege():
         for token in ('"uv"', '"pip"', '"install"', '"--python"')
     )
     assert "papergraph-mcp --version" in build_steps
-    assert "papergraph-mcp 1.1.7" in build_steps
+    assert "papergraph-mcp 1.2.0.dev0" in build_steps
     assert 'version="$(.smoke-venv/bin/papergraph-mcp --version)"' in build_steps
 
 
@@ -435,7 +436,8 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     lowered = readme.lower()
     assert "scanned pdf" in lowered
     assert "does not verify proofs" in lowered
-    assert "arbitrary urls are not accepted" in lowered
+    assert 'discovered public https pdf candidates' in lowered
+    assert 'pins the validated connection address' in lowered
     assert "main_file" in readme
     assert "[Contributing](CONTRIBUTING.md)" in readme
     assert "[MIT License](LICENSE)" in readme

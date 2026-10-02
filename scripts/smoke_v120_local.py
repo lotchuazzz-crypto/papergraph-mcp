@@ -5,6 +5,7 @@ Run from the development checkout with its .venv Python.
 """
 import asyncio
 import json
+from importlib.metadata import version as distribution_version
 from pathlib import Path
 import subprocess
 import sys
@@ -44,7 +45,8 @@ async def main():
         parameters = StdioServerParameters(command=sys.executable, args=['-m', 'papergraph.server'])
         async with stdio_client(parameters) as (read, write):
             async with ClientSession(read, write) as session:
-                await session.initialize()
+                initialized = await session.initialize()
+                assert initialized.server_info.version == distribution_version('papergraph-mcp')
                 tools = {tool.name for tool in (await session.list_tools()).tools}
                 assert 'discover_doi_paper' in tools
                 assert 'workspace_import_doi_candidate' in tools
@@ -64,6 +66,8 @@ async def main():
                 alias = await call('workspace_get_result_proof', {'result_id': 'local:smoke::pdf:theorem:0.1'})
                 assert alias['proof_entry']['status'] == 'corresponding_proof'
                 assert alias['known']['proof']['result_id'] == 'local:smoke::pdf:theorem:1.2'
+                assert alias['known']['proof']['proof_complete'] is False
+                assert alias['known']['proof']['text_coverage']['status'] == 'unverified'
                 path = await call('workspace_get_result_reading_path', {'result_id': 'local:smoke::pdf:theorem:1.2'})
                 assert [item['result_id'] for item in path['bottom_up']] == [
                     'local:smoke::pdf:lemma:1.1', 'local:smoke::pdf:theorem:1.2']

@@ -117,23 +117,8 @@ def extract_result_blocks(
         if match is None or not _formal_result_heading(span.text, text, match):
             continue
 
-        result_span_indices = (span_index,)
-        remainder = text[match.end('number'):]
-        if re.fullmatch(r'\s*(?:\([^)]*\)\s*)?[.:]?\s*', remainder):
-            # Only isolated headings receive bounded adjacent continuation. Keep
-            # both original locations, including a statement on the next page.
-            for following in range(span_index + 1, min(limit, span_index + 5)):
-                candidate = spans[following]
-                next_text = _normalized_text(candidate.text)
-                if next_text.isdecimal() or (candidate.block_index == 0 and next_text.isupper()):
-                    continue
-                if (PROOF_RE.match(next_text) or RESULT_RE.match(next_text)
-                        or next_text.casefold() in ('references', 'bibliography')
-                        or re.match(r'^\d+(?:\.\d+)*\.?\s+[A-Z]', next_text)):
-                    break
-                text += ' ' + next_text
-                result_span_indices = (span_index, following)
-                break
+        result_span_indices = _statement_span_indices(spans, span_index, limit)
+        text = '\n'.join(_normalized_text(spans[i].text) for i in result_span_indices)
 
         raw_kind = match.group("raw")
         visible_number = match.group("number") or None
@@ -178,6 +163,37 @@ def _formal_result_heading(raw_text, normalized, match):
         return True
     first_line = _normalized_text(raw_text.splitlines()[0])
     return first_line == normalized[:match.end('number')]
+
+
+def _statement_span_indices(spans, start, limit):
+    """Collect a small lexical/layout continuation window, never certify entirety."""
+    included = [start]
+    heading = _normalized_text(spans[start].text)
+    match = RESULT_RE.match(heading)
+    isolated = bool(re.fullmatch(r'\s*(?:\([^)]*\)\s*)?[.:]?\s*', heading[match.end('number'):]))
+    for following in range(start + 1, min(limit, start + 8)):
+        candidate, previous = spans[following], spans[included[-1]]
+        next_text = _normalized_text(candidate.text)
+        if candidate.page is not None and spans[start].page is not None and candidate.page > spans[start].page + 1:
+            break
+        # Do not discard a mathematical denominator merely because it is numeric.
+        if candidate.block_index == 0 and (next_text.isupper() or next_text == str(candidate.page)):
+            continue
+        if (PROOF_RE.match(next_text) or RESULT_RE.match(next_text)
+                or next_text.casefold() in ('references', 'bibliography')
+                or re.match(r'^\d+(?:\.\d+)*\.?\s+[A-Z]', next_text)):
+            break
+        if previous.page == candidate.page and previous.bbox and candidate.bbox:
+            if candidate.bbox[1] - previous.bbox[3] > 36 or candidate.bbox[0] > previous.bbox[2] or candidate.bbox[2] < previous.bbox[0]:
+                break
+        explicit_continuation = re.match(r'^(?:Then\b|Moreover\b|Furthermore\b|In particular\b|where\b|such that\b|\([0-9]+\))', next_text)
+        if not isolated and _normalized_text(previous.text).endswith(('.', '!', '?')) and not explicit_continuation:
+            break
+        if sum(len(spans[i].text) for i in included) + len(candidate.text) > 12000:
+            break
+        included.append(following)
+        isolated = False
+    return tuple(included)
 
 
 def _result_lookup(

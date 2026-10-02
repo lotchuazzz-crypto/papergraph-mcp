@@ -1,12 +1,13 @@
 from papergraph.diagnostics import environment_diagnostics
 
 
-def test_environment_diagnostics_reports_version_and_release_source():
+def test_environment_diagnostics_reports_candidate_and_stable_release_source():
     result = environment_diagnostics()
 
     assert result["package_name"] == "papergraph-mcp"
-    assert result["version"] == "1.1.7"
-    assert result["release_tag"] == "v1.1.7"
+    assert result["version"] == "1.2.0.dev0"
+    assert result["release_tag"] is None
+    assert result['build_identity']['channel'] == 'development_candidate'
     assert (
         result["recommended_source"]
         == "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.1.7"
@@ -35,6 +36,6 @@ def test_environment_diagnostics_tolerates_missing_git(monkeypatch):
 
     result = environment_diagnostics()
 
-    assert result["version"] == "1.1.7"
+    assert result["version"] == "1.2.0.dev0"
     assert result["git"] is None
     assert any("Git context unavailable" in warning for warning in result["warnings"])

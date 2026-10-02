@@ -32,7 +32,7 @@ from papergraph.reference_expansion_api import (
 )
 
 
-mcp = MCPServer("PaperGraph MCP")
+mcp = MCPServer("PaperGraph MCP", version=distribution_version('papergraph-mcp'))
 
 
 _current_graph: PaperGraph | None = None

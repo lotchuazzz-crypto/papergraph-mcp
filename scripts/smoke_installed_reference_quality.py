@@ -27,7 +27,7 @@ async def protocol(path, baseline, search):
     async with stdio_client(params) as (reader, writer):
         async with ClientSession(reader, writer) as session:
             initialized = await session.initialize()
-            assert initialized.server_info.version == '1.2.0.dev0'
+            assert initialized.server_info.version == '1.2.0'
             assert not (await session.call_tool('open_workspace', {'path':str(path)})).is_error
             result = await session.call_tool('workspace_list_external_reference_searches', {'paper_id':'local:paper'})
             assert not result.is_error
@@ -39,19 +39,20 @@ async def protocol(path, baseline, search):
 
 def main():
     assert 'site-packages' in str(Path(papergraph.__file__).resolve())
-    assert cli('--version').strip() == 'papergraph-mcp 1.2.0.dev0'
+    assert cli('--version').strip() == 'papergraph-mcp 1.2.0'
     doctor = json.loads(cli('doctor'))
-    assert doctor['version'] == '1.2.0.dev0'
-    assert doctor['release_tag'] is None
-    assert doctor['recommended_source'].endswith('@v1.1.7')
-    assert doctor['build_identity']['channel'] == 'development_candidate'
+    assert doctor['version'] == '1.2.0'
+    assert doctor['release_tag'] == 'v1.2.0'
+    assert doctor['recommended_source'].endswith('@v1.2.0')
+    assert doctor['recommended_source_role'] == 'running_release'
+    assert doctor['build_identity']['channel'] == 'release_version'
     assert len(doctor['build_identity']['source_tree_sha256']) == 64
     if os.environ.get('GITHUB_SHA'):
         assert doctor['build_identity']['source_commit'] == os.environ['GITHUB_SHA']
         assert doctor['build_identity']['tracked_dirty'] is False
     # Outside a Git checkout, the existing diagnostic legitimately notes missing
     # Git context; this is not an installation warning.
-    assert all(w.startswith(('Git context unavailable;', 'Unreleased development candidate;')) for w in doctor['warnings'])
+    assert all(w.startswith('Git context unavailable;') for w in doctor['warnings'])
     with tempfile.TemporaryDirectory(prefix='papergraph-wheel-') as temp:
         root = Path(temp)
         pdf = root/'source.pdf'

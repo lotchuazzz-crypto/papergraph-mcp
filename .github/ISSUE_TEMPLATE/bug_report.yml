@@ -13,7 +13,7 @@ body:
     id: version
     attributes:
       label: PaperGraph version
-      placeholder: "1.1.7 (stable) or 1.2.0.dev0 (candidate); include doctor build_identity"
+      placeholder: "1.1.7 (stable) or 1.2.0 (release preparation); include doctor build_identity"
     validations:
       required: true
   - type: input

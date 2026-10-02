@@ -81,3 +81,13 @@ def test_no_git_consumer_guard_rejects_a_host_with_git():
                              '--check-environment'], capture_output=True, text=True)
     assert result.returncode != 0
     assert 'Git must be absent' in result.stderr
+
+
+def test_consumer_cli_failure_preserves_the_actual_stderr():
+    spec = importlib.util.spec_from_file_location('no_git_smoke', ROOT / 'scripts/smoke_no_git_distribution.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    with pytest.raises(RuntimeError, match='consumer cache is read only'):
+        module.run_cli([sys.executable, '-c',
+                        'import sys; sys.stderr.write("consumer cache is read only"); sys.exit(2)'],
+                       env=None, timeout=10)

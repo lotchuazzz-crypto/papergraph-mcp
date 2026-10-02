@@ -30,6 +30,14 @@ def check_environment():
                       'platform': sys.platform, 'python': sys.version.split()[0]}), flush=True)
 
 
+def run_cli(command, env, timeout):
+    result = subprocess.run(command, env=env, capture_output=True, text=True,
+                            check=False, timeout=timeout)
+    if result.returncode:
+        raise RuntimeError(f'Consumer CLI exited {result.returncode}: {result.stderr[-6000:]}')
+    return result.stdout
+
+
 async def verify(artifact, expected_sha):
     # The isolated uv environment contains the local artifact, never an editable checkout.
     import papergraph
@@ -46,11 +54,9 @@ async def verify(artifact, expected_sha):
         cache = root / 'fresh-uvx-cache'
         assert not cache.exists()
         env = dict(os.environ, UV_CACHE_DIR=str(cache), UV_PYTHON_DOWNLOADS='never')
-        version = subprocess.run(command + ['--version'], env=env, capture_output=True,
-                                 text=True, check=True, timeout=240).stdout.strip()
+        version = run_cli(command + ['--version'], env=env, timeout=240).strip()
         assert version == 'papergraph-mcp 1.2.0'
-        doctor = json.loads(subprocess.run(command + ['doctor'], env=env, capture_output=True,
-                                          text=True, check=True, timeout=90).stdout)
+        doctor = json.loads(run_cli(command + ['doctor'], env=env, timeout=90))
         identity = doctor['build_identity']
         assert doctor['version'] == '1.2.0' and doctor['git'] is None
         assert identity['source_commit'] == expected_sha

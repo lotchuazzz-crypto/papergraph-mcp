@@ -15,7 +15,6 @@ concurrency:
 
 jobs:
   pypi-preparation:
-    needs: test
     permissions:
       contents: read
     uses: ./.github/workflows/pypi-preparation.yml

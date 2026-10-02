@@ -79,6 +79,9 @@ checkout, Git credential, user paper or publishing permission enters the consume
 Before installing tools, the consumer checks the original PATH, executes a Git
 absence probe, checks the Debian Git package database and known executable paths.
 It adds the uv virtualenv to the existing PATH without hiding system directories.
+The consumer sets `UV_TOOL_DIR` inside its temporary directory so uvx can store
+tool state while the root filesystem remains read-only. See the
+[uv environment reference](https://docs.astral.sh/uv/reference/environment/#uv_tool_dir).
 
 Each consumer starts with absent bootstrap/uvx caches, installs the local artifact
 through uv, then tests the real `uvx --from <artifact>` entry point: CLI version,

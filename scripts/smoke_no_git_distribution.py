@@ -53,7 +53,10 @@ async def verify(artifact, expected_sha):
         root = Path(temp)
         cache = root / 'fresh-uvx-cache'
         assert not cache.exists()
-        env = dict(os.environ, UV_CACHE_DIR=str(cache), UV_PYTHON_DOWNLOADS='never')
+        tool_dir = root / 'uv-tools'
+        assert not tool_dir.exists()
+        env = dict(os.environ, UV_CACHE_DIR=str(cache), UV_TOOL_DIR=str(tool_dir),
+                   UV_PYTHON_DOWNLOADS='never')
         version = run_cli(command + ['--version'], env=env, timeout=240).strip()
         assert version == 'papergraph-mcp 1.2.0'
         doctor = json.loads(run_cli(command + ['doctor'], env=env, timeout=90))

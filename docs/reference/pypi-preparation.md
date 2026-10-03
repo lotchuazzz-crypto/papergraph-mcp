@@ -1,8 +1,10 @@
 # PyPI distribution preparation
 
-This is preparation only. No PyPI release, Trusted Publisher, account/token,
-GitHub publishing environment, MCPVault listing change or email is authorized by
-this document. The current usable installation remains the immutable Git tag.
+The user separately approved the Trusted Publisher/environment configuration and,
+on 2026-10-03, activation and the first public PyPI upload of the reviewed 1.2.0
+files. Publication still requires the user's GitHub environment approval. This
+document does not authorize MCPVault listing changes or email. The current verified
+installation remains the immutable Git tag until public-index acceptance succeeds.
 Public PyPI project/JSON/simple endpoints returned 404 during the 2026-10-02
 assessment. That does not establish ownership or guarantee name availability.
 
@@ -92,46 +94,56 @@ manifest must survive. Dependency downloads use the index, not Git. No newly
 discovered paper is downloaded. This tests Linux/Python 3.12; MCPVault's actual
 Python, architecture and index/network policy still need confirmation.
 
-## Proposed later publishing authorization
+## Publishing identity and authorization
 
 Preparation does not reserve the PyPI name. A PyPI pending publisher also does
 not reserve it until first upload. See the [official pending-publisher flow](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/).
 
-The proposed future configuration, **not created or activated**, is:
+The coordinating thread verified these account/environment settings in the browser
+on 2026-10-03. Repository tests do not verify external account configuration:
 
-| Field | Proposed value |
+| Field | Configured value |
 | --- | --- |
 | PyPI project | `papergraph-mcp` (availability/ownership checked again) |
-| PyPI account | `Jonathan`, user-confirmed; repository tests do not verify account settings |
+| PyPI account | `Jonathon`, browser-verified by the coordinating thread |
 | GitHub owner | `lotchuazzz-crypto` |
 | GitHub repository | `papergraph-mcp` |
-| Future workflow filename | `pypi-publish.yml` |
+| Workflow filename | `pypi-publish.yml` |
 | GitHub environment | `pypi`, required reviewer `lotchuazzz-crypto` (user-confirmed) |
 | Target for first upload | Exact v1.2.0 commit above |
 
-After preparation review, the user separately approves persistent Trusted
-Publisher/environment configuration. The future publisher would retrieve verified
-artifacts in a separate publish job, use only job-scoped `id-token: write` plus
-minimal read permissions, and use a fixed reviewed PyPA publish-action revision.
-No long-lived token is needed. Those permissions and that job are absent now.
+The user separately approved persistent Trusted Publisher/environment configuration
+before approving first upload. The independent publisher retrieves verified
+artifacts, has only job-scoped `id-token: write`, and uses the fixed PyPA action
+commit `dc37677b2e1c63e2034f94d8a5b11f265b73ba33`. It does not check out project
+code, build packages or use a long-lived token.
 See [PyPI Trusted Publishing](https://docs.pypi.org/trusted-publishers/using-a-publisher/).
 
-The user then separately approves first upload after reviewing artifact hashes,
-source identity and no-Git results. After public index version/doctor/MCP checks,
+The first-upload approval covers the reviewed artifact hashes, source identity and
+no-Git results. After public index version/doctor/MCP checks,
 obtain approval to change MCPVault's listing to command `uvx`, args
 `["--from", "papergraph-mcp==1.2.0", "papergraph-mcp"]`. Email sending is a
 separate authorization. Do not treat prior GitHub release permission as PyPI or
 MCPVault permission. Rebuild/review is required if artifacts need repair; do not
 overwrite published artifacts or silently change v1.2.0 source.
 
-## Publishing workflow draft
+## Protected publishing workflow
 
 `.github/workflows/pypi-publish.yml` is non-reusable, manually dispatched, and
-permits builds only from this repository's `main`. Its `publish` job is fixed to
-`${{ false }}`: no input can enable it. There is no publisher action, credential
-request or actual publishing-environment reference. All jobs have only
-`contents: read`. Dispatching this draft cannot upload to PyPI; activation needs
-a separately reviewed change and authorization.
+permits builds only from this repository's `main`. After build and same-run artifact
+verification succeed, `publish` waits at environment `pypi`. The environment allows
+only `main`, requires reviewer `lotchuazzz-crypto`, allows that reviewer to approve
+their own run and prohibits administrator bypass. No secrets are configured.
+Build, verification and normal CI retain only `contents: read`; only the independent
+Linux publisher has OIDC permission, after the environment review.
+
+The publisher downloads the same run's immutable artifact ID into `dist/`. After
+approval, an inline standard-library guard rechecks the producer run ID, the exact
+two regular files and their approved SHA-256 values below. Those fixed bytes bind
+the upload to the source/version manifest already validated before the gate.
+No package execution or rebuild occurs in this guard. Digest mismatch stops upload.
+The pinned PyPA action uploads to public PyPI with metadata checking and attestations;
+`skip-existing: false` makes existing-file conflicts fail visibly.
 
 uv writes a `.gitignore` in its build output. Staging accepts only the two approved
 filenames and this known marker, validates both packages, and copies only the
@@ -141,7 +153,7 @@ The marker stays in build output and is not uploaded. Packages are not rebuilt.
 
 The preparation workflow optionally saves exactly the two verified distributions
 as immutable GitHub artifacts with seven-day retention and no overwrite. CI and
-the manual draft exercise this path. These are public package files, without
+the manual publishing workflow exercise this path. These are public package files, without
 credentials or user papers, and are not PyPI releases. The artifact ID and producer
 run ID go to a separate verification job. Download is scoped to the same run,
 not a latest run or mutable name; no extra repository-write or OIDC permission is
@@ -158,32 +170,24 @@ separate from these individual package digests:
 
 PR #41 CI #88 and merged-main CI #89 reproduced these digests. A mismatch stops
 the run for review; do not silently replace the approved checksums. Source stays
-at the exact v1.2.0 commit above, not current main's same-version build. A future
-publish job must retrieve this run's already verified artifact ID and must not
+at the exact v1.2.0 commit above, not current main's same-version build. The
+publisher retrieves this run's already verified artifact ID and must not
 rebuild or replace the distributions after review.
 
-## Remaining approval and configuration steps
+## Human review and remaining acceptance
 
-1. Review the draft workflow PR separately from its later activation.
-2. Separately approve persistent delegation. In PyPI account **Jonathan**, use
-   account **Publishing** to add a GitHub pending publisher with the exact five
-   fields above. Recheck project-name availability; pending registration does not
-   reserve it. Enter `pypi-publish.yml`, not a full path or the reusable workflow.
-3. Configure GitHub environment `pypi`: selected deployment branch `main`, required
-   reviewer `lotchuazzz-crypto`, disable administrator bypass. If this sole reviewer
-   also triggers the run, leave "Prevent self-review" off; enabling it requires
-   another reviewer. This code does not create or configure the environment.
-4. Review an activation change that adds `environment: pypi` and job-scoped
-   `id-token: write` only to the independent Linux publish job, keeping only manual
-   main dispatch. Retrieve the validated artifacts, recheck approved hashes and
-   use a fixed reviewed PyPA publish-action commit. Build/test jobs retain no OIDC
-   permission; do not add a long-lived token or secret.
-5. Separately approve first upload after reviewing source, hashes and no-Git
-   results; dispatch and approve the environment gate for the validated two-file
-   set. First use converts the pending publisher into a persistent project
+1. Merge the activation PR only after its CI checks pass. In repository **Actions**,
+   select **Publish reviewed v1.2.0 to PyPI**, click **Run workflow**, choose `main`
+   and run it. PR/push CI never invokes the publisher.
+2. Wait for build and artifact verification. Open that run, click **Review deployments**,
+   select **pypi**, then **Approve and deploy**. This user action permits the first
+   public upload; the assistant must not approve or bypass it. If review is not yet
+   shown, the prerequisite jobs may still be running.
+3. First successful upload converts the pending publisher into a persistent project
    publisher. This is continuing delegation, not a version-only credential;
-   revoke it through PyPI Publishing when needed.
-6. Verify public-index digests and clean-cache index uvx/doctor/MCP/PDF in a truly
+   revoke it through PyPI Publishing when needed. Published version files cannot
+   be replaced in place.
+4. Verify public-index digests and clean-cache index uvx/doctor/MCP/PDF in a truly
    Git-free consumer. Only then review enabling the onboarding PyPI guard and
    changing MCPVault's listing. Listing changes and emails remain separately
    authorized.

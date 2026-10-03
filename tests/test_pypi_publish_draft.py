@@ -146,17 +146,24 @@ def workflow(name):
     return yaml.load(path.read_text(encoding='utf-8'), Loader=yaml.BaseLoader)
 
 
-def test_manual_workflow_cannot_enable_publication_or_request_credentials():
+def test_publication_requires_manual_main_dispatch_and_protected_environment():
     draft = workflow('pypi-publish.yml')
     assert set(draft['on']) == {'workflow_dispatch'}
-    assert not draft['on']['workflow_dispatch']  # No user input can enable publishing.
-    assert draft['jobs']['publish']['if'] == '${{ false }}'
+    assert not draft['on']['workflow_dispatch']  # No version, index or credential overrides.
+    publish = draft['jobs']['publish']
+    assert "github.event_name == 'workflow_dispatch'" in publish['if']
+    assert "github.ref == 'refs/heads/main'" in publish['if']
+    assert "github.repository == 'lotchuazzz-crypto/papergraph-mcp'" in publish['if']
+    assert publish['environment']['name'] == 'pypi'
+    assert publish['permissions'] == {'id-token': 'write'}
     assert set(draft['jobs']['publish']['needs']) == {'build', 'verify'}
     assert 'refs/heads/main' in draft['jobs']['build']['if']
     for name in ('pypi-publish.yml', 'pypi-preparation.yml', 'pypi-artifact-verification.yml'):
         value = workflow(name)
         assert value['permissions'] == {'contents': 'read'}
-        for job in value['jobs'].values():
+        for job_id, job in value['jobs'].items():
+            if name == 'pypi-publish.yml' and job_id == 'publish':
+                continue
             assert 'environment' not in job
             assert job.get('permissions', {'contents': 'read'}) == {'contents': 'read'}
             for step in job.get('steps', []):
@@ -164,6 +171,27 @@ def test_manual_workflow_cannot_enable_publication_or_request_credentials():
                 assert not re.search(r'\b(?:uv\s+publish|twine\s+upload)\b', step.get('run', ''))
                 if 'uses' in step:
                     assert re.search(r'@[a-f0-9]{40}$', step['uses'])
+
+
+def test_publisher_uses_only_verified_same_run_artifact_and_pinned_pypa_action():
+    steps = workflow('pypi-publish.yml')['jobs']['publish']['steps']
+    downloads = [step for step in steps if 'download-artifact@' in step.get('uses', '')]
+    assert len(downloads) == 1, 'Publisher must retrieve the reviewed artifact'
+    assert downloads[0]['with']['artifact-ids'] == '${{ needs.build.outputs.artifact_id }}'
+    assert downloads[0]['with']['path'] == 'dist'
+    assert downloads[0]['with']['digest-mismatch'] == 'error'
+    assert not ({'github-token', 'repository', 'run-id', 'pattern'} & downloads[0]['with'].keys())
+    assert not any('checkout@' in step.get('uses', '') for step in steps)
+    publishers = [step for step in steps if 'gh-action-pypi-publish@' in step.get('uses', '')]
+    assert len(publishers) == 1
+    assert publishers[0]['uses'] == 'pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33'
+    assert publishers[0]['with'] == {'packages-dir': 'dist/',
+                                    'repository-url': 'https://upload.pypi.org/legacy/',
+                                    'verify-metadata': 'true', 'skip-existing': 'false',
+                                    'attestations': 'true', 'print-hash': 'true'}
+    assert steps[-1] == publishers[0]
+    assert steps.index(downloads[0]) < next(i for i, step in enumerate(steps)
+        if step.get('name') == 'Recheck approved bytes after approval') < steps.index(publishers[0])
 
 
 def test_only_validated_candidates_are_saved_and_same_run_artifact_is_reused():

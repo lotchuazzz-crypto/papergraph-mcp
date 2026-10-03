@@ -1,0 +1,30 @@
+name: PyPI publishing draft (preparation only)
+
+# No input or dispatch can enable publication. Activation requires a reviewed change.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: ${{ github.ref == 'refs/heads/main' && github.repository == 'lotchuazzz-crypto/papergraph-mcp' }}
+    uses: ./.github/workflows/pypi-preparation.yml
+    with:
+      save_artifacts: true
+  verify:
+    needs: build
+    uses: ./.github/workflows/pypi-artifact-verification.yml
+    with:
+      artifact_id: ${{ needs.build.outputs.artifact_id }}
+      producer_run_id: ${{ needs.build.outputs.producer_run_id }}
+  publish:
+    name: Publication disabled pending separate authorization
+    if: ${{ false }}
+    needs: [build, verify]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - run: echo "Publication is disabled. A separately reviewed activation change is required."

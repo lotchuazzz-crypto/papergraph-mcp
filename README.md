@@ -135,6 +135,8 @@ post-publication command is `uvx --from papergraph-mcp==1.2.0 papergraph-mcp`; i
 needs uv/uvx and index access, without Git. The read-only checker supports
 `--install-source pypi` and blocks launch until publication is verified. See
 [PyPI preparation and no-Git acceptance](docs/reference/pypi-preparation.md).
+The draft manual publishing workflow only saves and verifies GitHub artifacts;
+its upload job is disabled and requires a separately reviewed activation change.
 
 Add PaperGraph to an MCP client that accepts JSON-style stdio configuration:
 

@@ -2,7 +2,23 @@ name: PyPI preparation (build and verify only)
 
 on:
   workflow_dispatch:
+    inputs:
+      save_artifacts:
+        description: Save verified distributions to this GitHub run (no PyPI upload)
+        type: boolean
+        default: false
   workflow_call:
+    inputs:
+      save_artifacts:
+        type: boolean
+        default: false
+    outputs:
+      artifact_id:
+        description: Immutable artifact ID from this run
+        value: ${{ jobs.prepare.outputs.artifact_id }}
+      producer_run_id:
+        description: Run that built and verified the distributions
+        value: ${{ jobs.prepare.outputs.producer_run_id }}
 
 permissions:
   contents: read
@@ -11,6 +27,9 @@ jobs:
   prepare:
     name: Build v1.2.0 and verify without Git
     runs-on: ubuntu-latest
+    outputs:
+      artifact_id: ${{ steps.save.outputs.artifact-id }}
+      producer_run_id: ${{ github.run_id }}
     env:
       UV_PYTHON: "3.12"
     steps:
@@ -38,3 +57,15 @@ jobs:
           sha256sum "$RUNNER_TEMP/papergraph-pypi-dist/"*
       - name: Verify wheel and sdist in fresh containers without Git
         run: bash scripts/check_no_git_distributions.sh "$RUNNER_TEMP/papergraph-pypi-dist"
+      - name: Verify approved release hashes and manifests
+        run: python scripts/check_release_artifacts.py "$RUNNER_TEMP/papergraph-pypi-dist"
+      - name: Save verified release candidates
+        id: save
+        if: ${{ inputs.save_artifacts }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: papergraph-v1.2.0-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/papergraph-pypi-dist/*
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: false

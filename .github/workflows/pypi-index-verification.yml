@@ -1,0 +1,41 @@
+name: Verify public PyPI 1.2.0 without Git
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'lotchuazzz-crypto/papergraph-mcp' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out verification tools
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify public-index install in a fresh container without Git
+        shell: bash
+        run: |
+          set -euo pipefail
+          image=python:3.12-slim-bookworm
+          docker pull "$image"
+          image_digest="$(docker image inspect --format '{{index .RepoDigests 0}}' "$image")"
+          echo "Consumer image: $image_digest"
+          docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges \
+            --tmpfs /tmp:rw,exec,size=2g \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/scripts,target=/checks,readonly" \
+            --workdir /tmp "$image_digest" sh -eu -c '
+              python /checks/smoke_no_git_distribution.py --check-environment
+              python -m venv /tmp/tools
+              /tmp/tools/bin/python -m pip install --disable-pip-version-check --no-cache-dir \
+                --only-binary=:all: --index-url https://pypi.org/simple uv
+              export PATH="/tmp/tools/bin:$PATH"
+              export UV_CACHE_DIR=/tmp/public-index-bootstrap-cache
+              export UV_PYTHON_DOWNLOADS=never
+              test ! -e "$UV_CACHE_DIR"
+              uv run --no-project --no-config --no-env-file --default-index https://pypi.org/simple \
+                --with papergraph-mcp==1.2.0 python /checks/smoke_no_git_distribution.py --public-index
+            '

@@ -1,6 +1,6 @@
-name: PyPI publishing draft (preparation only)
+name: Publish reviewed v1.2.0 to PyPI
 
-# No input or dispatch can enable publication. Activation requires a reviewed change.
+# Manual main dispatch and the protected pypi environment are both required.
 on:
   workflow_dispatch:
 
@@ -20,11 +20,54 @@ jobs:
       artifact_id: ${{ needs.build.outputs.artifact_id }}
       producer_run_id: ${{ needs.build.outputs.producer_run_id }}
   publish:
-    name: Publication disabled pending separate authorization
-    if: ${{ false }}
+    name: Publish approved distributions
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'lotchuazzz-crypto/papergraph-mcp' }}
     needs: [build, verify]
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/papergraph-mcp
     permissions:
-      contents: read
+      id-token: write
     steps:
-      - run: echo "Publication is disabled. A separately reviewed activation change is required."
+      - name: Retrieve this run's verified distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact_id }}
+          path: dist
+          digest-mismatch: error
+      - name: Recheck approved bytes after approval
+        env:
+          PRODUCER_RUN_ID: ${{ needs.build.outputs.producer_run_id }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import os
+          from pathlib import Path
+
+          producer = os.environ['PRODUCER_RUN_ID']
+          if not producer.isdecimal() or int(producer) <= 0 or producer != os.environ['GITHUB_RUN_ID']:
+              raise SystemExit('Distributions must come from the same workflow run')
+          approved = {
+              'papergraph_mcp-1.2.0-py3-none-any.whl': '3b66a763783359baf09f04402813e4e281840a67a3067bf5a6338b61b2c26690',
+              'papergraph_mcp-1.2.0.tar.gz': 'f1e8680b51ce47a6d1a80dc0569260487218083e299c87c0f4969b5705f2748b',
+          }
+          files = list(Path('dist').iterdir())
+          if {path.name for path in files} != set(approved) or any(path.is_symlink() or not path.is_file() for path in files):
+              raise SystemExit('Expected exactly the two approved distributions')
+          for path in files:
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              if digest != approved[path.name]:
+                  raise SystemExit(f'SHA-256 mismatch: {path.name}')
+              print(f'{path.name}: {digest}')
+          PY
+      - name: Publish to public PyPI using Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33
+        with:
+          packages-dir: dist/
+          repository-url: https://upload.pypi.org/legacy/
+          verify-metadata: true
+          skip-existing: false
+          attestations: true
+          print-hash: true

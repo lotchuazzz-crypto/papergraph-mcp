@@ -133,6 +133,12 @@ request or actual publishing-environment reference. All jobs have only
 `contents: read`. Dispatching this draft cannot upload to PyPI; activation needs
 a separately reviewed change and authorization.
 
+uv writes a `.gitignore` in its build output. Staging accepts only the two approved
+filenames and this known marker, validates both packages, and copies only the
+packages to a new candidate directory without overwriting. It rechecks the copied
+bytes; saved and downloaded candidates still require exactly two regular files.
+The marker stays in build output and is not uploaded. Packages are not rebuilt.
+
 The preparation workflow optionally saves exactly the two verified distributions
 as immutable GitHub artifacts with seven-day retention and no overwrite. CI and
 the manual draft exercise this path. These are public package files, without

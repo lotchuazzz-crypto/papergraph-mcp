@@ -58,14 +58,16 @@ jobs:
       - name: Verify wheel and sdist in fresh containers without Git
         run: bash scripts/check_no_git_distributions.sh "$RUNNER_TEMP/papergraph-pypi-dist"
       - name: Verify approved release hashes and manifests
-        run: python scripts/check_release_artifacts.py "$RUNNER_TEMP/papergraph-pypi-dist"
+        run: |
+          python scripts/check_release_artifacts.py "$RUNNER_TEMP/papergraph-pypi-dist" \
+            --stage-to "$RUNNER_TEMP/papergraph-pypi-candidates"
       - name: Save verified release candidates
         id: save
         if: ${{ inputs.save_artifacts }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: papergraph-v1.2.0-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/papergraph-pypi-dist/*
+          path: ${{ runner.temp }}/papergraph-pypi-candidates/*
           if-no-files-found: error
           retention-days: 7
           overwrite: false

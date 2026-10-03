@@ -77,6 +77,59 @@ def test_release_directory_rejects_extra_files(tmp_path):
         validator().verify_directory(tmp_path)
 
 
+def staged_source(tmp_path, module, monkeypatch):
+    source = tmp_path / 'build-output'
+    source.mkdir()
+    digests = dict(candidate(source, kind) for kind in ('wheel', 'sdist'))
+    monkeypatch.setattr(module, 'APPROVED_HASHES', {path.name: digest for path, digest in digests.items()})
+    (source / '.gitignore').write_text('*', encoding='utf-8')  # uv's build-output marker.
+    return source
+
+
+def test_uv_output_marker_is_not_copied_into_verified_candidates(tmp_path, monkeypatch):
+    module = validator()
+    source = staged_source(tmp_path, module, monkeypatch)
+    destination = tmp_path / 'candidates'
+    assert hasattr(module, 'stage_candidates'), 'Candidate staging has not been implemented'
+    module.stage_candidates(source, destination)
+    assert set(p.name for p in destination.iterdir()) == set(module.APPROVED_HASHES)
+    assert [p['sha256'] for p in module.verify_directory(destination)] == list(module.APPROVED_HASHES.values())
+
+
+def test_staging_rejects_an_unreviewed_package(tmp_path, monkeypatch):
+    module = validator()
+    source = staged_source(tmp_path, module, monkeypatch)
+    (source / 'unreviewed.whl').write_bytes(b'foreign artifact')
+    assert hasattr(module, 'stage_candidates'), 'Candidate staging has not been implemented'
+    with pytest.raises(ValueError, match='Unexpected build output'):
+        module.stage_candidates(source, tmp_path / 'candidates')
+    assert not (tmp_path / 'candidates').exists()
+
+
+def test_staging_rejects_modified_bytes_before_copying(tmp_path, monkeypatch):
+    module = validator()
+    source = staged_source(tmp_path, module, monkeypatch)
+    with (source / next(iter(module.APPROVED_HASHES))).open('ab') as stream:
+        stream.write(b'replacement')
+    assert hasattr(module, 'stage_candidates'), 'Candidate staging has not been implemented'
+    with pytest.raises(ValueError, match='SHA-256 mismatch'):
+        module.stage_candidates(source, tmp_path / 'candidates')
+    assert not (tmp_path / 'candidates').exists()
+
+
+def test_staging_does_not_overwrite_an_existing_candidate_directory(tmp_path, monkeypatch):
+    module = validator()
+    source = staged_source(tmp_path, module, monkeypatch)
+    destination = tmp_path / 'candidates'
+    destination.mkdir()
+    sentinel = destination / 'keep'
+    sentinel.write_bytes(b'original')
+    assert hasattr(module, 'stage_candidates'), 'Candidate staging has not been implemented'
+    with pytest.raises(FileExistsError):
+        module.stage_candidates(source, destination)
+    assert sentinel.read_bytes() == b'original'
+
+
 @pytest.mark.parametrize('producer,consumer', [('101', '102'), ('101,102', '101'), ('101', None)])
 def test_artifact_from_another_or_unknown_run_is_rejected(producer, consumer):
     with pytest.raises(ValueError, match='same workflow run'):

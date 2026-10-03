@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import tarfile
 import zipfile
 
@@ -72,15 +73,33 @@ def verify_directory(directory):
             for name, digest in APPROVED_HASHES.items()]
 
 
+def stage_candidates(source, destination):
+    items = list(source.iterdir())
+    names = set(p.name for p in items)
+    approved = set(APPROVED_HASHES)
+    if (names not in (approved, approved | {'.gitignore'}) or
+            any(not p.is_file() or p.is_symlink() for p in items)):
+        raise ValueError(f'Unexpected build output: {sorted(names)}')
+    # uv creates a build-output .gitignore. It is never a distribution or copied.
+    for name, digest in APPROVED_HASHES.items():
+        validate_distribution(source / name, digest)
+    destination.mkdir()  # Never overwrite an existing candidate directory.
+    for name in APPROVED_HASHES:
+        shutil.copyfile(source / name, destination / name)
+    return verify_directory(destination)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('directory', type=Path)
     parser.add_argument('--producer-run-id')
+    parser.add_argument('--stage-to', type=Path)
     args = parser.parse_args()
     try:
         if args.producer_run_id is not None:
             validate_run_identity(args.producer_run_id, os.environ.get('GITHUB_RUN_ID'))
-        distributions = verify_directory(args.directory)
+        distributions = (stage_candidates(args.directory, args.stage_to)
+                         if args.stage_to else verify_directory(args.directory))
     except (OSError, ValueError, KeyError, zipfile.BadZipFile, tarfile.TarError) as error:
         parser.exit(1, f'Release candidate verification failed: {error}\n')
     print(json.dumps({'version': '1.2.0', 'source_commit': SOURCE_SHA,

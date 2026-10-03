@@ -1,0 +1,40 @@
+name: PyPI preparation (build and verify only)
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Build v1.2.0 and verify without Git
+    runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: "3.12"
+    steps:
+      - name: Check out preparation tools
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Check out immutable release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: v1.2.0
+          path: release-source
+          persist-credentials: false
+      - name: Verify exact release commit
+        run: |
+          test "$(git -C release-source rev-parse HEAD)" = "60977c06217905e5c1db15fbf27aff4ca208a517"
+          test -z "$(git -C release-source status --porcelain --untracked-files=no)"
+      - name: Install build tool
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
+      - name: Build immutable release distributions
+        run: uv build --no-sources --out-dir "$RUNNER_TEMP/papergraph-pypi-dist" release-source
+      - name: Validate distribution metadata and record hashes
+        run: |
+          uvx --from twine twine check "$RUNNER_TEMP/papergraph-pypi-dist/"*
+          sha256sum "$RUNNER_TEMP/papergraph-pypi-dist/"*
+      - name: Verify wheel and sdist in fresh containers without Git
+        run: bash scripts/check_no_git_distributions.sh "$RUNNER_TEMP/papergraph-pypi-dist"

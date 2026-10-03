@@ -68,7 +68,17 @@ python scripts/check_onboarding.py
 
 Use its facts for `git`, `uv`, and `uvx`; also detect the active MCP client without mutation. Infer the client only from reliable host or executable evidence. If it remains ambiguous, ask one concise question: “Which MCP client should I configure?”
 
-The pinned Git-source launch requires Git as well as `uv` and `uvx`. If Git is missing, explain that prerequisite and stop before claiming launch readiness; do not misdiagnose it as an API-key or MCP handshake problem. Installing Git needs the user's installation approval too.
+The pinned Git-source launch requires Git as well as `uv` and `uvx`. If Git is missing, explain that Git-source prerequisite and stop before claiming launch readiness; do not misdiagnose it as an API-key or MCP handshake problem. Installing Git needs the user's installation approval too.
+
+PyPI installation is a separate path and does not require Git or a checkout.
+It is currently preparation only, not published/verified. Inspect it with
+`python scripts/check_onboarding.py --install-source pypi`: uv/uvx can satisfy its
+prerequisites while publication remains blocked. Do not configure a client with
+the proposed `uvx --from papergraph-mcp==1.2.0 papergraph-mcp` command until official
+publication and a clean-cache launch are verified. Do not install Git solely for
+a PyPI consumer. Missing repository/Git context is separate from index-launch
+readiness; disclose unknown checkout freshness rather than making it mandatory
+for PyPI. Until the index path is available, keep the usable Git-tag default.
 
 After selecting the client, read [references/client-configuration.md](references/client-configuration.md) completely and use only its matching verified recipe. State the detected facts, proposed next mutation, and the next required approval.
 

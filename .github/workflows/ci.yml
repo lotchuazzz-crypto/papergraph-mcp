@@ -14,6 +14,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  pypi-preparation:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/pypi-preparation.yml
+
   test:
     name: Test (${{ matrix.os }}, Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}

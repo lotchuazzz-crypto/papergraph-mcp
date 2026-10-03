@@ -22,16 +22,29 @@ LAUNCH_COMMAND = [
     "papergraph-mcp",
     "--version",
 ]
+PYPI_SOURCE = f"papergraph-mcp=={PAPERGRAPH_VERSION}"
+# Enable only after the official index release and clean-cache launch are verified.
+PYPI_PUBLICATION_VERIFIED = False
 
 
 def inspect_prerequisites(
     locator: Callable[[str], str | None] = shutil.which,
+    install_source: str = "git",
 ) -> dict[str, object]:
+    if install_source not in ("git", "pypi"):
+        raise ValueError(f"Unknown install source: {install_source}")
     commands = {name: locator(name) for name in ("git", "uv", "uvx")}
+    required = ["git", "uv", "uvx"] if install_source == "git" else ["uv", "uvx"]
+    satisfied = all(commands[name] for name in required)
+    verified = install_source == "git" or PYPI_PUBLICATION_VERIFIED
     return {
         "platform": platform.system().lower(),
         "commands": commands,
-        "ready_for_smoke_test": all(commands.values()),
+        "install_source": install_source,
+        "required_commands": required,
+        "prerequisites_satisfied": satisfied,
+        "publication_verified": verified,
+        "ready_for_smoke_test": bool(satisfied and verified),
     }
 
 
@@ -74,10 +87,18 @@ def inspect_repository(path: Path) -> dict[str, object]:
 
 def validate_launch(
     runner: Callable[..., Any] = subprocess.run,
+    install_source: str = "git",
 ) -> dict[str, object]:
+    if install_source not in ("git", "pypi"):
+        raise ValueError(f"Unknown install source: {install_source}")
+    if install_source == "pypi" and not PYPI_PUBLICATION_VERIFIED:
+        return {"ok": False, "reason": "pypi_publication_not_verified", "source": PYPI_SOURCE}
+    command = LAUNCH_COMMAND if install_source == "git" else [
+        "uvx", "--from", PYPI_SOURCE, "papergraph-mcp", "--version",
+    ]
     try:
         completed = runner(
-            LAUNCH_COMMAND,
+            command,
             capture_output=True,
             text=True,
             timeout=120,
@@ -111,15 +132,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Repository to inspect using local refs only (no network or mutation).",
     )
     parser.add_argument(
+        "--install-source", choices=("git", "pypi"), default="git",
+        help="Git-tag launch (default), or proposed PyPI launch; PyPI is not yet verified.",
+    )
+    parser.add_argument(
         "--smoke-test",
         action="store_true",
         help="Run the pinned PaperGraph version command (may access the network).",
     )
     args = parser.parse_args(argv)
-    result = inspect_prerequisites()
+    result = inspect_prerequisites() if args.install_source == "git" else inspect_prerequisites(install_source="pypi")
     result["repository"] = inspect_repository(args.repository)
     if args.smoke_test:
-        result["launch"] = validate_launch()
+        result["launch"] = validate_launch() if args.install_source == "git" else validate_launch(install_source="pypi")
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     return 1 if args.smoke_test and not result["launch"]["ok"] else 0
 

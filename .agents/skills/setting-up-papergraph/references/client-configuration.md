@@ -8,6 +8,12 @@ The pinned source is always:
 git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0
 ```
 
+The recipes below use the available Git-tag source and therefore require Git.
+A proposed PyPI alternative would use `papergraph-mcp==1.2.0` in the `--from`
+argument and would not require Git. It is not published/verified yet; do not use
+it in an active client configuration. Changing the source after publication
+still requires the existing configuration approval and backup boundaries.
+
 ## Install `uv` and `uvx`
 
 - **Detection:** run `uv --version` and `uvx --version` without modifying the host. Do nothing when both work.

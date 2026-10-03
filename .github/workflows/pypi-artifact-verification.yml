@@ -1,0 +1,35 @@
+name: Verify saved release candidates (no publication)
+
+on:
+  workflow_call:
+    inputs:
+      artifact_id:
+        type: string
+        required: true
+      producer_run_id:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out verifier
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Download this run's verified candidates by immutable ID
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ inputs.artifact_id }}
+          path: ${{ runner.temp }}/papergraph-verified-candidates
+          digest-mismatch: error
+      - name: Verify same run, approved bytes, metadata and source manifest
+        env:
+          PRODUCER_RUN_ID: ${{ inputs.producer_run_id }}
+        run: |
+          python scripts/check_release_artifacts.py "$RUNNER_TEMP/papergraph-verified-candidates" \
+            --producer-run-id "$PRODUCER_RUN_ID"

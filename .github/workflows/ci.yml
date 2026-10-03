@@ -18,6 +18,17 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/pypi-preparation.yml
+    with:
+      save_artifacts: true
+
+  pypi-artifact-verification:
+    needs: pypi-preparation
+    permissions:
+      contents: read
+    uses: ./.github/workflows/pypi-artifact-verification.yml
+    with:
+      artifact_id: ${{ needs.pypi-preparation.outputs.artifact_id }}
+      producer_run_id: ${{ needs.pypi-preparation.outputs.producer_run_id }}
 
   test:
     name: Test (${{ matrix.os }}, Python ${{ matrix.python-version }})

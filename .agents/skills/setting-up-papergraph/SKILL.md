@@ -68,17 +68,20 @@ python scripts/check_onboarding.py
 
 Use its facts for `git`, `uv`, and `uvx`; also detect the active MCP client without mutation. Infer the client only from reliable host or executable evidence. If it remains ambiguous, ask one concise question: “Which MCP client should I configure?”
 
-The pinned Git-source launch requires Git as well as `uv` and `uvx`. If Git is missing, explain that Git-source prerequisite and stop before claiming launch readiness; do not misdiagnose it as an API-key or MCP handshake problem. Installing Git needs the user's installation approval too.
+The default pinned PyPI launch requires `uv` and `uvx`, index access, and no Git
+or checkout. PyPI 1.2.0 is published; [Git-free clean-cache acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/37123289066)
+passed CLI, stdio MCP and PDF reading. The checker defaults to `pypi`;
+`--install-source pypi` is also explicit. Do not install Git solely for a PyPI
+consumer. Missing repository/Git context and unknown checkout freshness are
+separate from index-launch readiness. The published doctor still recommends Git
+source and may emit a nonfatal Git-context warning outside a checkout; report
+that separately from actual launch failure.
 
-PyPI installation is a separate path and does not require Git or a checkout.
-It is currently preparation only, not published/verified. Inspect it with
-`python scripts/check_onboarding.py --install-source pypi`: uv/uvx can satisfy its
-prerequisites while publication remains blocked. Do not configure a client with
-the proposed `uvx --from papergraph-mcp==1.2.0 papergraph-mcp` command until official
-publication and a clean-cache launch are verified. Do not install Git solely for
-a PyPI consumer. Missing repository/Git context is separate from index-launch
-readiness; disclose unknown checkout freshness rather than making it mandatory
-for PyPI. Until the index path is available, keep the usable Git-tag default.
+The optional Git-source launch requires Git as well as `uv` and `uvx`. Inspect
+that route with `python scripts/check_onboarding.py --install-source git`.
+If Git is missing, explain that route's prerequisite and stop before claiming
+Git-source readiness; do not misdiagnose it as an API-key or MCP handshake problem.
+Installing Git needs the user's installation approval too.
 
 After selecting the client, read [references/client-configuration.md](references/client-configuration.md) completely and use only its matching verified recipe. State the detected facts, proposed next mutation, and the next required approval.
 
@@ -88,23 +91,26 @@ There are three separate approval boundaries:
 2. **configuration approval:** show the exact client change and ask before a native command or any edit outside this repository. For file-based configuration, parse first, preserve unrelated servers, and create a timestamped adjacent backup. If parsing fails, stop and show the error. If safe mutation is unavailable, provide the minimal snippet and exact placement guidance instead.
 3. **restart approval:** after configuration and launch validation, ask before controlling or restarting the client. If control is unavailable or permission is declined, provide one direct manual restart instruction.
 
-For ordinary installation, use this immutable release source; never substitute a
-branch, a mutable default, or an unreleased revision:
+For ordinary installation, use this fixed published package version; never
+substitute a branch, a mutable default, or an unreleased revision:
 
 ```text
-git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0
+papergraph-mcp==1.2.0
 ```
 
-The v1.2.0 Git tag is available and its pinned launch has been verified. The
-separate GitHub Release page is still pending; it is not needed for Git-source
-installation. An explicitly requested development test is separate: use the
+The [GitHub Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.0)
+and immutable Git tag are available. Optional Git-source installation uses
+`git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0` in `--from`;
+validate both version and doctor with the same selected source. Switching an
+existing client's source requires configuration approval and a backup.
+An explicitly requested development test is separate: use the
 requested checkout's locked environment or install its built wheel in a separate environment,
 then launch that exact interpreter. Check CLI version, `doctor.build_identity`
 (source commit, tracked changes and source-tree digest), and MCP initialization
 version. A dirty build's commit is its base; unknown build provenance is unknown.
 Release diagnostics name the package version's tag but do not themselves establish
-tag availability. Ordinary setup uses the verified v1.2.0 tag below; future tags
-must be checked before they are recommended.
+tag availability. Ordinary setup uses the verified PyPI 1.2.0 commands below; future package
+versions or tags must be verified before they are recommended.
 Keep the user's active MCP registration intact unless they explicitly authorize a
 configuration change, and never invent a development release/tag.
 
@@ -120,13 +126,13 @@ Never request credentials, upload papers, guess the identity of ambiguous refere
 Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `1.2.0`; file presence alone is insufficient:
 
 ```text
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp --version
+uvx --from papergraph-mcp==1.2.0 papergraph-mcp --version
 ```
 
 Also validate the pinned diagnostics command:
 
 ```text
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp doctor
+uvx --from papergraph-mcp==1.2.0 papergraph-mcp doctor
 ```
 
 The expected output is:

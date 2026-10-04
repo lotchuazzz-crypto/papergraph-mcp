@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / ".agents" / "skills" / "setting-up-papergraph"
-PIN = "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0"
+PIN = "papergraph-mcp==1.2.0"
 
 
 def read(path: Path) -> str:
@@ -166,11 +166,11 @@ def test_checker_main_defaults_to_json_without_launching(monkeypatch, capsys):
         "commands": {"git": "/tools/git", "uv": None, "uvx": None},
         "ready_for_smoke_test": False,
     }
-    monkeypatch.setattr(checker, "inspect_prerequisites", lambda: dict(prerequisites))
+    monkeypatch.setattr(checker, "inspect_prerequisites", lambda install_source="pypi": dict(prerequisites))
     repository = {"available": False, "freshness_verified": False}
     monkeypatch.setattr(checker, "inspect_repository", lambda path: repository)
 
-    def unexpected_launch():
+    def unexpected_launch(install_source="pypi"):
         raise AssertionError("default checker invocation must not launch PaperGraph")
 
     monkeypatch.setattr(checker, "validate_launch", unexpected_launch)
@@ -191,10 +191,10 @@ def test_checker_main_smoke_test_emits_successful_launch_json(monkeypatch, capsy
         "ready_for_smoke_test": True,
     }
     launch = {"ok": True, "reason": "ok", "version": "papergraph-mcp 1.2.0"}
-    monkeypatch.setattr(checker, "inspect_prerequisites", lambda: dict(prerequisites))
+    monkeypatch.setattr(checker, "inspect_prerequisites", lambda install_source="pypi": dict(prerequisites))
     repository = {"available": True, "freshness_verified": False}
     monkeypatch.setattr(checker, "inspect_repository", lambda path: repository)
-    monkeypatch.setattr(checker, "validate_launch", lambda: launch)
+    monkeypatch.setattr(checker, "validate_launch", lambda install_source="pypi": launch)
 
     returncode = checker.main(["--smoke-test"])
     payload = json.loads(capsys.readouterr().out)
@@ -213,10 +213,10 @@ def test_checker_main_failed_smoke_test_emits_json_and_returns_nonzero(
         "ready_for_smoke_test": True,
     }
     launch = {"ok": False, "reason": "nonzero_exit", "returncode": 1}
-    monkeypatch.setattr(checker, "inspect_prerequisites", lambda: dict(prerequisites))
+    monkeypatch.setattr(checker, "inspect_prerequisites", lambda install_source="pypi": dict(prerequisites))
     repository = {"available": True, "freshness_verified": False}
     monkeypatch.setattr(checker, "inspect_repository", lambda path: repository)
-    monkeypatch.setattr(checker, "validate_launch", lambda: launch)
+    monkeypatch.setattr(checker, "validate_launch", lambda install_source="pypi": launch)
 
     returncode = checker.main(["--smoke-test"])
     payload = json.loads(capsys.readouterr().out)
@@ -373,6 +373,6 @@ def test_all_onboarding_source_pins_match_latest_published_release():
             read(SKILL / "references" / "client-configuration.md"),
         )
     )
-    refs = re.findall(r"papergraph-mcp\.git@(v[^\s\"'\],)]+)", combined)
+    refs = re.findall(r"papergraph-mcp\.git@(v[^\s\"'`\],)]+)", combined)
     assert refs
     assert set(refs) == {"v1.2.0"}

@@ -1,4 +1,4 @@
-"""Keep preparation distinct from index publication and Git-source setup."""
+"""Keep publication evidence, Git-source setup and preparation permissions distinct."""
 import importlib.util
 from pathlib import Path
 import re
@@ -20,19 +20,22 @@ def checker():
     return module
 
 
-def test_pypi_prerequisites_exclude_git_but_do_not_claim_publication():
+def test_pypi_prerequisites_exclude_git_after_verified_publication():
     module = checker()
     paths = {'git': None, 'uv': '/tools/uv', 'uvx': '/tools/uvx'}
     result = module.inspect_prerequisites(locator=paths.get, install_source='pypi')
     assert result['required_commands'] == ['uv', 'uvx']
     assert result['prerequisites_satisfied'] is True
-    assert result['publication_verified'] is False
-    assert result['ready_for_smoke_test'] is False
+    assert result['publication_verified'] is True
+    assert result['ready_for_smoke_test'] is True
     assert result['commands']['git'] is None
 
 
-def test_unverified_index_launch_does_not_execute_any_command():
+def test_unverified_index_launch_does_not_execute_any_command(monkeypatch):
     module = checker()
+    monkeypatch.setattr(module, 'PYPI_PUBLICATION_VERIFIED', False)
+    paths = {'git': None, 'uv': '/tools/uv', 'uvx': '/tools/uvx'}
+    assert module.inspect_prerequisites(locator=paths.get)['ready_for_smoke_test'] is False
     calls = []
     result = module.validate_launch(runner=lambda *a, **kw: calls.append(a), install_source='pypi')
     assert result['ok'] is False
@@ -40,9 +43,8 @@ def test_unverified_index_launch_does_not_execute_any_command():
     assert calls == []
 
 
-def test_verified_index_launch_uses_the_versioned_package_not_git(monkeypatch):
+def test_verified_index_launch_uses_the_versioned_package_not_git():
     module = checker()
-    monkeypatch.setattr(module, 'PYPI_PUBLICATION_VERIFIED', True, raising=False)
     calls = []
 
     def runner(command, **kwargs):
@@ -91,3 +93,39 @@ def test_consumer_cli_failure_preserves_the_actual_stderr():
         module.run_cli([sys.executable, '-c',
                         'import sys; sys.stderr.write("consumer cache is read only"); sys.exit(2)'],
                        env=None, timeout=10)
+
+
+def test_default_index_readiness_does_not_require_git():
+    module = checker()
+    paths = {'git': None, 'uv': '/tools/uv', 'uvx': '/tools/uvx'}
+    result = module.inspect_prerequisites(locator=paths.get)
+    assert result['install_source'] == 'pypi'
+    assert result['ready_for_smoke_test'] is True
+    assert module.inspect_prerequisites(locator=paths.get, install_source='git')['ready_for_smoke_test'] is False
+
+
+def test_explicit_git_launch_preserves_tag_source():
+    module = checker()
+    calls = []
+    def runner(command, **kwargs):
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0, 'papergraph-mcp 1.2.0\n', '')
+    assert module.validate_launch(runner=runner, install_source='git')['ok'] is True
+    assert calls == [['uvx', '--from', module.PAPERGRAPH_SOURCE, 'papergraph-mcp', '--version']]
+
+
+def test_cli_default_smoke_dispatches_pypi_and_explicit_git_is_preserved(monkeypatch, capsys):
+    import json
+    module = checker()
+    selected = []
+    monkeypatch.setattr(module, 'inspect_repository', lambda path: {'available': False})
+    monkeypatch.setattr(module, 'inspect_prerequisites', lambda install_source: {'install_source': install_source})
+    def launch(install_source):
+        selected.append(install_source)
+        return {'ok': True}
+    monkeypatch.setattr(module, 'validate_launch', launch)
+    assert module.main(['--smoke-test']) == 0
+    assert json.loads(capsys.readouterr().out)['install_source'] == 'pypi'
+    assert module.main(['--install-source', 'git', '--smoke-test']) == 0
+    assert json.loads(capsys.readouterr().out)['install_source'] == 'git'
+    assert selected == ['pypi', 'git']

@@ -1,16 +1,20 @@
-# PyPI distribution preparation
+# PyPI publication and installation
 
-The user separately approved the Trusted Publisher/environment configuration and,
-on 2026-10-03, activation and the first public PyPI upload of the reviewed 1.2.0
-files. Publication still requires the user's GitHub environment approval. This
-document does not authorize MCPVault listing changes or email. The current verified
-installation remains the immutable Git tag until public-index acceptance succeeds.
-Public PyPI project/JSON/simple endpoints returned 404 during the 2026-10-02
-assessment. That does not establish ownership or guarantee name availability.
+Status, checked 2026-10-04: [PyPI 1.2.0](https://pypi.org/project/papergraph-mcp/1.2.0/)
+is published. The authorized, human-approved [first upload](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/37119385521)
+completed on 2026-10-03; [Git-free public-index acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/37123289066)
+passed with fresh caches. Ordinary installation now defaults to fixed PyPI 1.2.0.
+The [GitHub Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.0)
+was published on 2026-10-02. This document does not authorize another upload,
+MCPVault listing changes or email.
+
+Historical assessment: public PyPI project/JSON/simple endpoints returned 404 on
+2026-10-02. That observation did not establish ownership or reserve the name;
+it is not the current publication status.
 
 ## Reviewed source and artifacts
 
-- Project: `papergraph-mcp`, first proposed PyPI version: `1.2.0`.
+- Project: `papergraph-mcp`, first published PyPI version: `1.2.0`.
 - Immutable source: tag `v1.2.0`, commit
   `60977c06217905e5c1db15fbf27aff4ca208a517`. Never move that tag.
 - Build with `uv build --no-sources`. Upload candidates are
@@ -29,15 +33,15 @@ a legal compliance determination. See [PyMuPDF licensing](https://pymupdf.io/lic
 
 ## Installation paths
 
-Git source (available now) requires Git, uv and uvx:
+Optional Git-source installation requires Git, uv and uvx:
 
 ```text
 uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp --version
 python scripts/check_onboarding.py --install-source git --smoke-test
 ```
 
-PyPI (not published/verified yet) requires uv/uvx and index access, not Git.
-These commands are **post-publication candidates**, not usable setup commands now:
+Default PyPI installation is published and verified. It requires uv/uvx and index
+access, without Git or a checkout:
 
 ```text
 uvx --from papergraph-mcp==1.2.0 papergraph-mcp
@@ -45,22 +49,42 @@ uvx --from papergraph-mcp==1.2.0 papergraph-mcp --version
 uvx --from papergraph-mcp==1.2.0 papergraph-mcp doctor
 ```
 
-Read-only prerequisite inspection is available now:
+Read-only prerequisite inspection defaults to PyPI:
 
 ```text
+python scripts/check_onboarding.py
 python scripts/check_onboarding.py --install-source pypi
 ```
 
-`prerequisites_satisfied` can be true without Git, while `publication_verified`
-and `ready_for_smoke_test` remain false. PyPI smoke is blocked before execution
-with `pypi_publication_not_verified`. There is no command-line bypass. A future
-reviewed change may enable it only after authorized official publication and
-clean-cache index validation. Repository freshness is a separate optional check.
+Add `--smoke-test` to execute the pinned version check (network/cache/environment
+changes are possible); without it the checker does not download or launch.
+
+`publication_verified` records the version-specific public-index acceptance above,
+not a live index availability check. With uv/uvx available, prerequisites and
+`ready_for_smoke_test` can be true without Git. Actual launch can still fail due
+to network, index or host conditions; the checker reports that separately.
+Repository freshness is a separate optional check and stays unverified without
+a fetch. For a future unverified package version, restore the publication guard
+until authorized publication and fresh-cache acceptance have succeeded.
 The v1.2.0 installed doctor still recommends the Git source and emits a nonfatal
-Git-context warning when Git is absent; that warning is not a failed MCP startup.
+Git-context warning outside a checkout; that warning is not a failed MCP startup.
 Changing installed-package behavior would require a new reviewed release.
 
 ## Actual no-Git acceptance
+
+Post-publication public-index acceptance is separate from the local-artifact checks
+below. [Run 37123289066](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/37123289066) completed successfully on Linux/Python 3.12.15,
+using resolved official image digest
+`python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3`.
+Git executable/package absence was checked before and after bootstrap. Fresh-cache
+`uvx --from papergraph-mcp==1.2.0` used the official public index, without a local
+artifact. Version/doctor, stdio initialize/tools/diagnostics and generated PDF
+reading passed; source commit/digest matched the original release, with
+`tracked_dirty=false`. The independent verification workflow has only
+`contents: read`, no publishing job, environment or OIDC permission. This validates
+Linux/Python 3.12; MCPVault's actual environment remains unverified.
+
+### Earlier wheel and sdist checks
 
 The Windows development host has Git. Hiding its PATH is not acceptance evidence.
 Local Docker/Podman availability and every actual CI result must be reported.
@@ -174,7 +198,10 @@ at the exact v1.2.0 commit above, not current main's same-version build. The
 publisher retrieves this run's already verified artifact ID and must not
 rebuild or replace the distributions after review.
 
-## Human review and remaining acceptance
+## Historical first-upload procedure
+
+The following steps describe the completed 1.2.0 first upload and acceptance.
+Do not dispatch the fixed v1.2.0 publisher again or replace existing files.
 
 1. Merge the activation PR only after its CI checks pass. In repository **Actions**,
    select **Publish reviewed v1.2.0 to PyPI**, click **Run workflow**, choose `main`
@@ -188,9 +215,27 @@ rebuild or replace the distributions after review.
    revoke it through PyPI Publishing when needed. Published version files cannot
    be replaced in place.
 4. Verify public-index digests and clean-cache index uvx/doctor/MCP/PDF in a truly
-   Git-free consumer. Only then review enabling the onboarding PyPI guard and
-   changing MCPVault's listing. Listing changes and emails remain separately
+   Git-free consumer. That acceptance now supports the reviewed onboarding PyPI guard change;
+   changing MCPVault's listing remains a separate request. Listing changes and emails remain separately
    authorized.
+
+## Future version preparation
+
+Prepare a new version in a separately approved change: finalize README before
+building, update version-specific source identities, artifact hashes and workflow
+guards, and verify metadata, wheel/sdist provenance and Git-free installation.
+Only after review should an immutable tag identify that exact source. Obtain
+separate publication authorization and the protected environment's human approval.
+After upload, verify official-index hashes and fresh-cache CLI/MCP/PDF behavior
+before enabling that version's installation guard or recommending its commands.
+The current workflows and hashes are fixed to 1.2.0; this record does not authorize
+changing their permissions or reusing them to overwrite that release.
+
+The PyPI 1.2.0 long description came from the README in the original tagged
+build, including its old v1.1.7/preparation examples. Editing main updates GitHub,
+not that uploaded package's description. Correct it with a separately approved
+new version. Never move the v1.2.0 tag, rebuild different bytes under its filenames
+or replace published files; [PyPI filenames cannot be reused](https://pypi.org/help/#file-name-reuse).
 
 References: [PyPI pending publishers](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/),
 [PyPA reusable-workflow restriction](https://github.com/pypa/gh-action-pypi-publish/blob/release/v1/README.md),

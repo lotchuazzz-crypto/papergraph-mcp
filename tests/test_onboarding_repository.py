@@ -21,7 +21,8 @@ def repository(tmp_path):
 
 def test_git_is_required_for_git_source_launch():
     result = load_checker().inspect_prerequisites(
-        locator=lambda name: None if name == "git" else "/tools/" + name
+        locator=lambda name: None if name == "git" else "/tools/" + name,
+        install_source="git"
     )
     assert result["ready_for_smoke_test"] is False
 

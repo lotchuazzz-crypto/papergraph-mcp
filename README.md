@@ -25,10 +25,10 @@ It helps AI agents turn arXiv papers, local LaTeX projects, and born-digital PDF
 
 ### v1.2.0: DOI inputs and dependency reading
 
-The immutable [v1.2.0 Git tag](https://github.com/lotchuazzz-crypto/papergraph-mcp/tree/v1.2.0)
-is available, and its pinned `uvx` version/diagnostics checks have passed. The
-installation examples below launch `1.2.0`; the separate GitHub Release page is
-still pending. To test subsequent checkout changes in isolation, use
+[v1.2.0 is released](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.0)
+and [available on PyPI](https://pypi.org/project/papergraph-mcp/1.2.0/).
+The examples below pin PyPI `1.2.0`; a [Git-free, clean-cache consumer check](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/37123289066)
+passed CLI, stdio MCP and PDF reading. The immutable Git tag remains available. To test subsequent checkout changes in isolation, use
 `uv sync --locked --dev`, then `uv run papergraph-mcp --version` and
 `uv run papergraph-mcp doctor`. For a wheel, build with `uv build`, install it in a
 separate environment, and launch that environment's `papergraph-mcp`.
@@ -61,7 +61,7 @@ mathematical contents. Unavailable providers, conflicting DOI identities and
 missing public PDFs are reported separately. Use `workspace_add_pdf_paper` for a
 legally obtained local PDF when no usable candidate is available. HTTPS PDF
 downloads are bounded to 50 MiB and preserve source/version/hash receipts beside
-the workspace. Installation examples pin the available v1.2.0 tag.
+the workspace. Installation examples pin the published PyPI 1.2.0 package.
 
 `get-dependency-reading WORKSPACE PAPER_ID` (MCP
 `workspace_get_dependency_reading`) lists results and source-backed main-result
@@ -105,7 +105,7 @@ v1.1.4 introduced **bounded reference expansion**: approve a finite policy, then
 
 v1.1.5 improves **reference identity quality**: traceable bibliography hints, conservative DOI/arXiv normalization, explicit conflicts, provider outcomes and saved matching explanations. New runs use `unique_strong_v2`; existing `unique_strong_v1` tasks keep their legacy resolver. Back up workspaces before upgrading to schema 9; older versions cannot open them. Scores are not probabilities, and metadata agreement is not independent verification. See the [release preparation notes](docs/reference/v1.1.5-release-notes.md) and [offline quality corpus](tests/fixtures/reference_quality/README.md).
 
-See the [expansion walkthrough](docs/walkthroughs/bounded-reference-expansion.md), [offline JSON](docs/examples/reference-expansion-example.json), [reference tree](docs/examples/reference-expansion-example.md), and [v1.1.5 client verification matrix](docs/reference/client-compatibility.md). The pinned commands below install the available v1.2.0 Git tag.
+See the [expansion walkthrough](docs/walkthroughs/bounded-reference-expansion.md), [offline JSON](docs/examples/reference-expansion-example.json), [reference tree](docs/examples/reference-expansion-example.md), and [v1.1.5 client verification matrix](docs/reference/client-compatibility.md). The pinned commands below install PyPI 1.2.0 without Git.
 
 ### Why Researchers Use It
 
@@ -120,23 +120,33 @@ PaperGraph does not verify proofs, perform semantic theorem matching, or claim t
 
 ### Quick Start
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the pinned Git tag without cloning:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then verify the pinned PyPI package. This path needs uv/uvx and index access, without Git or a checkout:
+
+```powershell
+uvx --from papergraph-mcp==1.2.0 papergraph-mcp --version
+uvx --from papergraph-mcp==1.2.0 papergraph-mcp doctor
+```
+
+Pinning `papergraph-mcp==1.2.0` keeps the package version reproducible.
+The repository checker defaults to this verified PyPI path:
+`python scripts/check_onboarding.py --smoke-test` launches the pinned version
+command; without `--smoke-test` it only inspects prerequisites and local refs.
+Repository/Git context and checkout freshness are separate from PyPI readiness.
+The published 1.2.0 doctor still recommends Git-source installation and may report
+unavailable Git context outside a checkout; this nonfatal warning does not block
+PyPI startup. See [publication and no-Git acceptance](docs/reference/pypi-preparation.md).
+
+Optional Git-source installation requires Git as well as uv/uvx:
 
 ```powershell
 uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp --version
 uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp doctor
 ```
 
-Pinning the `v1.2.0` tag keeps MCP client installations reproducible.
-
-PyPI distribution is being prepared for consumers that cannot use Git. It is not
-published or verified yet: keep the available Git-tag command above. The proposed
-post-publication command is `uvx --from papergraph-mcp==1.2.0 papergraph-mcp`; it
-needs uv/uvx and index access, without Git. The read-only checker supports
-`--install-source pypi` and blocks launch until publication is verified. See
-[PyPI preparation and no-Git acceptance](docs/reference/pypi-preparation.md).
-The manual publishing workflow verifies the approved v1.2.0 artifacts and requires
-the protected GitHub `pypi` environment's human review before uploading to PyPI.
+Select `--install-source git` when using the repository checker for that route.
+The PyPI 1.2.0 page retains the README embedded in its original release build;
+editing main does not update that description. Corrections belong to a separately
+approved new version; never move the v1.2.0 tag or replace its published files.
 
 Add PaperGraph to an MCP client that accepts JSON-style stdio configuration:
 
@@ -145,7 +155,7 @@ Add PaperGraph to an MCP client that accepts JSON-style stdio configuration:
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0", "papergraph-mcp"]
+      "args": ["--from", "papergraph-mcp==1.2.0", "papergraph-mcp"]
     }
   }
 }
@@ -208,9 +218,9 @@ flowchart LR
 
 PaperGraph v1.2.0 是稳定的 evidence-first 数学论文阅读工作流：先看 Paper Map，再检查 proof 和 citation 证据，用 Evidence Triage 理解稀疏抽取结果，对被阻塞的外部引用做 scholarly metadata 搜索，然后把选定候选闭环到用户确认的 arXiv、本地 PDF、DOI、URL 或出版信息。
 
-v1.2.0 改善首次使用诊断、DOI 公开正文入口和证明依赖阅读。Git 标签已可安装，正式 GitHub Release 页面仍待创建。根 DOI 论文仅在阅读策略允许且存在唯一合格公开 PDF 时直接导入；其他候选需要选择，新发现的外部引用仍先审阅。直接与递归依赖、共享前置结果、环和未知证据分别报告，不推断隐藏的数学关系。见 [v1.2.0 说明](docs/reference/v1.2.0-release-notes.md)。
+v1.2.0 改善首次使用诊断、DOI 公开正文入口和证明依赖阅读。[GitHub Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.0) 和 [PyPI 1.2.0](https://pypi.org/project/papergraph-mcp/1.2.0/) 已发布。根 DOI 论文仅在阅读策略允许且存在唯一合格公开 PDF 时直接导入；其他候选需要选择，新发现的外部引用仍先审阅。直接与递归依赖、共享前置结果、环和未知证据分别报告，不推断隐藏的数学关系。见 [v1.2.0 说明](docs/reference/v1.2.0-release-notes.md)。
 
-v1.1.6 修复了重新导入时丢失阅读数据及引用解析输入边界；v1.1.7 仅做维护清扫，不改变既有工作流。下方安装命令固定到已发布的 v1.2.0 Git 标签；参见 [v1.1.6 修复说明](docs/reference/v1.1.6-release-notes.md) 和 [v1.1.7 Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.1.7)。
+v1.1.6 修复了重新导入时丢失阅读数据及引用解析输入边界；v1.1.7 仅做维护清扫，不改变既有工作流。下方安装命令默认固定到已发布的 PyPI 1.2.0，无需 Git；参见 [v1.1.6 修复说明](docs/reference/v1.1.6-release-notes.md) 和 [v1.1.7 Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.1.7)。
 
 v1.1.4 引入有界引用扩展：默认最多追踪 2 层、导入 10 篇新论文。v1.1.5 进一步改善引用身份匹配：保留解析证据，审慎规范化 DOI/arXiv，明确冲突、服务状态和选择理由。新任务默认 `unique_strong_v2`，已有 `unique_strong_v1` 任务保持旧行为。升级到 schema 9 前请备份 workspace，旧版本无法打开新 schema。分数不是概率，多来源元数据一致也不代表独立验证。导入需要可访问正文，不绕过付费墙。见[完整操作示例](docs/walkthroughs/bounded-reference-expansion.md)及[客户端验证状态](docs/reference/client-compatibility.md)。
 
@@ -227,12 +237,20 @@ PaperGraph does not verify proofs，也不做 semantic theorem matching；它不
 
 ### 快速开始
 
-先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，然后验证固定版本：
+先安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，然后从 PyPI 验证固定版本；此路径需要 uv/uvx 和索引访问，无需 Git 或检出目录：
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp doctor
+uvx --from papergraph-mcp==1.2.0 papergraph-mcp --version
+uvx --from papergraph-mcp==1.2.0 papergraph-mcp doctor
 ```
+
+[正式 PyPI 的无 Git、全新缓存验收](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/37123289066)已通过 CLI、stdio MCP 和 PDF 阅读；MCPVault 实际环境仍未验证。
+仓库检查器默认使用 PyPI：`python scripts/check_onboarding.py --smoke-test`。
+不加 `--smoke-test` 时只做只读检查，不下载或启动服务器；仓库新鲜度与 PyPI 启动就绪状态分开报告。
+已发布的 1.2.0 doctor 仍推荐 Git-source，并可能提示缺少 Git 上下文；该非致命提示不阻止 PyPI 启动。
+
+可选 Git-source 路径才需要 Git；将 `--from` 参数改为 `git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0`，检查器使用 `--install-source git`。
+修改 main README 不会同步更新 PyPI 1.2.0 已发布包中的旧描述；更正应随下一次单独批准的新版本发布，不移动 v1.2.0 标签或覆盖发布文件。
 
 如果你的 MCP client 使用 JSON 风格的 stdio server 配置，可以添加：
 
@@ -241,7 +259,7 @@ uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 pa
   "mcpServers": {
     "papergraph": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0", "papergraph-mcp"]
+      "args": ["--from", "papergraph-mcp==1.2.0", "papergraph-mcp"]
     }
   }
 }

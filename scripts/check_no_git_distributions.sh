@@ -22,11 +22,10 @@ for artifact in papergraph_mcp-1.2.0-py3-none-any.whl papergraph_mcp-1.2.0.tar.g
       export UV_CACHE_DIR=/tmp/uv-bootstrap-cache
       export UV_PYTHON_DOWNLOADS=never
       test ! -e "$UV_CACHE_DIR"
-      if python /checks/check_onboarding.py --install-source pypi --smoke-test > /tmp/pypi-check.json; then
-        echo "Unverified PyPI launch unexpectedly succeeded" >&2
-        exit 1
-      fi
-      python -c '\''import json; p=json.load(open("/tmp/pypi-check.json")); assert p["commands"]["git"] is None; assert p["required_commands"] == ["uv", "uvx"]; assert p["prerequisites_satisfied"] is True; assert p["launch"]["reason"] == "pypi_publication_not_verified"; print(json.dumps({"pypi_prerequisites_without_git": "passed", "unverified_index_launch": "blocked"}))'\''
+      # Readiness checks do not launch/download; artifact acceptance follows below.
+      python /checks/check_onboarding.py > /tmp/pypi-check.json
+      python /checks/check_onboarding.py --install-source git > /tmp/git-check.json
+      python -c '\''import json; p=json.load(open("/tmp/pypi-check.json")); g=json.load(open("/tmp/git-check.json")); assert p["commands"]["git"] is None; assert p["install_source"] == "pypi"; assert p["required_commands"] == ["uv", "uvx"]; assert p["prerequisites_satisfied"] is True; assert p["publication_verified"] is True; assert p["ready_for_smoke_test"] is True; assert "launch" not in p; assert g["required_commands"] == ["git", "uv", "uvx"]; assert g["ready_for_smoke_test"] is False; print(json.dumps({"pypi_prerequisites_without_git": "passed", "git_source_without_git": "not_ready"}))'\''
       uv run --no-project --with "/dist/$1" python /checks/smoke_no_git_distribution.py \
         --artifact "/dist/$1" --expected-sha 60977c06217905e5c1db15fbf27aff4ca208a517
     ' sh "$artifact"

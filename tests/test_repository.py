@@ -428,7 +428,13 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     assert '"path": "main.tex"' in readme
     assert '"cached": false' in readme
     assert '"nodes": 7' in readme
-    assert "```mermaid" in readme
+    diagram_path = "docs/assets/papergraph-request-flow.png"
+    editable_path = "docs/assets/papergraph-request-flow.drawcms"
+    assert f"]({diagram_path})" in readme
+    assert f"]({editable_path})" in readme
+    assert (ROOT / diagram_path).read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+    editable_document = json.loads((ROOT / editable_path).read_text(encoding="utf-8"))
+    assert editable_document["nodes"] and editable_document["edges"]
     assert "100 MiB" in readme
     assert "500 MiB" in readme
     assert "10,000" in readme

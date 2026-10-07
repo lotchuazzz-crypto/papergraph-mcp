@@ -1,0 +1,1187 @@
+{
+  "schemaVersion": 5,
+  "meta": {
+    "name": "PaperGraph: request to evidence-based reading",
+    "diagramType": "flowchart"
+  },
+  "canvas": {},
+  "nodes": [
+    {
+      "id": "request",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "data": {
+        "label": "Your paper + reading goal",
+        "type": "terminator",
+        "fillColor": "#EAF3FC",
+        "strokeColor": "#5280AD",
+        "textColor": "#18334D"
+      },
+      "type": "customShape",
+      "style": {
+        "width": 280,
+        "height": 110
+      }
+    },
+    {
+      "id": "agent",
+      "position": {
+        "x": 400,
+        "y": 0
+      },
+      "data": {
+        "label": "MCP client / agent\nstdio; root-request scope",
+        "type": "process",
+        "fillColor": "#EAF3FC",
+        "strokeColor": "#5280AD",
+        "textColor": "#18334D"
+      },
+      "type": "customShape",
+      "style": {
+        "width": 280,
+        "height": 110
+      }
+    },
+    {
+      "id": "inputs",
+      "position": {
+        "x": 800,
+        "y": 0
+      },
+      "data": {
+        "label": "PaperGraph source tools\nLocal TeX / arXiv / PDF / DOI\nMetadata is not full text",
+        "type": "data",
+        "fillColor": "#EAF3FC",
+        "strokeColor": "#5280AD",
+        "textColor": "#18334D"
+      },
+      "type": "customShape",
+      "style": {
+        "width": 280,
+        "height": 110
+      }
+    },
+    {
+      "id": "gate",
+      "position": {
+        "x": 800,
+        "y": 220
+      },
+      "data": {
+        "label": "Root source ready?\nIdentity + usable body",
+        "type": "decision",
+        "fillColor": "#FFF7E8",
+        "strokeColor": "#D19A43",
+        "textColor": "#18334D"
+      },
+      "type": "customShape",
+      "style": {
+        "width": 280,
+        "height": 150
+      }
+    },
+    {
+      "id": "review",
+      "position": {
+        "x": 1200,
+        "y": 220
+      },
+      "data": {
+        "label": "Choose or supply full text\nResolve ambiguity, retry\nor provide a legal local PDF",
+        "type": "manual-input",
+        "fillColor": "#FFF7E8",
+        "strokeColor": "#D19A43",
+        "textColor": "#18334D"
+      },
+      "type": "customShape",
+      "style": {
+        "width": 280,
+        "height": 110
+      }
+    },
+    {
+      "id": "workspace",
+      "position": {
+        "x": 400,
+        "y": 220
+      },
+      "data": {
+        "label": "Local SQLite workspace\nImported body + provenance",
+        "type": "database",
+        "fillColor": "#EAF3FC",
+        "strokeColor": "#5280AD",
+        "textColor": "#18334D"
+      },
+      "type": "customShape",
+      "style": {
+        "width": 280,
+        "height": 110
+      }
+    },
+    {
+      "id": "target",
+      "position": {
+        "x": 0,
+        "y": 220
+      },
+      "data": {
+        "label": "Paper Map\nChoose a result",
+        "type": "process",
+        "fillColor": "#EAF3FC",
+        "strokeColor": "#5280AD",
+        "textColor": "#18334D"
+      },
+      "type": "customShape",
+      "style": {
+        "width": 280,
+        "height": 110
+      }
+    },
+    {
+      "id": "evidence",
+      "position": {
+        "x": 0,
+        "y": 440
+      },
+      "data": {
+        "label": "Inspect source evidence\nStatement / proof / citation",
+        "type": "process",
+        "fillColor": "#EAF3FC",
+        "strokeColor": "#5280AD",
+        "textColor": "#18334D"
+      },
+      "type": "customShape",
+      "style": {
+        "width": 280,
+        "height": 110
+      }
+    },
+    {
+      "id": "dependencies",
+      "position": {
+        "x": 400,
+        "y": 440
+      },
+      "data": {
+        "label": "Local proof dependencies\nDirect / recursive\nEvidence-based reading order",
+        "type": "process",
+        "fillColor": "#EAF3FC",
+        "strokeColor": "#5280AD",
+        "textColor": "#18334D"
+      },
+      "type": "customShape",
+      "style": {
+        "width": 280,
+        "height": 110
+      }
+    },
+    {
+      "id": "outputs",
+      "position": {
+        "x": 800,
+        "y": 440
+      },
+      "data": {
+        "label": "",
+        "type": "document",
+        "fillColor": "#DDF7EE",
+        "strokeColor": "#21886A",
+        "textColor": "#18334D"
+      },
+      "type": "customShape",
+      "style": {
+        "width": 280,
+        "height": 110
+      }
+    },
+    {
+      "id": "external",
+      "position": {
+        "x": 400,
+        "y": 660
+      },
+      "data": {
+        "label": "Review external import plan\nMetadata search, then\nexplicit approved import",
+        "type": "manual-input",
+        "fillColor": "#FFF7E8",
+        "strokeColor": "#D19A43",
+        "textColor": "#18334D"
+      },
+      "type": "customShape",
+      "style": {
+        "width": 280,
+        "height": 110
+      }
+    },
+    {
+      "id": "limits",
+      "position": {
+        "x": 800,
+        "y": 660
+      },
+      "data": {
+        "label": "Evidence limits stay visible\nUnknowns / missing proof / cycles\nNo proof verification",
+        "type": "terminator",
+        "fillColor": "#F1F5F9",
+        "strokeColor": "#94A3B8",
+        "textColor": "#18334D"
+      },
+      "type": "customShape",
+      "style": {
+        "width": 280,
+        "height": 110
+      }
+    },
+    {
+      "id": "outputs-text",
+      "type": "customShape",
+      "parentId": "outputs",
+      "position": {
+        "x": 22,
+        "y": 12
+      },
+      "style": {
+        "width": 236,
+        "height": 66
+      },
+      "data": {
+        "type": "text",
+        "label": "Read, export, resume\nReports / plans\nQueues / sessions",
+        "fontSize": 14,
+        "fontWeight": "500",
+        "textAlign": "center",
+        "lineHeight": 1.25,
+        "textColor": "#18334D",
+        "fillColor": "transparent",
+        "textAutoResize": false
+      },
+      "zIndex": 1
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-request-agent-1",
+      "source": "request",
+      "target": "agent",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "data": {
+        "notation": "directed",
+        "routingMode": "elbow",
+        "diagramRoute": {
+          "sourceBounds": {
+            "x": 0,
+            "y": 0,
+            "width": 280,
+            "height": 110
+          },
+          "targetBounds": {
+            "x": 400,
+            "y": 0,
+            "width": 280,
+            "height": 110
+          },
+          "points": [
+            {
+              "x": 280,
+              "y": 55
+            },
+            {
+              "x": 400,
+              "y": 55
+            }
+          ],
+          "source": {
+            "x": 280,
+            "y": 55
+          },
+          "target": {
+            "x": 400,
+            "y": 55
+          },
+          "label": {
+            "x": 340,
+            "y": 31.5
+          },
+          "labelWidth": 40,
+          "labelHeight": 27,
+          "issues": [],
+          "labelText": ""
+        }
+      }
+    },
+    {
+      "id": "edge-agent-inputs-1",
+      "source": "agent",
+      "target": "inputs",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "data": {
+        "notation": "directed",
+        "routingMode": "elbow",
+        "diagramRoute": {
+          "sourceBounds": {
+            "x": 400,
+            "y": 0,
+            "width": 280,
+            "height": 110
+          },
+          "targetBounds": {
+            "x": 800,
+            "y": 0,
+            "width": 280,
+            "height": 110
+          },
+          "points": [
+            {
+              "x": 680,
+              "y": 55
+            },
+            {
+              "x": 800,
+              "y": 55
+            }
+          ],
+          "source": {
+            "x": 680,
+            "y": 55
+          },
+          "target": {
+            "x": 800,
+            "y": 55
+          },
+          "label": {
+            "x": 740,
+            "y": 31.5
+          },
+          "labelWidth": 40,
+          "labelHeight": 27,
+          "issues": [],
+          "labelText": ""
+        }
+      }
+    },
+    {
+      "id": "edge-inputs-gate-1",
+      "source": "inputs",
+      "target": "gate",
+      "sourceHandle": "bottom",
+      "targetHandle": "top",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "data": {
+        "notation": "directed",
+        "routingMode": "elbow",
+        "diagramRoute": {
+          "sourceBounds": {
+            "x": 800,
+            "y": 0,
+            "width": 280,
+            "height": 110
+          },
+          "targetBounds": {
+            "x": 800,
+            "y": 220,
+            "width": 280,
+            "height": 150
+          },
+          "points": [
+            {
+              "x": 940,
+              "y": 110
+            },
+            {
+              "x": 940,
+              "y": 220
+            }
+          ],
+          "source": {
+            "x": 940,
+            "y": 110
+          },
+          "target": {
+            "x": 940,
+            "y": 220
+          },
+          "label": {
+            "x": 910,
+            "y": 165
+          },
+          "labelWidth": 40,
+          "labelHeight": 27,
+          "issues": [],
+          "labelText": ""
+        }
+      }
+    },
+    {
+      "id": "edge-gate-workspace-1",
+      "source": "gate",
+      "target": "workspace",
+      "sourceHandle": "left",
+      "targetHandle": "right",
+      "label": "Yes",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "data": {
+        "label": "Yes",
+        "notation": "directed",
+        "routingMode": "elbow",
+        "diagramRoute": {
+          "sourceBounds": {
+            "x": 800,
+            "y": 220,
+            "width": 280,
+            "height": 150
+          },
+          "targetBounds": {
+            "x": 400,
+            "y": 220,
+            "width": 280,
+            "height": 110
+          },
+          "points": [
+            {
+              "x": 800,
+              "y": 295
+            },
+            {
+              "x": 704,
+              "y": 295
+            },
+            {
+              "x": 704,
+              "y": 275
+            },
+            {
+              "x": 680,
+              "y": 275
+            }
+          ],
+          "source": {
+            "x": 800,
+            "y": 295
+          },
+          "target": {
+            "x": 680,
+            "y": 275
+          },
+          "label": {
+            "x": 752,
+            "y": 271.5
+          },
+          "labelWidth": 44,
+          "labelHeight": 27,
+          "issues": [],
+          "labelText": "Yes"
+        }
+      }
+    },
+    {
+      "id": "edge-gate-review-1",
+      "source": "gate",
+      "target": "review",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "label": "No",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "data": {
+        "label": "No",
+        "notation": "directed",
+        "routingMode": "elbow",
+        "diagramRoute": {
+          "sourceBounds": {
+            "x": 800,
+            "y": 220,
+            "width": 280,
+            "height": 150
+          },
+          "targetBounds": {
+            "x": 1200,
+            "y": 220,
+            "width": 280,
+            "height": 110
+          },
+          "points": [
+            {
+              "x": 1080,
+              "y": 295
+            },
+            {
+              "x": 1176,
+              "y": 295
+            },
+            {
+              "x": 1176,
+              "y": 275
+            },
+            {
+              "x": 1200,
+              "y": 275
+            }
+          ],
+          "source": {
+            "x": 1080,
+            "y": 295
+          },
+          "target": {
+            "x": 1200,
+            "y": 275
+          },
+          "label": {
+            "x": 1128,
+            "y": 271.5
+          },
+          "labelWidth": 40,
+          "labelHeight": 27,
+          "issues": [],
+          "labelText": "No"
+        }
+      }
+    },
+    {
+      "id": "edge-review-inputs-1",
+      "source": "review",
+      "target": "inputs",
+      "sourceHandle": "top",
+      "targetHandle": "right",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "data": {
+        "notation": "directed",
+        "routingMode": "elbow",
+        "diagramRoute": {
+          "sourceBounds": {
+            "x": 1200,
+            "y": 220,
+            "width": 280,
+            "height": 110
+          },
+          "targetBounds": {
+            "x": 800,
+            "y": 0,
+            "width": 280,
+            "height": 110
+          },
+          "points": [
+            {
+              "x": 1340,
+              "y": 220
+            },
+            {
+              "x": 1340,
+              "y": 55
+            },
+            {
+              "x": 1080,
+              "y": 55
+            }
+          ],
+          "source": {
+            "x": 1340,
+            "y": 220
+          },
+          "target": {
+            "x": 1080,
+            "y": 55
+          },
+          "label": {
+            "x": 1210,
+            "y": 31.5
+          },
+          "labelWidth": 40,
+          "labelHeight": 27,
+          "issues": [],
+          "labelText": ""
+        }
+      }
+    },
+    {
+      "id": "edge-workspace-target-1",
+      "source": "workspace",
+      "target": "target",
+      "sourceHandle": "left",
+      "targetHandle": "right",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "data": {
+        "notation": "directed",
+        "routingMode": "elbow",
+        "diagramRoute": {
+          "sourceBounds": {
+            "x": 400,
+            "y": 220,
+            "width": 280,
+            "height": 110
+          },
+          "targetBounds": {
+            "x": 0,
+            "y": 220,
+            "width": 280,
+            "height": 110
+          },
+          "points": [
+            {
+              "x": 400,
+              "y": 275
+            },
+            {
+              "x": 280,
+              "y": 275
+            }
+          ],
+          "source": {
+            "x": 400,
+            "y": 275
+          },
+          "target": {
+            "x": 280,
+            "y": 275
+          },
+          "label": {
+            "x": 340,
+            "y": 251.5
+          },
+          "labelWidth": 40,
+          "labelHeight": 27,
+          "issues": [],
+          "labelText": ""
+        }
+      }
+    },
+    {
+      "id": "edge-target-evidence-1",
+      "source": "target",
+      "target": "evidence",
+      "sourceHandle": "bottom",
+      "targetHandle": "top",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "data": {
+        "notation": "directed",
+        "routingMode": "elbow",
+        "diagramRoute": {
+          "sourceBounds": {
+            "x": 0,
+            "y": 220,
+            "width": 280,
+            "height": 110
+          },
+          "targetBounds": {
+            "x": 0,
+            "y": 440,
+            "width": 280,
+            "height": 110
+          },
+          "points": [
+            {
+              "x": 140,
+              "y": 330
+            },
+            {
+              "x": 140,
+              "y": 440
+            }
+          ],
+          "source": {
+            "x": 140,
+            "y": 330
+          },
+          "target": {
+            "x": 140,
+            "y": 440
+          },
+          "label": {
+            "x": 110,
+            "y": 385
+          },
+          "labelWidth": 40,
+          "labelHeight": 27,
+          "issues": [],
+          "labelText": ""
+        }
+      }
+    },
+    {
+      "id": "edge-evidence-dependencies-1",
+      "source": "evidence",
+      "target": "dependencies",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "data": {
+        "notation": "directed",
+        "routingMode": "elbow",
+        "diagramRoute": {
+          "sourceBounds": {
+            "x": 0,
+            "y": 440,
+            "width": 280,
+            "height": 110
+          },
+          "targetBounds": {
+            "x": 400,
+            "y": 440,
+            "width": 280,
+            "height": 110
+          },
+          "points": [
+            {
+              "x": 280,
+              "y": 495
+            },
+            {
+              "x": 400,
+              "y": 495
+            }
+          ],
+          "source": {
+            "x": 280,
+            "y": 495
+          },
+          "target": {
+            "x": 400,
+            "y": 495
+          },
+          "label": {
+            "x": 340,
+            "y": 471.5
+          },
+          "labelWidth": 40,
+          "labelHeight": 27,
+          "issues": [],
+          "labelText": ""
+        }
+      }
+    },
+    {
+      "id": "edge-dependencies-outputs-1",
+      "source": "dependencies",
+      "target": "outputs",
+      "sourceHandle": "right",
+      "targetHandle": "left",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "data": {
+        "notation": "directed",
+        "routingMode": "elbow",
+        "diagramRoute": {
+          "sourceBounds": {
+            "x": 400,
+            "y": 440,
+            "width": 280,
+            "height": 110
+          },
+          "targetBounds": {
+            "x": 800,
+            "y": 440,
+            "width": 280,
+            "height": 110
+          },
+          "points": [
+            {
+              "x": 680,
+              "y": 495
+            },
+            {
+              "x": 800,
+              "y": 495
+            }
+          ],
+          "source": {
+            "x": 680,
+            "y": 495
+          },
+          "target": {
+            "x": 800,
+            "y": 495
+          },
+          "label": {
+            "x": 740,
+            "y": 471.5
+          },
+          "labelWidth": 40,
+          "labelHeight": 27,
+          "issues": [],
+          "labelText": ""
+        }
+      }
+    },
+    {
+      "id": "edge-dependencies-external-1",
+      "source": "dependencies",
+      "target": "external",
+      "sourceHandle": "bottom",
+      "targetHandle": "top",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "data": {
+        "notation": "directed",
+        "routingMode": "elbow",
+        "diagramRoute": {
+          "sourceBounds": {
+            "x": 400,
+            "y": 440,
+            "width": 280,
+            "height": 110
+          },
+          "targetBounds": {
+            "x": 400,
+            "y": 660,
+            "width": 280,
+            "height": 110
+          },
+          "points": [
+            {
+              "x": 540,
+              "y": 550
+            },
+            {
+              "x": 540,
+              "y": 660
+            }
+          ],
+          "source": {
+            "x": 540,
+            "y": 550
+          },
+          "target": {
+            "x": 540,
+            "y": 660
+          },
+          "label": {
+            "x": 510,
+            "y": 605
+          },
+          "labelWidth": 40,
+          "labelHeight": 27,
+          "issues": [],
+          "labelText": ""
+        }
+      }
+    },
+    {
+      "id": "edge-dependencies-limits-1",
+      "source": "dependencies",
+      "target": "limits",
+      "sourceHandle": "top",
+      "targetHandle": "left",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "data": {
+        "notation": "directed",
+        "routingMode": "elbow",
+        "diagramRoute": {
+          "sourceBounds": {
+            "x": 400,
+            "y": 440,
+            "width": 280,
+            "height": 110
+          },
+          "targetBounds": {
+            "x": 800,
+            "y": 660,
+            "width": 280,
+            "height": 110
+          },
+          "points": [
+            {
+              "x": 540,
+              "y": 440
+            },
+            {
+              "x": 540,
+              "y": 416
+            },
+            {
+              "x": 776,
+              "y": 416
+            },
+            {
+              "x": 776,
+              "y": 715
+            },
+            {
+              "x": 800,
+              "y": 715
+            }
+          ],
+          "source": {
+            "x": 540,
+            "y": 440
+          },
+          "target": {
+            "x": 800,
+            "y": 715
+          },
+          "label": {
+            "x": 746,
+            "y": 565.5
+          },
+          "labelWidth": 40,
+          "labelHeight": 27,
+          "issues": [],
+          "labelText": ""
+        }
+      }
+    },
+    {
+      "id": "edge-external-workspace-1",
+      "source": "external",
+      "target": "workspace",
+      "sourceHandle": "left",
+      "targetHandle": "top",
+      "label": "after explicit review",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "data": {
+        "label": "after explicit review",
+        "notation": "directed",
+        "routingMode": "elbow",
+        "diagramRoute": {
+          "sourceBounds": {
+            "x": 400,
+            "y": 660,
+            "width": 280,
+            "height": 110
+          },
+          "targetBounds": {
+            "x": 400,
+            "y": 220,
+            "width": 280,
+            "height": 110
+          },
+          "points": [
+            {
+              "x": 400,
+              "y": 715
+            },
+            {
+              "x": 376,
+              "y": 715
+            },
+            {
+              "x": 376,
+              "y": 196
+            },
+            {
+              "x": 540,
+              "y": 196
+            },
+            {
+              "x": 540,
+              "y": 220
+            }
+          ],
+          "source": {
+            "x": 400,
+            "y": 715
+          },
+          "target": {
+            "x": 540,
+            "y": 220
+          },
+          "label": {
+            "x": 267.5,
+            "y": 377.65
+          },
+          "labelWidth": 197,
+          "labelHeight": 27,
+          "issues": [],
+          "labelText": "after explicit review"
+        }
+      }
+    }
+  ],
+  "assets": [],
+  "motion": {
+    "story": {
+      "scenes": [
+        {
+          "id": "scene-1",
+          "title": "PaperGraph: request to evidence-based reading",
+          "steps": [
+            {
+              "id": "beat-1",
+              "title": "Start with your request",
+              "description": "The user names root papers and a reading goal. The MCP client or agent retains that authorization scope.",
+              "targets": [
+                {
+                  "targetId": "request",
+                  "targetKind": "node"
+                },
+                {
+                  "targetId": "agent",
+                  "targetKind": "node"
+                },
+                {
+                  "targetId": "edge-request-agent-1",
+                  "targetKind": "edge"
+                }
+              ]
+            },
+            {
+              "id": "beat-2",
+              "title": "Resolve a usable root source",
+              "description": "Local LaTeX and local PDFs are supplied explicitly. arXiv input must be unambiguous. DOI discovery finds metadata and candidate public PDFs, without downloading; metadata is not body text.",
+              "targets": [
+                {
+                  "targetId": "inputs",
+                  "targetKind": "node"
+                },
+                {
+                  "targetId": "gate",
+                  "targetKind": "node"
+                },
+                {
+                  "targetId": "edge-agent-inputs-1",
+                  "targetKind": "edge"
+                },
+                {
+                  "targetId": "edge-inputs-gate-1",
+                  "targetKind": "edge"
+                }
+              ]
+            },
+            {
+              "id": "beat-3",
+              "title": "Ask when the source is unresolved",
+              "description": "Conflicting arXiv identifiers or multiple eligible DOI candidates require a choice. If no usable public body is available, retry or supply a legally obtained local PDF.",
+              "targets": [
+                {
+                  "targetId": "review",
+                  "targetKind": "node"
+                },
+                {
+                  "targetId": "edge-gate-review-1",
+                  "targetKind": "edge"
+                },
+                {
+                  "targetId": "edge-review-inputs-1",
+                  "targetKind": "edge"
+                }
+              ]
+            },
+            {
+              "id": "beat-4",
+              "title": "Import into a local workspace",
+              "description": "For a user-requested root DOI, one eligible public PDF may be imported directly; an explicitly selected DOI candidate requires confirmed=true. Imported body and provenance are stored separately from provider metadata.",
+              "targets": [
+                {
+                  "targetId": "workspace",
+                  "targetKind": "node"
+                },
+                {
+                  "targetId": "edge-gate-workspace-1",
+                  "targetKind": "edge"
+                }
+              ]
+            },
+            {
+              "id": "beat-5",
+              "title": "Choose the result and inspect its source",
+              "description": "Paper Map offers heuristic main-result candidates. The user chooses a result, then inspects statement, proof and citation evidence with source spans.",
+              "targets": [
+                {
+                  "targetId": "target",
+                  "targetKind": "node"
+                },
+                {
+                  "targetId": "evidence",
+                  "targetKind": "node"
+                },
+                {
+                  "targetId": "edge-workspace-target-1",
+                  "targetKind": "edge"
+                },
+                {
+                  "targetId": "edge-target-evidence-1",
+                  "targetKind": "edge"
+                }
+              ]
+            },
+            {
+              "id": "beat-6",
+              "title": "Follow extracted local dependencies",
+              "description": "Statement-reference reachability is distinct from proof-local dependencies. Direct or recursive proof evidence supports exploration and dependency-first local reading order.",
+              "targets": [
+                {
+                  "targetId": "dependencies",
+                  "targetKind": "node"
+                },
+                {
+                  "targetId": "edge-evidence-dependencies-1",
+                  "targetKind": "edge"
+                }
+              ]
+            },
+            {
+              "id": "beat-7",
+              "title": "Review external papers before import",
+              "description": "External citations produce a reviewable import plan and metadata search. Root-paper authorization does not authorize newly discovered literature. This diagram does not start a bounded expansion run.",
+              "targets": [
+                {
+                  "targetId": "external",
+                  "targetKind": "node"
+                },
+                {
+                  "targetId": "edge-dependencies-external-1",
+                  "targetKind": "edge"
+                },
+                {
+                  "targetId": "edge-external-workspace-1",
+                  "targetKind": "edge"
+                }
+              ]
+            },
+            {
+              "id": "beat-8",
+              "title": "Read and retain uncertainty",
+              "description": "Reports, plans, queues and sessions keep reading work durable. Missing proof evidence, unresolved prerequisites and cycles remain visible; cycles block a dependency-first order and extraction does not verify proofs.",
+              "targets": [
+                {
+                  "targetId": "outputs",
+                  "targetKind": "node"
+                },
+                {
+                  "targetId": "limits",
+                  "targetKind": "node"
+                },
+                {
+                  "targetId": "edge-dependencies-outputs-1",
+                  "targetKind": "edge"
+                },
+                {
+                  "targetId": "edge-dependencies-limits-1",
+                  "targetKind": "edge"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "activeSceneId": "scene-1"
+    }
+  }
+}

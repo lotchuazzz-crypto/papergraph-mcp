@@ -181,15 +181,9 @@ For raw user requests, prefer `load_arxiv_request(input=...)` or `papergraph-mcp
 
 ### A Typical Reading Flow
 
-```mermaid
-flowchart LR
-    Paper[Paper] --> Results[Extract results]
-    Results --> Evidence[Inspect proof evidence]
-    Evidence --> Path[Build reading path]
-    Path --> Queue[Create reading queue]
-    Queue --> Imports[Review external import plan]
-    Queue --> Session[Resume reading session]
-```
+[![PaperGraph request and reading flow: import usable full text, inspect source evidence and dependencies, review external imports, and save reading state.](docs/assets/papergraph-request-flow.png)](docs/assets/papergraph-request-flow.png)
+
+[Editable DrawCMS source](docs/assets/papergraph-request-flow.drawcms).
 
 1. Load a paper from arXiv, local LaTeX, or PDF.
 2. List theorem-like results and choose a target theorem.

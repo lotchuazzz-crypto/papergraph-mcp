@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / ".agents" / "skills" / "setting-up-papergraph"
-PIN = "papergraph-mcp==1.2.0"
+PIN = "papergraph-mcp==1.2.1"
 
 
 def read(path: Path) -> str:
@@ -121,11 +121,12 @@ def test_checker_reports_available_and_missing_commands():
 
 def test_checker_runs_the_exact_pinned_launch_command():
     checker = load_checker()
+    checker.PYPI_PUBLICATION_VERIFIED = True  # exercise post-verification launch behavior
     calls = []
 
     class Result:
         returncode = 0
-        stdout = "papergraph-mcp 1.2.0\n"
+        stdout = "papergraph-mcp 1.2.1\n"
         stderr = ""
 
     def runner(command, **kwargs):
@@ -142,11 +143,12 @@ def test_checker_runs_the_exact_pinned_launch_command():
         "--version",
     ]
     assert result["ok"] is True
-    assert result["version"] == "papergraph-mcp 1.2.0"
+    assert result["version"] == "papergraph-mcp 1.2.1"
 
 
 def test_checker_rejects_an_unexpected_version_even_on_exit_zero():
     checker = load_checker()
+    checker.PYPI_PUBLICATION_VERIFIED = True  # exercise post-verification launch behavior
 
     class Result:
         returncode = 0
@@ -190,7 +192,7 @@ def test_checker_main_smoke_test_emits_successful_launch_json(monkeypatch, capsy
         "commands": {"git": "/tools/git", "uv": "/tools/uv", "uvx": "/tools/uvx"},
         "ready_for_smoke_test": True,
     }
-    launch = {"ok": True, "reason": "ok", "version": "papergraph-mcp 1.2.0"}
+    launch = {"ok": True, "reason": "ok", "version": "papergraph-mcp 1.2.1"}
     monkeypatch.setattr(checker, "inspect_prerequisites", lambda install_source="pypi": dict(prerequisites))
     repository = {"available": True, "freshness_verified": False}
     monkeypatch.setattr(checker, "inspect_repository", lambda path: repository)
@@ -375,4 +377,4 @@ def test_all_onboarding_source_pins_match_latest_published_release():
     )
     refs = re.findall(r"papergraph-mcp\.git@(v[^\s\"'`\],)]+)", combined)
     assert refs
-    assert set(refs) == {"v1.2.0"}
+    assert set(refs) == {"v1.2.1"}

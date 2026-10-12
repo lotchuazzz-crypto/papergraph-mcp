@@ -2,10 +2,10 @@
 
 ## Version Pins
 
-- `pyproject.toml` reports `1.2.0`.
-- `uv.lock` reports package version `1.2.0`.
-- Runtime diagnostics report `version: 1.2.0` and `release_tag: v1.2.0`.
-- Active install commands pin the available and publicly validated `v1.2.0` Git tag. Installation examples are updated separately after tag publication; the GitHub Release page is a distinct publication step.
+- `pyproject.toml` reports `1.2.1`.
+- `uv.lock` reports package version `1.2.1`.
+- Runtime diagnostics report `version: 1.2.1` and `release_tag: v1.2.1`; this does not verify tag availability.
+- Install commands target fixed `1.2.1`, with tag and public-index availability checked before launch. Keep `publication_verified` false until official-index acceptance is recorded; the GitHub Release page is a separate publication step.
 - Historical specs and release history may keep old versions.
 
 ## Installation Validation
@@ -15,8 +15,8 @@ tag, build the wheel with `uv build` and test it in an isolated environment. Do
 not claim an unpublished tag was installed.
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.1 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.1 papergraph-mcp doctor
 ```
 
 Keep workspace databases outside the Git repository.
@@ -44,8 +44,9 @@ uv run papergraph-mcp <command> --help
 
 ## GitHub Release
 
-- Merge the reviewed v1.2.0 preparation branch into `main` after all checks pass.
-- Verify merge-commit CI, then create tag `v1.2.0` from that exact commit; never move an existing tag.
+- Merge the reviewed v1.2.1 preparation branch into `main` after all checks pass.
+- Verify merge-commit CI, then create tag `v1.2.1` from that exact source commit; never move an existing tag.
+- Record the exact source identity and two Linux-built artifact hashes before updating the fixed publisher guards. Preserve same-run immutable artifact IDs, strict metadata/manifest/hash checks and the protected `pypi` human deployment review.
 - Publish a formal GitHub release using an English introduction and Highlights, Compatibility, Verification and Install sections. Describe first use, DOI bodies and dependency reading with explicit coverage/identity boundaries.
 - Existing recent releases have no uploaded assets; do not add a new distribution channel.
 - After tag publication, verify the exact tag target and public pinned launch/version/diagnostics before updating active installation examples. Verify formal GitHub release flags and its tag separately after creating the release page.

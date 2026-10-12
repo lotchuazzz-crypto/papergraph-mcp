@@ -27,7 +27,7 @@ async def protocol(path, baseline, search):
     async with stdio_client(params) as (reader, writer):
         async with ClientSession(reader, writer) as session:
             initialized = await session.initialize()
-            assert initialized.server_info.version == '1.2.0'
+            assert initialized.server_info.version == '1.2.1'
             assert not (await session.call_tool('open_workspace', {'path':str(path)})).is_error
             result = await session.call_tool('workspace_list_external_reference_searches', {'paper_id':'local:paper'})
             assert not result.is_error
@@ -39,11 +39,11 @@ async def protocol(path, baseline, search):
 
 def main():
     assert 'site-packages' in str(Path(papergraph.__file__).resolve())
-    assert cli('--version').strip() == 'papergraph-mcp 1.2.0'
+    assert cli('--version').strip() == 'papergraph-mcp 1.2.1'
     doctor = json.loads(cli('doctor'))
-    assert doctor['version'] == '1.2.0'
-    assert doctor['release_tag'] == 'v1.2.0'
-    assert doctor['recommended_source'].endswith('@v1.2.0')
+    assert doctor['version'] == '1.2.1'
+    assert doctor['release_tag'] == 'v1.2.1'
+    assert doctor['recommended_source'].endswith('@v1.2.1')
     assert doctor['recommended_source_role'] == 'running_release'
     assert doctor['build_identity']['channel'] == 'release_version'
     assert len(doctor['build_identity']['source_tree_sha256']) == 64

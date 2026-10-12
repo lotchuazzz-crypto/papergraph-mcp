@@ -29,6 +29,33 @@ Before loading arXiv papers:
 8. After bootstrap or Reading Report export, report Evidence Triage before interpreting dependency output. Name the triage status, supported local chains, candidate starting point, external blockers, and next actions. Do not treat empty dependencies as evidence that no mathematical dependencies exist.
 9. If Evidence Triage reports external blockers, use `workspace_search_external_reference` to gather scholarly metadata candidates. Report confidence, provider evidence, ambiguity, and boundaries before applying anything. Use `workspace_resolve_external_reference_candidate` only for a selected candidate, or `workspace_resolve_external_reference` only with a confirmed arXiv ID, local PDF, DOI, URL, or published metadata. Then call `workspace_list_external_reference_resolutions`, `workspace_list_external_reference_searches`, or export a Reading Report to show whether each target is `resolved_imported`, `resolved_not_imported`, `failed_import`, ambiguous, or unavailable.
 
+For local LaTeX, supply the main `.tex` file, such as
+`tests/fixtures/workspace/paper_a/main.tex`, rather than its directory. MCP starter
+inputs use `kind: local_tex` and `path` pointing to that file. Inspect the running
+server's tools/schema before choosing a workflow. In the locally repaired build,
+starter planning performs read-only file preflight and does not open a database
+or create directories; `ready` means input preflight passed, not successful parsing
+or import. Bootstrap writes the workspace and artifacts and actually imports the
+inputs. Historical/published builds may behave differently: disclose their actual
+capability and side effects before calling them.
+
+Use command-first CLI syntax with explicit IDs, for example
+`papergraph-mcp get-paper-map --workspace '<WORKSPACE>' --paper-id 'local:example-a'`.
+Replace placeholders before execution and use the block for the user's shell.
+Quote Windows paths with spaces using PowerShell single quotes (double embedded
+apostrophes); POSIX shell quoting is separate. Checkpoint `target_kind` is
+`result_id`, not `result`; obtain the other supported enum values from the live
+schema. For `workspace_list_results`, the repaired schema exposes `limit` 1..100
+(default 50) and nonnegative `offset` (default 0). Read successive pages in a stable
+workspace until an empty/short page; a single response is not necessarily complete.
+
+For proof-local citations and bibliography identity, inspect result/proof IDs and
+source spans. TeX spans use offsets into their named original file; a cross-file
+body has ordered fragments. BibTeX evidence must point to the parsed top-level
+entry, not a similar key inside a comment or field. A citation supports an import
+candidate, not an inferred mathematical dependency or proof verification, and
+does not authorize external downloads.
+
 For a published DOI, do not pass it to an arXiv loader or claim metadata is an imported paper. Explain the supported inputs: arXiv source, local LaTeX, or a local born-digital PDF. Identify an unambiguous legally accessible full-text source, or ask for the user's local PDF; never bypass a paywall. A root paper requested by the user is distinct from newly discovered external references, which still require a reviewable import plan before downloads.
 
 For v1.2.0 servers advertising `discover_doi_paper`, use it to find
@@ -113,6 +140,13 @@ tag availability. Ordinary setup uses the verified PyPI 1.2.0 commands below; fu
 versions or tags must be verified before they are recommended.
 Keep the user's active MCP registration intact unless they explicitly authorize a
 configuration change, and never invent a development release/tag.
+
+These local first-use repairs keep the package version at `1.2.0` and are
+unreleased. Version equality alone does not identify them: record the exact
+interpreter, `doctor.build_identity` base commit/dirty status/source-tree digest,
+and the isolated wheel hash when applicable. Do not attribute repaired preflight,
+schema, source-span, or generated-command behavior to the published PyPI build
+without testing that build. Keep ordinary pinned installation recipes unchanged.
 
 For PDF reading, surface `text_coverage` and unverified statement/proof completeness.
 Use its continuation-source locator before interpreting truncated text. Adjacent

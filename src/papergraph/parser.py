@@ -110,7 +110,7 @@ def parse_latex(text: str) -> list[TheoremNode]:
     environments = discover_theorem_environments(text)
 
     matches: list[
-        tuple[int, str, str, str, str | None, str]
+        tuple[int, str, str, str, str | None, str, int, int]
     ] = []
 
     for environment, (display_kind, normalized_kind) in environments.items():
@@ -133,6 +133,8 @@ def parse_latex(text: str) -> list[TheoremNode]:
                     normalized_kind,
                     match.group("title"),
                     match.group("body").strip(),
+                    match.start("body") + len(match.group("body")) - len(match.group("body").lstrip()),
+                    match.start("body") + len(match.group("body")) - len(match.group("body").lstrip()) + len(match.group("body").strip()),
                 )
             )
 
@@ -141,7 +143,7 @@ def parse_latex(text: str) -> list[TheoremNode]:
     counters: dict[str, int] = {}
     nodes: list[TheoremNode] = []
 
-    for position, environment, display_kind, normalized_kind, title, body in matches:
+    for position, environment, display_kind, normalized_kind, title, body, body_start, body_end in matches:
         counters[environment] = counters.get(environment, 0) + 1
 
         label_match = LABEL_RE.search(body)
@@ -171,6 +173,8 @@ def parse_latex(text: str) -> list[TheoremNode]:
                 content=body,
                 refs=extract_refs(body),
                 position=position,
+                body_start=body_start,
+                body_end=body_end,
             )
         )
 
@@ -204,16 +208,46 @@ def parse_latex_proofs(text: str) -> list[LatexProofBlock]:
         body = match.group("body")
         stripped_body = body.strip()
         leading_whitespace = len(body) - len(body.lstrip())
-        trailing_whitespace = len(body) - len(body.rstrip())
         proofs.append(
             LatexProofBlock(
                 position=match.start(),
                 body_start=match.start("body") + leading_whitespace,
-                body_end=match.end("body") - trailing_whitespace,
+                body_end=match.start("body") + leading_whitespace + len(stripped_body),
                 body=stripped_body,
             )
         )
     return proofs
+
+
+def _append_source_spans(spans, paper_id, project, start, end, method):
+    """Map merged ranges to ordered original-file fragments; fail on gaps."""
+    indices = []
+    cursor = start
+    for segment in project.spans:
+        left, right = max(start, segment.start), min(end, segment.end)
+        if left >= right and not (start == end and segment.start <= start < segment.end):
+            continue
+        if left != cursor or segment.source_start is None:
+            raise ValueError("Cannot map TeX evidence to original source offsets")
+        source_start = segment.source_start + left - segment.start
+        source_end = source_start + right - left
+        text = project.text[left:right]
+        original = segment.path.read_text(encoding="utf-8", errors="replace")
+        if original[source_start:source_end] != text:
+            raise ValueError("TeX source changed while mapping evidence")
+        indices.append(len(spans))
+        spans.append(SourceSpanEvidence(
+            paper_id=paper_id, source_type="tex",
+            source_ref=segment.path.relative_to(project.project_root).as_posix(),
+            page=None, block_index=None, start_offset=source_start,
+            end_offset=source_end, bbox=None, text=text, method=method, confidence=1.0,
+        ))
+        cursor = right
+        if cursor == end:
+            break
+    if cursor != end or not indices:
+        raise ValueError("Cannot map TeX evidence to original source offsets")
+    return tuple(indices)
 
 
 def latex_project_to_evidence_document(
@@ -228,34 +262,12 @@ def latex_project_to_evidence_document(
     spans: list[SourceSpanEvidence] = []
     results: list[ResultEvidence] = []
 
-    for span_index, node in enumerate(nodes):
-        project_span = next(
-            (
-                item
-                for item in project.spans
-                if item.start <= node.position < item.end
-            ),
-            None,
-        )
-        if project_span is None:
-            raise ValueError(f"No source span contains theorem {node.id!r}")
-
-        spans.append(
-            SourceSpanEvidence(
-                paper_id=paper_id,
-                source_type="tex",
-                source_ref=project_span.path.relative_to(
-                    project.project_root
-                ).as_posix(),
-                page=None,
-                block_index=None,
-                start_offset=node.position,
-                end_offset=node.position + len(node.content),
-                bbox=None,
-                text=node.content,
-                method="latex_environment",
-                confidence=1.0,
-            )
+    for node in nodes:
+        if node.body_start is None or node.body_end is None:
+            raise ValueError(f"No source body bounds for theorem {node.id!r}")
+        span_indices = _append_source_spans(
+            spans, paper_id, project, node.body_start, node.body_end,
+            "latex_environment",
         )
         results.append(
             ResultEvidence(
@@ -270,7 +282,7 @@ def latex_project_to_evidence_document(
                 visible_number=node.visible_number,
                 title=node.title,
                 statement=node.content,
-                span_indices=(span_index,),
+                span_indices=span_indices,
                 method="latex_environment",
                 confidence=1.0,
             )
@@ -299,34 +311,9 @@ def latex_project_to_evidence_document(
 
     proofs: list[ProofEvidence] = []
     for proof in proof_blocks:
-        project_span = next(
-            (
-                item
-                for item in project.spans
-                if item.start <= proof.position < item.end
-            ),
-            None,
-        )
-        if project_span is None:
-            raise ValueError("No source span contains proof environment")
-
-        span_index = len(spans)
-        spans.append(
-            SourceSpanEvidence(
-                paper_id=paper_id,
-                source_type="tex",
-                source_ref=project_span.path.relative_to(
-                    project.project_root
-                ).as_posix(),
-                page=None,
-                block_index=None,
-                start_offset=proof.body_start,
-                end_offset=proof.body_end,
-                bbox=None,
-                text=proof.body,
-                method="latex_proof_environment",
-                confidence=1.0,
-            )
+        span_indices = _append_source_spans(
+            spans, paper_id, project, proof.body_start, proof.body_end,
+            "latex_proof_environment",
         )
 
         previous_result = previous_result_by_proof_position[proof.position]
@@ -349,7 +336,7 @@ def latex_project_to_evidence_document(
                 paper_id=paper_id,
                 result_id=result_id,
                 text=proof.body,
-                span_indices=(span_index,),
+                span_indices=span_indices,
                 association_basis=association_basis,
                 association_confidence=association_confidence,
                 method="latex_proof_environment",
@@ -362,10 +349,13 @@ def latex_project_to_evidence_document(
         tuple(proofs),
         tuple(results),
     )
+    from papergraph.citations import build_bibliography_evidence
+    bibliography_entries, bibliography_spans = build_bibliography_evidence(paper_id, project)
+    spans.extend(bibliography_spans)
     citation_mentions = extract_citation_mentions(
         paper_id,
         tuple(proofs),
-        (),
+        bibliography_entries,
     )
     external_result_mentions = extract_external_result_mentions(
         paper_id,
@@ -383,7 +373,7 @@ def latex_project_to_evidence_document(
         spans=tuple(spans),
         results=tuple(results),
         proofs=tuple(proofs),
-        bibliography_entries=(),
+        bibliography_entries=bibliography_entries,
         local_result_mentions=local_result_mentions,
         citation_mentions=citation_mentions,
         external_result_mentions=external_result_mentions,

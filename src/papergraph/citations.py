@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from pybtex.database import Entry, parse_file
+from pybtex.database.input.bibtex import LowLevelParser, Parser, SkipEntry
 from pybtex.exceptions import PybtexError
 
 from papergraph.arxiv import InvalidArxivIdError, normalize_arxiv_id
@@ -189,3 +190,90 @@ def _same_entry(first: Entry, second: Entry) -> bool:
 
 def _relative_path(path: Path, root: Path) -> str:
     return path.relative_to(root).as_posix()
+
+
+def build_bibliography_evidence(paper_id: str, project: LoadedProject):
+    """Reuse validated BibTeX identity fields and retain their local source text."""
+    from papergraph.evidence import BibliographyEntryEvidence, SourceSpanEvidence
+
+    entries, spans = [], []
+    source_entries = {}
+    for key, (entry, path) in _load_bibliography_entries(project).items():
+        text = path.read_text(encoding='utf-8')
+        if path not in source_entries:
+            source_entries[path] = _bibliography_source_entries(text)
+        matches = [item for item in source_entries[path].get(key.casefold(), [])
+                   if _same_entry(item[0], entry)]
+        if len(matches) != 1:
+            raise BibliographyParseError(f"No unique original source for bibliography key: {key}")
+        _, start, end = matches[0]
+        raw = text[start:end]
+        fields = {name.lower(): value for name, value in entry.fields.items()}
+        arxiv_id, version = _normalize_identifier(_resolve_arxiv_identifier(entry))
+        entry_id = f'{paper_id}::bib:{key}'
+        entries.append(BibliographyEntryEvidence(
+            entry_id=entry_id, paper_id=paper_id, raw_label=key, raw_text=raw,
+            entry_type=entry.type, title=fields.get('title'),
+            authors=tuple(str(person) for person in entry.persons.get('author', [])),
+            year=int(fields['year']) if fields.get('year', '').isdigit() else None,
+            arxiv_id=arxiv_id, arxiv_version=version, doi=fields.get('doi'),
+            url=fields.get('url'), method='bibtex_entry', confidence=1.0,
+        ))
+        spans.append(SourceSpanEvidence(
+            paper_id=paper_id, source_type='tex', source_ref=_relative_path(path, project.project_root),
+            page=None, block_index=None, start_offset=start, end_offset=end,
+            bbox=None, text=raw, method='bibtex_entry', confidence=1.0, span_id=entry_id,
+        ))
+    return tuple(entries), tuple(spans)
+
+
+class _SourceBibtexParser(LowLevelParser):
+    """Use BibTeX grammar for entries and consume comment bodies completely."""
+
+    def parse_command(self):
+        try:
+            return super().parse_command()
+        except SkipEntry:
+            opening = self.text[self.pos - 1]
+            if opening == "{":
+                list(self.parse_string(self.RBRACE))
+            else:
+                depth, braces, quoted = 1, 0, False
+                while self.pos < len(self.text) and depth:
+                    char = self.text[self.pos]
+                    self.pos += 1
+                    if char == "\\":
+                        self.pos += 1
+                        continue
+                    if char == '"' and braces == 0:
+                        quoted = not quoted
+                    if not quoted:
+                        if char == "{":
+                            braces += 1
+                        elif char == "}":
+                            braces -= 1
+                        elif braces == 0 and char == "(":
+                            depth += 1
+                        elif braces == 0 and char == ")":
+                            depth -= 1
+                if depth:
+                    raise BibliographyParseError("Unclosed bibliography comment")
+            raise
+
+
+def _bibliography_source_entries(text):
+    parser = Parser()
+    parser.unnamed_entry_counter = 1
+    scanner = _SourceBibtexParser(text, macros=parser.macros,
+                                  handle_error=parser.handle_error)
+    entries = {}
+    for entry_type, data in scanner:
+        if entry_type.lower() in {"string", "preamble"}:
+            continue
+        parser.process_entry(entry_type, *data)
+        key = data[0]
+        if key is None:
+            raise BibliographyParseError("Cannot locate unnamed bibliography entry")
+        entries.setdefault(key.casefold(), []).append(
+            (parser.data.entries[key], scanner.command_start, scanner.pos))
+    return entries

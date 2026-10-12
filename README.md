@@ -329,7 +329,7 @@ papergraph-mcp export-result-reading-context --workspace .\papergraph.sqlite3 --
 papergraph-mcp get-source-slice --workspace .\papergraph.sqlite3 --result-id local:paper-a::thm:main
 papergraph-mcp get-result-reading-path --workspace .\papergraph.sqlite3 --result-id local:paper-a::thm:main
 papergraph-mcp create-reading-session --workspace .\papergraph.sqlite3 --paper-id local:paper-a
-papergraph-mcp record-reading-checkpoint --workspace .\papergraph.sqlite3 --session-id SESSION --target-kind result --target-id local:paper-a::thm:main --status reviewed
+papergraph-mcp record-reading-checkpoint --workspace .\papergraph.sqlite3 --session-id SESSION --target-kind result_id --target-id local:paper-a::thm:main --status reviewed
 papergraph-mcp add-reading-note --workspace .\papergraph.sqlite3 --session-id SESSION --text "Need to check the cited fixed point theorem."
 papergraph-mcp export-reading-session-summary --workspace .\papergraph.sqlite3 --session-id SESSION
 papergraph-mcp create-reading-queue --workspace .\papergraph.sqlite3 --result-id local:paper-a::thm:main
@@ -369,7 +369,26 @@ Kind metadata is intentionally explicit:
 <details>
 <summary><strong>Local Three-Paper Walkthrough</strong></summary>
 
-The repository includes a small fixture under `tests/fixtures/workspace_tex_project/`. A typical local demo imports `paper_a`, `paper_b`, and `paper_c`, then searches for `fixed point`:
+The repository includes a small fixture under `tests/fixtures/workspace/`.
+Local TeX inputs must name the main `.tex` file, not its project directory:
+
+```powershell
+papergraph-mcp plan-starter-project --workspace './papergraph.sqlite3' --artifact-dir './papergraph-starter' --tex 'tests/fixtures/workspace/paper_a/main.tex=local:paper-a' --tex 'tests/fixtures/workspace/paper_b/main.tex=local:paper-b' --tex 'tests/fixtures/workspace/paper_c/main.tex=local:paper-c'
+papergraph-mcp bootstrap-reading-project --workspace './papergraph.sqlite3' --artifact-dir './papergraph-starter' --tex 'tests/fixtures/workspace/paper_a/main.tex=local:paper-a' --tex 'tests/fixtures/workspace/paper_b/main.tex=local:paper-b' --tex 'tests/fixtures/workspace/paper_c/main.tex=local:paper-c' --no-queue --no-session
+```
+
+Planning validates local file existence, type and readability without creating a
+workspace database, parent directories, or artifacts. Bootstrap performs the writes.
+Generated commands use PowerShell single-quoted literals (including paths with
+spaces); POSIX shell commands use POSIX quoting. Replace quoted placeholders such
+as `'<WORKSPACE>'` with your workspace path before execution.
+
+`workspace_list_results` returns a bounded page: `limit` is 1..100 (default 50),
+and `offset` is a nonnegative integer (default 0). Advance `offset` by the returned
+count. A full page may omit further results; continue until a page has fewer than
+`limit` entries. Paging assumes the workspace does not change between calls.
+
+A typical local demo imports `paper_a`, `paper_b`, and `paper_c`, then searches for `fixed point`:
 
 - `workspace_search_theorems("fixed point")` returns `local:paper-a::thm:main`, `local:paper-b::thm:main`, and `local:paper-c::thm:main`.
 - `workspace_get_citations("local:paper-a", direction="outgoing", include_unresolved=True)` reports citation keys `absent`, `missing`, and `paper-b`.

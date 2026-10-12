@@ -12,6 +12,7 @@ from papergraph.arxiv import (
 )
 from papergraph.identity import paper_id_from_arxiv
 from papergraph.project import load_project
+from papergraph.cli_commands import cli_command
 
 
 STARTER_SCHEMA_VERSION = 1
@@ -36,7 +37,8 @@ def plan_starter_project(
     workspace_text = _path_text(workspace_path)
     artifact_text = _path_text(artifact_dir) if artifact_dir is not None else None
     planned_papers = [_normalize_paper_input(paper) for paper in papers]
-    blocking_issues = _arxiv_blocking_issues(planned_papers)
+    _validate_distinct_paper_ids(planned_papers)
+    blocking_issues = _arxiv_blocking_issues(planned_papers) + _local_blocking_issues(planned_papers)
     if blocking_issues:
         return {
             "starter_schema_version": STARTER_SCHEMA_VERSION,
@@ -52,8 +54,6 @@ def plan_starter_project(
             "warnings": [],
             "blocking_issues": blocking_issues,
         }
-    _validate_distinct_paper_ids(planned_papers)
-
     planned_artifacts = [
         {"kind": "starter_summary", "path": STARTER_SUMMARY_NAME},
         {"kind": "starter_manifest", "path": STARTER_MANIFEST_NAME},
@@ -211,6 +211,8 @@ def bootstrap_reading_project(
         "artifacts": [summary_record, *artifacts],
         "evidence_triage": _compact_triage_records(evidence_triage),
         "next_commands": next_commands,
+        "next_commands_shell": "powershell",
+        "next_commands_posix": _next_commands(workspace_text, paper_ids, shell='posix'),
         "warnings": warnings,
     }
     manifest_path.write_text(
@@ -236,6 +238,8 @@ def bootstrap_reading_project(
         "reading_session": reading_session,
         "warnings": warnings,
         "next_commands": next_commands,
+        "next_commands_shell": "powershell",
+        "next_commands_posix": _next_commands(workspace_text, paper_ids, shell='posix'),
     }
 
 
@@ -280,6 +284,27 @@ def _arxiv_blocking_issues(papers: list[dict]) -> list[dict]:
                     "validation": validation,
                 }
             )
+    return issues
+
+
+def _local_blocking_issues(papers: list[dict]) -> list[dict]:
+    issues = []
+    for paper in papers:
+        if paper['kind'] not in {'local_tex', 'pdf'}:
+            continue
+        try:
+            path = Path(paper['path']).expanduser()
+            if not path.is_file():
+                raise ValueError('Input must be an existing file; local_tex requires the main .tex file')
+            if paper['kind'] == 'local_tex' and path.suffix.lower() != '.tex':
+                raise ValueError('local_tex requires the main .tex file')
+            if paper['kind'] == 'pdf' and path.suffix.lower() != '.pdf':
+                raise ValueError('pdf input requires a .pdf file')
+            with path.open('rb') as source:
+                source.read(1)
+        except (OSError, ValueError) as exc:
+            issues.append({'kind': 'invalid_local_input', 'action': 'inspect_error',
+                           'paper_id': paper['paper_id'], 'path': paper['path'], 'message': str(exc)})
     return issues
 
 
@@ -430,6 +455,10 @@ def _render_start_here(
             *next_commands,
             "```",
             "",
+            "```sh",
+            *_next_commands(workspace_path, [paper['paper_id'] for paper in papers], shell='posix'),
+            "```",
+            "",
         ]
     )
     return "\n".join(lines)
@@ -443,15 +472,14 @@ def _select_target_result(paper_maps: list[dict]) -> str | None:
     return None
 
 
-def _next_commands(workspace_path: str, paper_ids: list[str]) -> list[str]:
+def _next_commands(workspace_path: str, paper_ids: list[str], *, shell: str = 'powershell') -> list[str]:
     commands = [
-        f"papergraph-mcp get-paper-map --workspace {workspace_path} --paper-id {paper_id}"
+        cli_command('get-paper-map', shell=shell, workspace=workspace_path, paper_id=paper_id)
         for paper_id in paper_ids
     ]
     if paper_ids:
         commands.append(
-            "papergraph-mcp export-paper-reading-report "
-            f"--workspace {workspace_path} --paper-id {paper_ids[0]}"
+            cli_command('export-paper-reading-report', shell=shell, workspace=workspace_path, paper_id=paper_ids[0])
         )
     return commands
 

@@ -94,7 +94,10 @@ This is a compact example artifact showing the shape of a PaperGraph Reading Rep
 
 ## Next Commands
 
+Replace `<WORKSPACE>` with your database path before execution. These PowerShell
+commands quote paths with spaces; double any apostrophe inside the quoted path.
+
 ```powershell
-papergraph-mcp --workspace <WORKSPACE> get-paper-map local:example-a
-papergraph-mcp --workspace <WORKSPACE> plan-external-imports-for-paper local:example-a
+papergraph-mcp get-paper-map --workspace '<WORKSPACE>' --paper-id 'local:example-a'
+papergraph-mcp plan-external-imports-for-paper --workspace '<WORKSPACE>' --paper-id 'local:example-a'
 ```

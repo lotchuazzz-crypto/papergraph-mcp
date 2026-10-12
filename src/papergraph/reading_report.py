@@ -10,6 +10,7 @@ from papergraph.evidence_triage import (
 )
 from papergraph.report_format import code_or_none as _code_or_none, compact_json as _compact_json
 from papergraph.pdf_coverage import PDF_COVERAGE_WARNING
+from papergraph.cli_commands import cli_command
 
 if TYPE_CHECKING:
     from papergraph.workspace import Workspace
@@ -158,27 +159,16 @@ def render_paper_reading_report_markdown(report_model: dict[str, Any]) -> str:
     lines.extend(_render_warnings(report_model["warnings"]))
     lines.extend(["", "## Evidence Boundaries", ""])
     lines.extend(f"- {boundary}" for boundary in REQUIRED_BOUNDARIES)
-    lines.extend(
-        [
-            "",
-            "## Next Commands",
-            "",
-            "```powershell",
-            (
-                "papergraph-mcp --workspace <WORKSPACE> get-paper-map "
-                f"{paper['paper_id']}"
-            ),
-            (
-                "papergraph-mcp --workspace <WORKSPACE> create-reading-queue "
-                f"{summary['recommended_start_result_id'] or '<RESULT_ID>'}"
-            ),
-            (
-                "papergraph-mcp --workspace <WORKSPACE> "
-                f"plan-external-imports-for-paper {paper['paper_id']}"
-            ),
-            "```",
-        ]
-    )
+    lines.extend(['', '## Next Commands', ''])
+    for shell, fence in [('powershell', 'powershell'), ('posix', 'sh')]:
+        lines.extend([
+            f'```{fence}',
+            cli_command('get-paper-map', shell=shell, paper_id=paper['paper_id']),
+            cli_command('create-reading-queue', shell=shell,
+                        result_id=summary['recommended_start_result_id'] or '<RESULT_ID>'),
+            cli_command('plan-external-imports-for-paper', shell=shell, paper_id=paper['paper_id']),
+            '```', '',
+        ])
     return "\n".join(lines).rstrip() + "\n"
 
 

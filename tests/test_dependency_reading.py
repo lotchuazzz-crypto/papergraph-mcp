@@ -34,6 +34,10 @@ def test_shared_dependency_prerequisites_precede_every_user(tmp_path):
         for user, dependency in [('A', 'B'), ('A', 'C'), ('B', 'D'), ('C', 'D')]:
             assert order.index(dependency) < order.index(user), order
         assert len(order) == len(set(order))
+        deps = workspace.get_proof_dependencies('local:graph::node:A', recursive=True)
+        shared = next(r for r in deps['known']['resolved_local_results'] if r['local_id'] == 'node:D')
+        assert len(shared['via_mentions']) == 2
+        assert len({m['proof_id'] for m in shared['via_mentions']}) == 2
     finally:
         workspace.close()
 

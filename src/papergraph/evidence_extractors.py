@@ -29,8 +29,8 @@ RESULT_RE = re.compile(
     re.I,
 )
 PROOF_RE = re.compile(
-    r"^Proof(?:\s+of\s+(?P<kind>Theorem|Lemma|Proposition|Corollary|Claim)\s+"
-    r"(?P<number>[A-Za-z]?(?:\d+(?:\.\d+)*|[A-Z])?))?\.?\s*(?P<body>.*)$",
+    r"^Proof(?:\s+of\s+(?:(?P<kind>Theorem|Lemma|Proposition|Corollary|Claim)\s+)?"
+    r"(?P<number>[A-Za-z]?(?:\d+(?:\.\d+)*|[A-Z]))(?![\w.]*\w))?\.?\s*(?P<body>.*)$",
     re.I,
 )
 
@@ -244,17 +244,18 @@ def extract_proof_blocks(
         association_confidence = 0.0
         proof_id = f"{paper_id}::proof:{len(proofs) + 1}"
 
-        if match.group("kind") and match.group("number"):
-            result = _resolve_named_result(
-                lookup,
-                match.group("kind"),
-                match.group("number"),
-            )
+        if match.group("number"):
+            if match.group("kind"):
+                result = _resolve_named_result(lookup, match.group("kind"), match.group("number"))
+            else:
+                matches = [r for r in results if r.visible_number is not None
+                           and r.visible_number.casefold() == match.group("number").casefold()]
+                result = matches[0] if len(matches) == 1 else None
             if result is not None:
                 result_id = result.result_id
                 association_basis = "proof_heading_names_result"
                 association_confidence = 0.95
-        else:
+        elif not re.match(r"^Proof\s+of\b", text, re.I):
             for preceding_index in range(span_index - 1, -1, -1):
                 result = result_by_span.get(preceding_index)
                 if result is not None:
@@ -530,7 +531,9 @@ def _roadmap_normalized_kind(raw_kind: str) -> str:
 
 
 def _local_mention_excluded_ranges(text: str) -> tuple[tuple[int, int], ...]:
+    from papergraph.citations import _CITATION_RE as tex_citation_re
     ranges: list[tuple[int, int]] = [match.span() for match in _CITATION_RE.finditer(text)]
+    ranges.extend(match.span() for match in tex_citation_re.finditer(text))
     ranges.extend(_roadmap_result_group_ranges(text))
     proof_match = PROOF_RE.match(text)
     if (
@@ -567,8 +570,11 @@ def _roadmap_result_group_ranges(text: str) -> tuple[tuple[int, int], ...]:
 
 def _bibliography_lookup(
     entries: tuple[BibliographyEntryEvidence, ...],
-) -> dict[str, BibliographyEntryEvidence]:
-    return {entry.raw_label.casefold(): entry for entry in entries}
+) -> dict[str, list[BibliographyEntryEvidence]]:
+    lookup = {}
+    for entry in entries:
+        lookup.setdefault(entry.raw_label.casefold(), []).append(entry)
+    return lookup
 
 
 def extract_citation_mentions(
@@ -576,30 +582,41 @@ def extract_citation_mentions(
     proofs: tuple[ProofEvidence, ...],
     bibliography_entries: tuple[BibliographyEntryEvidence, ...],
 ) -> tuple[CitationMentionEvidence, ...]:
-    """Extract bracket citation mentions from proof text."""
+    """Extract explicit bracket/TeX citations, preserving repeated occurrences."""
+
+    from papergraph.citations import _CITATION_RE as tex_citation_re
+    from papergraph.loader import _is_commented
 
     lookup = _bibliography_lookup(bibliography_entries)
     mentions: list[CitationMentionEvidence] = []
 
     for proof in proofs:
-        for match in _CITATION_RE.finditer(proof.text):
-            raw_key = match.group("key").strip()
-            entry = lookup.get(raw_key.casefold())
-            mentions.append(
-                CitationMentionEvidence(
-                    mention_id=f"{paper_id}::citation-mention:{len(mentions) + 1}",
-                    paper_id=paper_id,
-                    proof_id=proof.proof_id,
-                    raw_text=match.group(0),
-                    raw_key=raw_key,
-                    entry_id=entry.entry_id if entry is not None else None,
-                    resolution_status="resolved_unique"
-                    if entry is not None
-                    else "unresolved",
-                    method="proof_citation_regex",
-                    confidence=0.85,
+        tex_matches = list(tex_citation_re.finditer(proof.text))
+        matches = [(m, [k.strip() for k in m.group('keys').split(',') if k.strip()],
+                    'proof_latex_citation') for m in tex_matches
+                   if not _is_commented(proof.text, m.start())]
+        matches.extend((m, [m.group('key').strip()], 'proof_citation_regex')
+                       for m in _CITATION_RE.finditer(proof.text)
+                       if not _overlaps_any_range(m.span(), tuple(t.span() for t in tex_matches)))
+        for match, keys, method in sorted(matches, key=lambda item: item[0].start()):
+            for raw_key in keys:
+                entries = lookup.get(raw_key.casefold(), [])
+                entry = entries[0] if len(entries) == 1 else None
+                mentions.append(
+                    CitationMentionEvidence(
+                        mention_id=f"{paper_id}::citation-mention:{len(mentions) + 1}",
+                        paper_id=paper_id,
+                        proof_id=proof.proof_id,
+                        raw_text=match.group(0),
+                        raw_key=raw_key,
+                        entry_id=entry.entry_id if entry is not None else None,
+                        resolution_status="resolved_unique"
+                        if entry is not None
+                        else "ambiguous" if entries else "unresolved",
+                        method=method,
+                        confidence=0.85,
+                    )
                 )
-            )
 
     return tuple(mentions)
 
@@ -613,6 +630,12 @@ def extract_external_result_mentions(
     mentions: list[ExternalResultMentionEvidence] = []
     for citation in citation_mentions:
         match = _CITATION_RE.fullmatch(citation.raw_text)
+        if citation.method == 'proof_latex_citation':
+            from papergraph.citations import _CITATION_RE as tex_citation_re
+            tex_match = tex_citation_re.fullmatch(citation.raw_text)
+            locator = citation.raw_text[tex_match.end('command'):tex_match.start('keys') - 1]
+            locator_matches = list(_LOCAL_RESULT_MENTION_RE.finditer(locator))
+            match = locator_matches[0] if len(locator_matches) == 1 else None
         if match is None or not (match.group("kind") and match.group("number")):
             continue
 

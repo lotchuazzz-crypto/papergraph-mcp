@@ -12,6 +12,7 @@ def read_json(capsys) -> dict:
 
 
 def test_plan_starter_project_cli_prints_json(tmp_path: Path, capsys):
+    (tmp_path / 'paper.pdf').write_bytes(b'%PDF-1.7\n')
     server.main(
         [
             "plan-starter-project",

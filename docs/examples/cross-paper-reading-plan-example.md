@@ -43,8 +43,8 @@ This is selected-paper citation evidence. Citation evidence does not imply logic
 ## Per-Paper Reading Reports
 
 ```powershell
-papergraph-mcp --workspace <WORKSPACE> export-paper-reading-report --paper-id local:example-a
-papergraph-mcp --workspace <WORKSPACE> export-paper-reading-report --paper-id arxiv:2401.12345
+papergraph-mcp export-paper-reading-report --workspace '<WORKSPACE>' --paper-id 'local:example-a'
+papergraph-mcp export-paper-reading-report --workspace '<WORKSPACE>' --paper-id 'arxiv:2401.12345'
 ```
 
 ## External Reading Risks
@@ -65,7 +65,10 @@ papergraph-mcp --workspace <WORKSPACE> export-paper-reading-report --paper-id ar
 
 ## Next Commands
 
+Replace `<WORKSPACE>` with your database path before execution. These PowerShell
+commands quote paths with spaces; double any apostrophe inside the quoted path.
+
 ```powershell
-papergraph-mcp --workspace <WORKSPACE> get-paper-map local:example-a
-papergraph-mcp --workspace <WORKSPACE> plan-external-imports-for-paper local:example-a
+papergraph-mcp get-paper-map --workspace '<WORKSPACE>' --paper-id 'local:example-a'
+papergraph-mcp plan-external-imports-for-paper --workspace '<WORKSPACE>' --paper-id 'local:example-a'
 ```

@@ -6,6 +6,8 @@ from functools import wraps
 from importlib.metadata import version as distribution_version
 from pathlib import Path
 from threading import RLock
+from typing import Annotated, Literal
+from pydantic import Field
 
 from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
@@ -26,6 +28,7 @@ from papergraph.pdf import PdfExtractionError
 from papergraph.project import load_project
 from papergraph.published import discover_doi, import_doi_candidate, import_root_doi
 from papergraph.workspace import SCHEMA_VERSION, Workspace, WorkspaceError
+from papergraph.starter import plan_starter_project
 from papergraph.reference_expansion_api import (
     COMMANDS as EXPANSION_COMMANDS, add_cli as add_expansion_cli,
     register_tools as register_expansion_tools, run_cli as run_expansion_cli,
@@ -337,15 +340,21 @@ def workspace_get_citations(
 def workspace_list_results(
     paper_id: str | None = None,
     kind: str | None = None,
-    limit: int = 50,
+    limit: Annotated[int, Field(ge=1, le=100, strict=True)] = 50,
+    offset: Annotated[int, Field(ge=0, strict=True)] = 0,
 ) -> list[dict]:
-    """List stored evidence results across the active workspace."""
+    """List a stable result page (limit 1..100). Advance offset by returned count.
+
+    A full page may be truncated; continue until a page has fewer than limit
+    results. This is not an unbounded complete list.
+    """
 
     try:
         return require_workspace().list_results(
             paper_id=paper_id,
             kind=kind,
             limit=limit,
+            offset=offset,
         )
     except _WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc
@@ -545,7 +554,7 @@ def workspace_get_reading_session(session_id: str) -> dict:
 @_serialized_workspace_tool
 def workspace_record_reading_checkpoint(
     session_id: str,
-    target_kind: str,
+    target_kind: Literal['result_id', 'proof_id', 'span_id', 'external_stop', 'unresolved_stop'],
     target_id: str,
     status: str,
     summary: str = "",
@@ -572,7 +581,7 @@ def workspace_add_reading_note(
     session_id: str,
     text: str,
     note_type: str = "note",
-    target_kind: str | None = None,
+    target_kind: Literal['result_id', 'proof_id', 'span_id', 'external_stop', 'unresolved_stop', 'session'] | None = None,
     target_id: str | None = None,
 ) -> dict:
     """Add a note or question to a reading session."""
@@ -877,21 +886,17 @@ def workspace_plan_starter_project(
     """Plan a Workspace Starter run without writing files."""
 
     try:
-        workspace = Workspace.open(workspace_path)
-        try:
-            return workspace.plan_starter_project(
-                workspace_path=workspace_path,
-                artifact_dir=artifact_dir,
-                papers=papers,
-                project_title=project_title,
-                focus=focus,
-                target_result_id=target_result_id,
-                create_queue=create_queue,
-                create_session=create_session,
-                max_candidates=max_candidates,
-            )
-        finally:
-            workspace.close()
+        return plan_starter_project(
+            workspace_path=workspace_path,
+            artifact_dir=artifact_dir,
+            papers=papers,
+            project_title=project_title,
+            focus=focus,
+            target_result_id=target_result_id,
+            create_queue=create_queue,
+            create_session=create_session,
+            max_candidates=max_candidates,
+        )
     except _WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc
 
@@ -1373,10 +1378,9 @@ def _run_starter_cli_command(command: str, args) -> None:
     workspace = None
     try:
         papers = _parse_starter_papers(args.arxiv, args.tex, args.pdf)
-        workspace = Workspace.open(args.workspace)
         if command == "plan-starter-project":
             _print_json(
-                workspace.plan_starter_project(
+                plan_starter_project(
                     workspace_path=args.workspace,
                     artifact_dir=args.artifact_dir,
                     papers=papers,
@@ -1390,6 +1394,7 @@ def _run_starter_cli_command(command: str, args) -> None:
                 )
             )
             return
+        workspace = Workspace.open(args.workspace)
         payload = workspace.bootstrap_reading_project(
             workspace_path=args.workspace,
             artifact_dir=args.artifact_dir,

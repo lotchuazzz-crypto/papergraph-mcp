@@ -33,6 +33,7 @@ def write_minimal_tex(path: Path) -> None:
 
 
 def test_plan_starter_project_describes_artifacts_without_writing(tmp_path: Path):
+    write_minimal_tex(tmp_path / 'paper-a' / 'main.tex')
     workspace = Workspace.open(tmp_path / "workspace.sqlite3")
     artifact_dir = tmp_path / "artifacts"
     try:

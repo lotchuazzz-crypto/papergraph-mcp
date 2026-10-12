@@ -22,6 +22,8 @@ class TheoremNode:
     normalized_kind: str | None = None
     visible_number: str | None = None
     source_file: str | None = None
+    body_start: int | None = None
+    body_end: int | None = None
 
     def __post_init__(self) -> None:
         if self.raw_kind is None:

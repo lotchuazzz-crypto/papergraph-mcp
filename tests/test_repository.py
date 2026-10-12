@@ -414,7 +414,7 @@ def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
     ) in readme
     assert (
         "papergraph-mcp record-reading-checkpoint --workspace .\\papergraph.sqlite3 "
-        "--session-id SESSION --target-kind result "
+        "--session-id SESSION --target-kind result_id "
         "--target-id local:paper-a::thm:main --status reviewed"
     ) in readme
     assert "`get_environment_diagnostics`" in readme

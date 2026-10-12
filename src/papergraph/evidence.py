@@ -238,6 +238,9 @@ class EvidenceDocument:
 def source_span_payload(span: SourceSpanEvidence) -> dict:
     """Serialize a source span for graph/tool payloads."""
 
+    # Original TeX fragments retain whitespace so short excerpts can be checked
+    # directly against their file offsets, including cross-file body boundaries.
+    excerpt = (span.text if len(span.text) <= 240 else span.text[:237] + "...") if span.source_type == "tex" else bounded_excerpt(span.text)
     return {
         "span_id": span.span_id,
         "paper_id": span.paper_id,
@@ -248,7 +251,7 @@ def source_span_payload(span: SourceSpanEvidence) -> dict:
         "start_offset": span.start_offset,
         "end_offset": span.end_offset,
         "bbox": list(span.bbox) if span.bbox is not None else None,
-        "excerpt": bounded_excerpt(span.text),
+        "excerpt": excerpt,
         "method": span.method,
         "confidence": confidence(span.confidence),
     }

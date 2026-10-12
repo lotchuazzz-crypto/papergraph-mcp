@@ -13,6 +13,7 @@ class SourceSpan:
     path: Path
     start: int
     end: int
+    source_start: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,7 +28,7 @@ class _Traversal:
         self.spans: list[SourceSpan] = []
         self.length = 0
 
-    def append(self, path: Path, text: str) -> None:
+    def append(self, path: Path, text: str, source_start: int) -> None:
         if not text:
             return
 
@@ -35,7 +36,7 @@ class _Traversal:
         self.parts.append(text)
         self.length += len(text)
         self.spans.append(
-            SourceSpan(path=path, start=start, end=self.length)
+            SourceSpan(path=path, start=start, end=self.length, source_start=source_start)
         )
 
     def result(self) -> LoadedLatexText:
@@ -151,7 +152,7 @@ def _load_file(
         if is_latex_commented(text, match.start()):
             continue
 
-        traversal.append(path, text[cursor:match.start()])
+        traversal.append(path, text[cursor:match.start()], cursor)
         included = resolve_tex_path(
             path,
             match.group("path").strip(),
@@ -174,4 +175,4 @@ def _load_file(
         )
         cursor = match.end()
 
-    traversal.append(path, text[cursor:])
+    traversal.append(path, text[cursor:], cursor)

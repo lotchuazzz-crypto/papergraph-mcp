@@ -15,6 +15,7 @@ def reset_server_state():
 
 
 def test_starter_plan_mcp_tool_returns_payload(tmp_path: Path):
+    (tmp_path / 'paper.pdf').write_bytes(b'%PDF-1.7\n')
     payload = server.workspace_plan_starter_project(
         workspace_path=str(tmp_path / "workspace.sqlite3"),
         artifact_dir=str(tmp_path / "artifacts"),

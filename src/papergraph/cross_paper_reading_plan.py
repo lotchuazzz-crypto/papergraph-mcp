@@ -1,6 +1,7 @@
 """Deterministic Markdown cross-paper reading plan assembly."""
 
 from __future__ import annotations
+from papergraph.cli_commands import cli_command
 
 import json
 from typing import TYPE_CHECKING, Any
@@ -143,20 +144,15 @@ def render_cross_paper_reading_plan_markdown(
     lines.extend(_render_warnings(plan_model["warnings"], plan_model["papers"]))
     lines.extend(["", "## Evidence Boundaries", ""])
     lines.extend(f"- {boundary}" for boundary in plan_model["evidence_boundaries"])
-    lines.extend(["", "## Next Commands", "", "```powershell"])
+    lines.extend(["", "## Next Commands", ""])
     start_paper = summary["recommended_start_paper_id"] or plan_model["paper_ids"][0]
-    lines.extend(
-        [
-            f"papergraph-mcp --workspace <WORKSPACE> get-paper-map {start_paper}",
-            (
-                "papergraph-mcp --workspace <WORKSPACE> "
-                f"plan-external-imports-for-paper {start_paper}"
-            ),
-        ]
-    )
-    for paper in plan_model["papers"]:
-        lines.append(paper["single_paper_report_command"])
-    lines.append("```")
+    for shell, fence in [('powershell', 'powershell'), ('posix', 'sh')]:
+        lines.extend([f'```{fence}',
+                      cli_command('get-paper-map', shell=shell, paper_id=start_paper),
+                      cli_command('plan-external-imports-for-paper', shell=shell, paper_id=start_paper)])
+        for paper in plan_model['papers']:
+            lines.append(cli_command('export-paper-reading-report', shell=shell, paper_id=paper['paper_id']))
+        lines.extend(['```', ''])
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -209,8 +205,7 @@ def _paper_summaries(paper_maps: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "reading_route_preview": paper_map["reading_route"][:5],
                 "dependency_order": paper_map["dependency_order"],
                 "single_paper_report_command": (
-                    "papergraph-mcp --workspace <WORKSPACE> "
-                    f"export-paper-reading-report --paper-id {paper['paper_id']}"
+                    cli_command('export-paper-reading-report', paper_id=paper['paper_id'])
                 ),
                 "warnings": paper_map["evidence_quality"]["warnings"],
             }
@@ -666,9 +661,11 @@ def _render_candidates(papers: list[dict[str, Any]]) -> list[str]:
 
 
 def _render_report_commands(papers: list[dict[str, Any]]) -> list[str]:
-    lines = ["```powershell"]
-    lines.extend(paper["single_paper_report_command"] for paper in papers)
-    lines.append("```")
+    lines = []
+    for shell, fence in [('powershell', 'powershell'), ('posix', 'sh')]:
+        lines.append(f'```{fence}')
+        lines.extend(cli_command('export-paper-reading-report', shell=shell, paper_id=paper['paper_id']) for paper in papers)
+        lines.extend(['```', ''])
     return lines
 
 

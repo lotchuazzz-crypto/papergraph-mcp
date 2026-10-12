@@ -1312,6 +1312,7 @@ class Workspace(ReferenceExpansionMixin):
         paper_id: str | None = None,
         kind: str | None = None,
         limit: int = 50,
+        offset: int = 0,
     ) -> list[dict]:
         """Return stored evidence results in stable order."""
 
@@ -1321,6 +1322,8 @@ class Workspace(ReferenceExpansionMixin):
             or not 1 <= limit <= 100
         ):
             raise ValueError("Result limit must be an integer from 1 through 100")
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+            raise ValueError('Result offset must be a nonnegative integer')
 
         conditions: list[str] = []
         parameters: list[str | int] = []
@@ -1330,7 +1333,7 @@ class Workspace(ReferenceExpansionMixin):
         if kind is not None:
             conditions.append("(results.kind = ? OR results.normalized_kind = ?)")
             parameters.extend([kind, kind])
-        parameters.append(limit)
+        parameters.extend([limit, offset])
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
         rows = self._connection.execute(
@@ -1345,7 +1348,7 @@ class Workspace(ReferenceExpansionMixin):
             JOIN papers ON papers.paper_id = results.paper_id
             {where_clause}
             ORDER BY results.paper_id, results.result_id
-            LIMIT ?
+            LIMIT ? OFFSET ?
             """,
             parameters,
         ).fetchall()
@@ -1447,6 +1450,7 @@ class Workspace(ReferenceExpansionMixin):
         resolved_local_mentions_by_result: dict[str, list[dict]] = {}
         unresolved_local = []
         unresolved_citation = []
+        known_citation = []
         unresolved_external = []
         resolved_external = []
         known_external_mentions = []
@@ -1503,6 +1507,8 @@ class Workspace(ReferenceExpansionMixin):
                     mention["resolution_status"]
                 ):
                     unresolved_citation.append(mention)
+                else:
+                    known_citation.append(mention)
 
             for row in self._connection.execute(
                 """
@@ -1552,6 +1558,7 @@ class Workspace(ReferenceExpansionMixin):
                 ],
                 "resolved_external_results": resolved_external,
                 "external_result_mentions": known_external_mentions,
+                "citation_mentions": known_citation,
             },
             "inferred": [
                 {
@@ -2020,6 +2027,19 @@ class Workspace(ReferenceExpansionMixin):
         collector = _ExternalImportPlanCollector(self)
         path = self.get_result_reading_path(result_id, recursive=recursive)
 
+        # A plain citation is import-planning evidence, not a result dependency.
+        from papergraph.author_correspondence import resolve_proof_entry
+        entry = resolve_proof_entry(self, result_id)
+        proof_ids = [entry['proof']['proof_id']] if entry['proof'] else []
+        if recursive:
+            proof_ids.extend(self._recursive_dependency_proof_ids(result_id))
+        for proof_id in dict.fromkeys(proof_ids):
+            for row in self._connection.execute(
+                'SELECT mention_id FROM citation_mentions WHERE proof_id = ? ORDER BY mention_id',
+                (proof_id,),
+            ):
+                collector.add_citation_mention(row[0], 'result.citation_mentions')
+
         for mention in path["external_stops"]:
             collector.add_external_mention(
                 mention["mention_id"],
@@ -2059,7 +2079,16 @@ class Workspace(ReferenceExpansionMixin):
         queue_payload = self._reading_queue_payload(queue_id)
         collector = _ExternalImportPlanCollector(self)
         for item in self._reading_queue_items(queue_id):
-            if item["target_kind"] == "external_stop":
+            if item['target_kind'] == 'result_id':
+                from papergraph.author_correspondence import resolve_proof_entry
+                entry = resolve_proof_entry(self, item['target_id'])
+                if entry['proof']:
+                    for row in self._connection.execute(
+                        'SELECT mention_id FROM citation_mentions WHERE proof_id = ? ORDER BY mention_id',
+                        (entry['proof']['proof_id'],),
+                    ):
+                        collector.add_citation_mention(row[0], 'reading_queue.citation_mentions')
+            elif item["target_kind"] == "external_stop":
                 collector.add_external_mention(
                     item["target_id"],
                     "reading_queue.external_stop",
@@ -5001,7 +5030,7 @@ class _ExternalImportPlanCollector:
             return
 
         entry = self._bibliography_entry(citation["entry_id"])
-        evidence.append(_bibliography_entry_evidence(entry, "paper.bibliography_entry"))
+        evidence.append(_bibliography_entry_evidence(entry, source.partition('.')[0] + '.bibliography_entry'))
         if entry["arxiv_id"]:
             self._add_candidate(entry["arxiv_id"], entry["arxiv_version"], evidence)
         else:

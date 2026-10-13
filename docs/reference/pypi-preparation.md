@@ -1,5 +1,17 @@
 # PyPI publication and installation
 
+## v1.2.1 preparation
+
+Version 1.2.1 includes the first-use repairs from PR47. Its package metadata,
+installation examples and current-version tests are being prepared. Its public
+index installation is not yet verified: the onboarding publication guard stays
+false. New source/manifest and wheel/sdist hashes must be reviewed before the
+manual protected publisher is activated for 1.2.1. The fixed 1.2.0 artifact
+checks below remain paired with their immutable old tag during this transition.
+See [v1.2.1 notes](v1.2.1-release-notes.md).
+
+## Historical 1.2.0 publication
+
 Status, checked 2026-10-04: [PyPI 1.2.0](https://pypi.org/project/papergraph-mcp/1.2.0/)
 is published. The authorized, human-approved [first upload](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/37119385521)
 completed on 2026-10-03; [Git-free public-index acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/37123289066)

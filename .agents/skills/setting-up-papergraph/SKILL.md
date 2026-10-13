@@ -97,7 +97,8 @@ Use its facts for `git`, `uv`, and `uvx`; also detect the active MCP client with
 
 The default pinned PyPI launch requires `uv` and `uvx`, index access, and no Git
 or checkout. PyPI 1.2.0 is published; [Git-free clean-cache acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/37123289066)
-passed CLI, stdio MCP and PDF reading. The checker defaults to `pypi`;
+passed CLI, stdio MCP and PDF reading. That recorded acceptance applies only to 1.2.0. The new 1.2.1 publication
+guard remains false until its official-index acceptance is recorded. The checker defaults to `pypi`;
 `--install-source pypi` is also explicit. Do not install Git solely for a PyPI
 consumer. Missing repository/Git context and unknown checkout freshness are
 separate from index-launch readiness. The published doctor still recommends Git
@@ -118,16 +119,18 @@ There are three separate approval boundaries:
 2. **configuration approval:** show the exact client change and ask before a native command or any edit outside this repository. For file-based configuration, parse first, preserve unrelated servers, and create a timestamped adjacent backup. If parsing fails, stop and show the error. If safe mutation is unavailable, provide the minimal snippet and exact placement guidance instead.
 3. **restart approval:** after configuration and launch validation, ask before controlling or restarting the client. If control is unavailable or permission is declined, provide one direct manual restart instruction.
 
-For ordinary installation, use this fixed published package version; never
-substitute a branch, a mutable default, or an unreleased revision:
+The recipe below pins 1.2.1. Before ordinary installation, run the read-only
+checker and confirm version-specific official-index acceptance. If
+`publication_verified` is false, report that launch is blocked; do not run the
+new PyPI recipe or claim readiness. Never substitute a mutable branch:
 
 ```text
-papergraph-mcp==1.2.0
+papergraph-mcp==1.2.1
 ```
 
-The [GitHub Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.0)
-and immutable Git tag are available. Optional Git-source installation uses
-`git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.0` in `--from`;
+The prior [1.2.0 release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.0)
+remains immutable. Verify the exact v1.2.1 tag before using the optional Git-source recipe
+`git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.1` in `--from`;
 validate both version and doctor with the same selected source. Switching an
 existing client's source requires configuration approval and a backup.
 An explicitly requested development test is separate: use the
@@ -136,17 +139,16 @@ then launch that exact interpreter. Check CLI version, `doctor.build_identity`
 (source commit, tracked changes and source-tree digest), and MCP initialization
 version. A dirty build's commit is its base; unknown build provenance is unknown.
 Release diagnostics name the package version's tag but do not themselves establish
-tag availability. Ordinary setup uses the verified PyPI 1.2.0 commands below; future package
+tag availability. The commands below target 1.2.1 and require its publication guard; future package
 versions or tags must be verified before they are recommended.
 Keep the user's active MCP registration intact unless they explicitly authorize a
 configuration change, and never invent a development release/tag.
 
-These local first-use repairs keep the package version at `1.2.0` and are
-unreleased. Version equality alone does not identify them: record the exact
-interpreter, `doctor.build_identity` base commit/dirty status/source-tree digest,
-and the isolated wheel hash when applicable. Do not attribute repaired preflight,
-schema, source-span, or generated-command behavior to the published PyPI build
-without testing that build. Keep ordinary pinned installation recipes unchanged.
+The first-use repairs are included in version 1.2.1. Until official-index
+acceptance succeeds, do not call this a verified PyPI installation. Record the
+exact interpreter, doctor.build_identity and isolated artifact hashes for local
+tests. Version equality alone does not establish source identity or publication;
+never attribute these repairs to the earlier published 1.2.0 build.
 
 For PDF reading, surface `text_coverage` and unverified statement/proof completeness.
 Use its continuation-source locator before interpreting truncated text. Adjacent
@@ -157,22 +159,22 @@ Never request credentials, upload papers, guess the identity of ambiguous refere
 
 ### What changed
 
-Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `1.2.0`; file presence alone is insufficient:
+Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `1.2.1`; file presence alone is insufficient:
 
 ```text
-uvx --from papergraph-mcp==1.2.0 papergraph-mcp --version
+uvx --from papergraph-mcp==1.2.1 papergraph-mcp --version
 ```
 
 Also validate the pinned diagnostics command:
 
 ```text
-uvx --from papergraph-mcp==1.2.0 papergraph-mcp doctor
+uvx --from papergraph-mcp==1.2.1 papergraph-mcp doctor
 ```
 
 The expected output is:
 
 ```text
-papergraph-mcp 1.2.0
+papergraph-mcp 1.2.1
 ```
 
 Before restart, say “launch command validated”; never say “client has loaded the PaperGraph tools.” Tool loading can be confirmed only after the restarted client discovers the server.

@@ -23,7 +23,7 @@ def smoke():
 def test_index_command_is_fixed_to_public_version_and_not_a_local_artifact():
     command = smoke().consumer_command('/tools/uvx', public_index=True)
     assert command == ['/tools/uvx', '--no-config', '--no-env-file', '--default-index',
-                       'https://pypi.org/simple', '--from', 'papergraph-mcp==1.2.0', 'papergraph-mcp']
+                       'https://pypi.org/simple', '--from', 'papergraph-mcp==1.2.1', 'papergraph-mcp']
 
 
 def test_artifact_command_preserves_the_existing_consumer():
@@ -49,7 +49,7 @@ def test_public_index_identity_accepts_only_the_reviewed_source():
 def test_public_index_identity_rejects_wrong_or_unknown_provenance(field, value):
     identity = dict(validator().EXPECTED_IDENTITY, channel='release_version')
     identity[field] = value
-    with pytest.raises(RuntimeError, match='reviewed public release identity'):
+    with pytest.raises(RuntimeError, match='reviewed release identity'):
         smoke().validate_public_identity(identity)
 
 
@@ -97,6 +97,18 @@ def test_index_cli_rejects_artifact_or_source_overrides_before_verification(monk
     assert calls == []
 
 
+def test_local_artifact_cli_rejects_an_unreviewed_source_before_execution(monkeypatch):
+    module = smoke()
+    calls = []
+    monkeypatch.setattr(module, 'check_environment', lambda: calls.append('environment'))
+    monkeypatch.setattr(sys, 'argv', ['smoke', '--artifact', '/dist/release.whl',
+                                    '--expected-sha', '0' * 40])
+    with pytest.raises(SystemExit) as error:
+        module.main()
+    assert error.value.code == 2
+    assert calls == []
+
+
 def test_index_workflow_is_manual_main_only_and_has_no_publishing_permissions():
     path = ROOT / '.github/workflows/pypi-index-verification.yml'
     assert path.exists(), 'Public-index verification workflow has not been implemented'
@@ -132,5 +144,5 @@ def test_index_consumer_has_fresh_container_and_index_install_not_a_local_mount(
     assert text.index('--check-environment') < text.index('pip install')
     assert 'test ! -e "$UV_CACHE_DIR"' in text
     assert '--default-index https://pypi.org/simple' in text
-    assert '--with papergraph-mcp==1.2.0' in text
+    assert '--with papergraph-mcp==1.2.1' in text
     assert '--public-index' in text and '--artifact' not in text

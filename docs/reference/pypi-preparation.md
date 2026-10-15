@@ -2,13 +2,22 @@
 
 ## v1.2.1 preparation
 
-Version 1.2.1 includes the first-use repairs from PR47. Its package metadata,
-installation examples and current-version tests are being prepared. Its public
-index installation is not yet verified: the onboarding publication guard stays
-false. New source/manifest and wheel/sdist hashes must be reviewed before the
-manual protected publisher is activated for 1.2.1. The fixed 1.2.0 artifact
-checks below remain paired with their immutable old tag during this transition.
-See [v1.2.1 notes](v1.2.1-release-notes.md).
+Version 1.2.1 includes the first-use repairs from PR47. Local publication
+configuration now binds the exact source commit
+`d4c232efb4736eb37fad8975708abd773b0e90d7` and the measured Linux artifacts.
+Both distributions passed Twine, direct manifest inspection and separate fresh
+Git-free CLI, stdio MCP and generated-PDF checks on Linux/Python 3.14.4.
+See the [v1.2.1 artifact record](v1.2.1-artifact-verification.md) for hashes,
+environment details and remaining manual gates, and the
+[v1.2.1 notes](v1.2.1-release-notes.md) for package changes.
+
+This is local preparation, not publication or public-index acceptance.
+`PYPI_PUBLICATION_VERIFIED` remains false. The configured Linux/Python 3.12
+container workflow has not been run for these new bindings; it must reproduce
+the reviewed bytes and pass before a human approves the protected publisher.
+No tag, workflow dispatch, upload or client-registration change is part of this
+local preparation. Everything below documents the historical 1.2.0 release;
+its commands, hashes and acceptance results do not establish 1.2.1 publication.
 
 ## Historical 1.2.0 publication
 

@@ -13,8 +13,8 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_SHA = '60977c06217905e5c1db15fbf27aff4ca208a517'
-SOURCE_DIGEST = '9e873fd94cfa16b41b67acd2a1b19caab7083717b36e758553873bb9153da58a'
+SOURCE_SHA = 'd4c232efb4736eb37fad8975708abd773b0e90d7'
+SOURCE_DIGEST = '9998e8b65d75c9b500edf5bb2b04f664f242241ad9d8a926b2372af6e4beff6f'
 
 
 def validator():
@@ -26,21 +26,21 @@ def validator():
     return module
 
 
-def candidate(tmp_path, kind, *, source=SOURCE_SHA, dirty=False, version='1.2.0'):
+def candidate(tmp_path, kind, *, source=SOURCE_SHA, dirty=False, version='1.2.1'):
     manifest = json.dumps({'schema_version': 1, 'source_commit': source,
                            'source_tree_sha256': SOURCE_DIGEST,
                            'tracked_dirty': dirty, 'origin': 'git_checkout'}).encode()
     metadata = f'Metadata-Version: 2.3\nName: papergraph-mcp\nVersion: {version}\n'.encode()
     if kind == 'wheel':
-        path = tmp_path / 'papergraph_mcp-1.2.0-py3-none-any.whl'
+        path = tmp_path / 'papergraph_mcp-1.2.1-py3-none-any.whl'
         with zipfile.ZipFile(path, 'w') as archive:
             archive.writestr('papergraph/_build_info.json', manifest)
-            archive.writestr('papergraph_mcp-1.2.0.dist-info/METADATA', metadata)
+            archive.writestr('papergraph_mcp-1.2.1.dist-info/METADATA', metadata)
     else:
-        path = tmp_path / 'papergraph_mcp-1.2.0.tar.gz'
+        path = tmp_path / 'papergraph_mcp-1.2.1.tar.gz'
         with tarfile.open(path, 'w:gz') as archive:
             for name, data in [('src/papergraph/_build_info.json', manifest), ('PKG-INFO', metadata)]:
-                info = tarfile.TarInfo('papergraph_mcp-1.2.0/' + name)
+                info = tarfile.TarInfo('papergraph_mcp-1.2.1/' + name)
                 info.size = len(data)
                 archive.addfile(info, io.BytesIO(data))
     return path, hashlib.sha256(path.read_bytes()).hexdigest()
@@ -64,7 +64,7 @@ def test_downloaded_candidate_cannot_be_replaced_with_different_bytes(tmp_path):
 
 
 @pytest.mark.parametrize('kind', ['wheel', 'sdist'])
-@pytest.mark.parametrize('change', [dict(source='a' * 40), dict(dirty=True), dict(version='1.2.1')])
+@pytest.mark.parametrize('change', [dict(source='a' * 40), dict(dirty=True), dict(version='1.2.0')])
 def test_matching_checksum_does_not_excuse_wrong_source_or_version(tmp_path, kind, change):
     path, digest = candidate(tmp_path, kind, **change)
     with pytest.raises(ValueError, match='release identity|package metadata'):

@@ -9,10 +9,10 @@ import subprocess
 import sys
 import tempfile
 
-PUBLIC_REQUIREMENT = 'papergraph-mcp==1.2.0'
+PUBLIC_REQUIREMENT = 'papergraph-mcp==1.2.1'
 PUBLIC_INDEX = 'https://pypi.org/simple'
-PUBLIC_SOURCE_SHA = '60977c06217905e5c1db15fbf27aff4ca208a517'
-PUBLIC_SOURCE_DIGEST = '9e873fd94cfa16b41b67acd2a1b19caab7083717b36e758553873bb9153da58a'
+PUBLIC_SOURCE_SHA = 'd4c232efb4736eb37fad8975708abd773b0e90d7'
+PUBLIC_SOURCE_DIGEST = '9998e8b65d75c9b500edf5bb2b04f664f242241ad9d8a926b2372af6e4beff6f'
 
 
 def consumer_command(uvx, artifact=None, *, public_index=False):
@@ -40,7 +40,7 @@ def validate_public_identity(identity):
                 'source_commit': PUBLIC_SOURCE_SHA, 'source_tree_sha256': PUBLIC_SOURCE_DIGEST,
                 'tracked_dirty': False}
     if any(identity.get(key) != value for key, value in expected.items()):
-        raise RuntimeError('Installed package does not have the reviewed public release identity')
+        raise RuntimeError('Installed package does not have the reviewed release identity')
 
 
 def check_environment():
@@ -90,15 +90,14 @@ async def verify(artifact, expected_sha, *, public_index=False):
         assert not tool_dir.exists()
         env = consumer_environment(cache, tool_dir, public_index=public_index)
         version = run_cli(command + ['--version'], env=env, timeout=240).strip()
-        assert version == 'papergraph-mcp 1.2.0'
+        assert version == 'papergraph-mcp 1.2.1'
         doctor = json.loads(run_cli(command + ['doctor'], env=env, timeout=90))
         identity = doctor['build_identity']
-        assert doctor['version'] == '1.2.0' and doctor['git'] is None
+        assert doctor['version'] == '1.2.1' and doctor['git'] is None
         assert identity['source_commit'] == expected_sha
         assert identity['tracked_dirty'] is False
         assert len(identity['source_tree_sha256']) == 64
-        if public_index:
-            validate_public_identity(identity)
+        validate_public_identity(identity)
 
         pdf = root / 'fixture.pdf'
         with fitz.open() as document:
@@ -111,7 +110,7 @@ async def verify(artifact, expected_sha, *, public_index=False):
         async with stdio_client(params) as (reader, writer):
             async with ClientSession(reader, writer) as session:
                 initialized = await session.initialize()
-                assert initialized.server_info.version == '1.2.0'
+                assert initialized.server_info.version == '1.2.1'
                 tools = {tool.name for tool in (await session.list_tools()).tools}
                 assert {'discover_doi_paper', 'workspace_add_doi_paper',
                         'workspace_import_doi_candidate', 'workspace_get_dependency_reading'} <= tools
@@ -123,7 +122,7 @@ async def verify(artifact, expected_sha, *, public_index=False):
                         c.text for c in result.content if c.type == 'text'))
 
                 diagnostics = await call('get_environment_diagnostics', {})
-                assert diagnostics['version'] == '1.2.0' and diagnostics['git'] is None
+                assert diagnostics['version'] == '1.2.1' and diagnostics['git'] is None
                 assert diagnostics['build_identity'] == identity
                 await call('open_workspace', {'path': str(root / 'workspace.sqlite3')})
                 await call('workspace_add_pdf_paper', {'path': str(pdf), 'paper_id': 'local:no-git'})
@@ -133,7 +132,7 @@ async def verify(artifact, expected_sha, *, public_index=False):
                 assert reading['paper']['import_state']['body_imported'] is True
                 assert [item['result_id'] for item in reading['reading_path']['bottom_up']] == [
                     'local:no-git::pdf:lemma:1.1', 'local:no-git::pdf:theorem:1.2']
-        receipt = {'artifact': artifact.name if artifact else None, 'version': '1.2.0',
+        receipt = {'artifact': artifact.name if artifact else None, 'version': '1.2.1',
                    'build_identity': identity, 'git': 'absent', 'fresh_uvx_cache': True,
                    'cli_version_doctor': 'passed', 'stdio_initialize_tools_diagnostics': 'passed',
                    'generated_pdf_reading': 'passed', 'consumer_git_download': False}
@@ -153,6 +152,8 @@ def main():
     args = parser.parse_args()
     if args.public_index and args.expected_sha is not None:
         parser.error('--public-index has a fixed reviewed source; --expected-sha is not allowed')
+    if args.artifact is not None and args.expected_sha != PUBLIC_SOURCE_SHA:
+        parser.error('Local artifact must use the fixed reviewed source commit')
     if not args.check_environment and not args.public_index and (args.artifact is None or args.expected_sha is None):
         parser.error('--artifact and --expected-sha are required unless --public-index is used')
     check_environment()

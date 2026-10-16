@@ -111,6 +111,15 @@ applies only to that immutable version.
 
 The optional Git-source launch requires Git as well as `uv` and `uvx`. Inspect
 that route with `python scripts/check_onboarding.py --install-source git`.
+This default check performs no remote tag verification and must keep Git
+`publication_verified=false`, even when every command is available. To verify
+publication explicitly, add `--verify-git-release --expected-source-commit SHA`,
+using the reviewed 40-character package source commit from release evidence.
+That read-only network check must find the exact version tag and match its
+peeled target to the expected source before `ready_for_smoke_test` can be true.
+Missing tags, network failures and target conflicts remain unverified. Add
+`--smoke-test` to this verified route to test launch. An exact development Git
+commit installation is a separate capability check and does not verify a tag.
 If Git is missing, explain that route's prerequisite and stop before claiming
 Git-source readiness; do not misdiagnose it as an API-key or MCP handshake problem.
 Installing Git needs the user's installation approval too.

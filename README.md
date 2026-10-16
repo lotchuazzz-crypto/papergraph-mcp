@@ -196,6 +196,14 @@ uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.2 pa
 ```
 
 Select `--install-source git` when using the repository checker for that route.
+This local check reports prerequisites only: Git `publication_verified` and
+`ready_for_smoke_test` stay false until an explicit live tag check succeeds.
+Use `--install-source git --verify-git-release --expected-source-commit` followed
+by the reviewed 40-character package source SHA; this performs read-only network
+verification, checks lightweight or annotated tag targets, and refuses missing,
+unavailable or mismatched tags. Add `--smoke-test` only after that verification.
+An isolated development install from an exact Git commit establishes source
+launchability, not release-tag publication.
 The PyPI 1.2.0 page retains the README embedded in its original release build;
 editing main does not update that description. Corrections belong to a separately
 approved new version; never move the v1.2.0 tag or replace its published files.

@@ -2,12 +2,13 @@
 from copy import deepcopy
 
 
-def compact_reading(payload):
+def compact_reading(payload, max_candidates):
     payload = deepcopy(payload)
     paper_id = payload['paper']['paper_id']
     target = payload['selection']['target_result_id']
     payload['full_evidence'] = {'tool': 'workspace_get_dependency_reading', 'arguments': {
-        'paper_id': paper_id, 'target_result_id': target, 'recursive': payload['reading_path']['recursive'], 'detail': 'full'}}
+        'paper_id': paper_id, 'target_result_id': target, 'recursive': payload['reading_path']['recursive'],
+        'max_candidates': max_candidates, 'detail': 'full'}}
     payload['result_catalog'] = {'tool': 'workspace_list_results', 'arguments': {'paper_id': paper_id, 'limit': 50, 'offset': 0}}
     # Each occurrence retains its ID and an executable evidence accessor. Full
     # proof/correspondence/coverage warnings stay in the selected path.

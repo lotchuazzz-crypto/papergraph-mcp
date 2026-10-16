@@ -107,13 +107,15 @@ def test_default_index_readiness_does_not_require_git(monkeypatch):
     assert module.inspect_prerequisites(locator=paths.get, install_source='git')['ready_for_smoke_test'] is False
 
 
-def test_explicit_git_launch_preserves_tag_source():
+def test_explicit_verified_git_launch_preserves_tag_source():
     module = checker()
     calls = []
     def runner(command, **kwargs):
         calls.append(command)
         return subprocess.CompletedProcess(command, 0, 'papergraph-mcp 1.2.2\n', '')
-    assert module.validate_launch(runner=runner, install_source='git')['ok'] is True
+    verification = module.inspect_git_release('a' * 40, runner=lambda command, **kwargs:
+        subprocess.CompletedProcess(command, 0, f'{"a" * 40}\trefs/tags/v1.2.2\n', ''))
+    assert module.validate_launch(runner=runner, install_source='git', git_release_verification=verification)['ok'] is True
     assert calls == [['uvx', '--from', module.PAPERGRAPH_SOURCE, 'papergraph-mcp', '--version']]
 
 

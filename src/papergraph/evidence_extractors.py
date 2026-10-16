@@ -269,16 +269,18 @@ def extract_proof_blocks(
             already_associated.add(result_id)
 
         proof_indices = _bounded_proof_indices(spans, span_index, limit)
+        proof_text = (_proof_opening_excerpt(span) if len(proof_indices) == 1 else
+                      "\n".join(_normalized_text(spans[i].text) for i in proof_indices))
         proofs.append(
             ProofEvidence(
                 proof_id=proof_id,
                 paper_id=paper_id,
                 result_id=result_id,
-                text="\n".join(_normalized_text(spans[i].text) for i in proof_indices),
+                text=proof_text,
                 span_indices=proof_indices,
                 association_basis=association_basis,
                 association_confidence=association_confidence,
-                method="pdf_proof_explicit_end" if _proof_end(spans[proof_indices[-1]].text) else "pdf_proof_heading",
+                method="pdf_proof_explicit_end" if _proof_end(proof_text) else "pdf_proof_heading",
                 confidence=0.85,
             )
         )
@@ -290,6 +292,60 @@ def _proof_end(text):
     return re.search(r"(?:\bQ\.?E\.?D\.?|[\u25a1\u220e\u25a0])\s*$", text) is not None
 
 
+_PROOF_DECLARATION_BOUNDARY_RE = re.compile(
+    r'^(?:Theorem|Lemma|Proposition|Corollary|Definition|Claim|Conjecture|Example|Remark|Proof)\b',
+    re.I,
+)
+_PROOF_SECTION_BOUNDARY_RE = re.compile(
+    # Numbered headings are not constrained by the title's capitalization.
+    # A single letter needs punctuation, avoiding ordinary "A ..." prose.
+    r'^(?:(?:\d+(?:\.\d+)*\.?|[A-Za-z][.)]|[IVXLCDMivxlcdm]{2,}[.)]?)\s+\S'
+    r'|(?:Appendix|Appendices|Section|Chapter|Part)\b'
+    r'|(?:References|Bibliography|Acknowledgements?|Introduction|Conclusions?|Discussion)\s*[.:]?\s*$)',
+    re.I,
+)
+
+
+def _proof_lexical_boundary(line):
+    return bool(_PROOF_DECLARATION_BOUNDARY_RE.match(line.strip())
+                or _PROOF_SECTION_BOUNDARY_RE.match(line.strip()))
+
+
+def _proof_opening_excerpt(span):
+    # A PDF block can itself contain a heading after its opening proof line.
+    # Keep source provenance, but never extract mentions from beyond that line.
+    included = []
+    for line in span.text.splitlines():
+        if not line.strip():
+            continue
+        if included and _proof_lexical_boundary(line):
+            break
+        included.append(line)
+    return _normalized_text('\n'.join(included))
+
+
+def _proof_region_boundary(candidate, opening):
+    """Fail closed at lexical declarations/headings or an ambiguous layout title.
+
+    A nested claim, numbered step, or title-like larger block can belong to the
+    proof, but does not establish ownership of everything up to a later QED.
+    Prefer a partial excerpt plus raw navigation over such an uncertain join.
+    """
+    if any(_proof_lexical_boundary(line) for line in candidate.text.splitlines() if line.strip()):
+        return True
+    text = _normalized_text(candidate.text)
+    if not candidate.bbox or not opening.bbox or len(text) > 200:
+        return False
+    # Block height per text line approximates a size change without claiming
+    # font reconstruction. Restrict to prose-like short blocks, not equations.
+    if re.fullmatch(r"[\w\s.,:;'’()\u2013\u2014-]+", text) is None:
+        return False
+    def line_height(span):
+        lines = max(1, sum(bool(line.strip()) for line in span.text.splitlines()))
+        return (span.bbox[3] - span.bbox[1]) / lines
+    return line_height(candidate) > 1.25 * line_height(opening)
+
+
 def _bounded_proof_indices(spans, start, limit):
     """Only associate a lexical region closed by an explicit proof terminator.
 
@@ -298,11 +354,11 @@ def _bounded_proof_indices(spans, start, limit):
     still reaches the entire source without asserting proof ownership.
     """
     included, size = [], 0
+    if any(_proof_lexical_boundary(line) for line in spans[start].text.splitlines()[1:]):
+        return (start,)
     for index in range(start, min(limit, start + 200)):
         text = _normalized_text(spans[index].text)
-        if index > start and (RESULT_RE.match(text) or PROOF_RE.match(text)
-                or re.match(r'^\d+(?:\.\d+)*\.?\s+[A-Z]', text)
-                or text.casefold() in ('references', 'bibliography')):
+        if index > start and _proof_region_boundary(spans[index], spans[start]):
             break
         size += len(text)
         if size > 100000:

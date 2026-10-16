@@ -192,5 +192,5 @@ def build_dependency_reading(workspace, paper_id, target_result_id=None, recursi
     result['warnings'] = result['reading_path']['warnings']
     if detail == 'compact':
         from papergraph.compact_reading import compact_reading
-        return compact_reading(result)
+        return compact_reading(result, max_candidates)
     return result

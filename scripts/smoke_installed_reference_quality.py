@@ -17,6 +17,9 @@ from mcp.client.stdio import stdio_client
 from papergraph.workspace import Workspace
 
 
+EXPECTED_VERSION = '1.2.2'
+
+
 def cli(*args):
     return subprocess.run([sys.executable, '-m', 'papergraph.server', *args],
                           check=True, capture_output=True, text=True, timeout=30).stdout
@@ -27,7 +30,7 @@ async def protocol(path, baseline, search):
     async with stdio_client(params) as (reader, writer):
         async with ClientSession(reader, writer) as session:
             initialized = await session.initialize()
-            assert initialized.server_info.version == '1.2.1'
+            assert initialized.server_info.version == EXPECTED_VERSION
             assert not (await session.call_tool('open_workspace', {'path':str(path)})).is_error
             result = await session.call_tool('workspace_list_external_reference_searches', {'paper_id':'local:paper'})
             assert not result.is_error
@@ -39,20 +42,21 @@ async def protocol(path, baseline, search):
 
 def main():
     assert 'site-packages' in str(Path(papergraph.__file__).resolve())
-    assert cli('--version').strip() == 'papergraph-mcp 1.2.1'
+    assert cli('--version').strip() == f'papergraph-mcp {EXPECTED_VERSION}'
     doctor = json.loads(cli('doctor'))
-    assert doctor['version'] == '1.2.1'
-    assert doctor['release_tag'] == 'v1.2.1'
-    assert doctor['recommended_source'].endswith('@v1.2.1')
+    assert doctor['version'] == EXPECTED_VERSION
+    assert doctor['release_tag'] == f'v{EXPECTED_VERSION}'
+    assert doctor['recommended_source'] == f'papergraph-mcp=={EXPECTED_VERSION}'
+    assert doctor['optional_git_source'].endswith(f'@v{EXPECTED_VERSION}')
+    assert doctor['publication_status'] == 'not_checked_by_diagnostics'
+    assert doctor['git_required_for_default_install'] is False
     assert doctor['recommended_source_role'] == 'running_release'
     assert doctor['build_identity']['channel'] == 'release_version'
     assert len(doctor['build_identity']['source_tree_sha256']) == 64
     if os.environ.get('GITHUB_SHA'):
         assert doctor['build_identity']['source_commit'] == os.environ['GITHUB_SHA']
         assert doctor['build_identity']['tracked_dirty'] is False
-    # Outside a Git checkout, the existing diagnostic legitimately notes missing
-    # Git context; this is not an installation warning.
-    assert all(w.startswith('Git context unavailable;') for w in doctor['warnings'])
+    assert doctor['warnings'] == []
     with tempfile.TemporaryDirectory(prefix='papergraph-wheel-') as temp:
         root = Path(temp)
         pdf = root/'source.pdf'

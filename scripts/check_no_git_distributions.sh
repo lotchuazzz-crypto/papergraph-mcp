@@ -27,6 +27,6 @@ for artifact in papergraph_mcp-1.2.2-py3-none-any.whl papergraph_mcp-1.2.2.tar.g
       python /checks/check_onboarding.py --install-source git > /tmp/git-check.json
       python -c '\''import json; p=json.load(open("/tmp/pypi-check.json")); g=json.load(open("/tmp/git-check.json")); assert p["commands"]["git"] is None; assert p["install_source"] == "pypi"; assert p["required_commands"] == ["uv", "uvx"]; assert p["prerequisites_satisfied"] is True; assert p["ready_for_smoke_test"] == p["publication_verified"]; assert "launch" not in p; assert g["required_commands"] == ["git", "uv", "uvx"]; assert g["ready_for_smoke_test"] is False; print(json.dumps({"pypi_prerequisites_without_git": "passed", "git_source_without_git": "not_ready"}))'\''
       uv run --no-project --with "/dist/$1" python /checks/smoke_no_git_distribution.py \
-        --artifact "/dist/$1" --expected-sha 12bc530052c2139d6a18eac0ed97f6083c520ff7
+        --artifact "/dist/$1" --expected-sha 3ddcfef671df02fe4d3dbd8b7786a7cae2c4571e
     ' sh "$artifact"
 done

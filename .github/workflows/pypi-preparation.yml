@@ -40,12 +40,12 @@ jobs:
       - name: Check out immutable release source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: 12bc530052c2139d6a18eac0ed97f6083c520ff7
+          ref: 3ddcfef671df02fe4d3dbd8b7786a7cae2c4571e
           path: release-source
           persist-credentials: false
       - name: Verify exact release commit
         run: |
-          test "$(git -C release-source rev-parse HEAD)" = "12bc530052c2139d6a18eac0ed97f6083c520ff7"
+          test "$(git -C release-source rev-parse HEAD)" = "3ddcfef671df02fe4d3dbd8b7786a7cae2c4571e"
           test -z "$(git -C release-source status --porcelain --untracked-files=no)"
       - name: Install build tool
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9

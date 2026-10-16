@@ -16,7 +16,8 @@ historical prepared-state guidance. Prior
 [v1.2.1 index acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)
 applies only to 1.2.1, not this version.
 
-The public Git tag exists; GitHub Release creation remains pending. Obtain expected package source R from the
+The public Git tag exists; GitHub Release public assets are verified against the
+same approved PyPI bytes. Obtain expected package source R from the
 [reviewed artifact record](../../../../docs/reference/v1.2.2-artifact-verification.md),
 then explicitly check `--verify-git-release --expected-source-commit SHA` with
 `--install-source git`. Missing tags, unavailable networks and mismatched targets

@@ -19,13 +19,15 @@ def plain(text):
     return ' '.join(text.replace('`', '').replace('**', '').split())
 
 
-def contradictory_claims(text):
+def contradictory_claims(text, *, github_release_published=None):
     text = plain(text)
     # Channel-specific: the public tag does not establish a GitHub Release.
     unavailable_pypi = re.search(r'PyPI\s+v?1\.2\.2\s+is\s+not\s+published', text, re.I)
     released = re.search(r'GitHub\s+v?1\.2\.2\s+Release\s+'
                          r'(?:is|was|has been)\s+(?:published|released|verified)', text, re.I)
-    return bool(unavailable_pypi or (released and not EVIDENCE['github_release']['published']))
+    if github_release_published is None:
+        github_release_published = EVIDENCE['github_release']['published']
+    return bool(unavailable_pypi or (released and not github_release_published))
 
 
 def test_runtime_gate_matches_actual_public_acceptance_and_package_version():
@@ -57,6 +59,11 @@ def test_public_evidence_matches_unchanged_approved_release_bytes():
     assert EVIDENCE['source_tree_sha256'] == module.SOURCE_DIGEST
     assert EVIDENCE['git_tag']['target'] == EVIDENCE['source_commit']
     assert EVIDENCE['git_tag']['live_verification_still_required_for_setup']
+    release = EVIDENCE['github_release']
+    assert release['published'] and release['asset_bytes_verified']
+    assert release['asset_bytes_equal_official_pypi_downloads']
+    assert release['embedded_source_manifests_verified']
+    assert {name: asset['sha256'] for name, asset in release['assets'].items()} == module.APPROVED_HASHES
 
 
 @pytest.mark.parametrize('path', GUIDANCE, ids=lambda path: path.name)
@@ -83,7 +90,7 @@ def test_client_recipe_distinguishes_verified_pypi_and_explicit_live_git_check()
     assert 'v1.2.2-artifact-verification.md' in introduction
     assert 'do not run' in introduction
     assert '1.2.1' in introduction
-    assert 'GitHub Release creation remains pending' in introduction
+    assert 'GitHub Release public assets are verified' in introduction
     assert 'requires approval at the point of mutation' in introduction
 
 
@@ -124,12 +131,12 @@ def test_setup_and_readme_local_reference_closure_remains_complete():
     'The [GitHub v1.2.2 Release](https://example.invalid) was published yesterday.',
 ])
 def test_contradiction_guard_detects_rejected_current_version_claims(claim):
-    assert contradictory_claims(claim)
+    assert contradictory_claims(claim, github_release_published=False)
 
 
-def test_current_pypi_historical_acceptance_and_pending_github_are_distinct():
+def test_current_pypi_historical_acceptance_and_verified_github_are_distinct():
     assert not contradictory_claims('PyPI 1.2.1 is published. PyPI 1.2.2 is published.')
-    assert not contradictory_claims('GitHub v1.2.2 Release is not published. The public tag exists.')
+    assert not contradictory_claims('GitHub v1.2.2 Release is published.')
 
 
 def test_current_guidance_discloses_fail_closed_pdf_policy():

@@ -45,6 +45,30 @@
     "target": "40d2daf8fd0d1c8b23c8d9ac03d8bf66cd2f5fa0",
     "live_verification_still_required_for_setup": true
   },
-  "github_release": {"published": false, "status": "pending_separate_creation"},
+  "github_release": {
+    "published": true,
+    "status": "public_assets_verified",
+    "url": "https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.2",
+    "release_id": 415167025,
+    "published_at": "2026-10-16T16:35:12Z",
+    "draft": false,
+    "prerelease": false,
+    "asset_bytes_verified": true,
+    "asset_bytes_equal_official_pypi_downloads": true,
+    "embedded_source_manifests_verified": true,
+    "body_matches_reviewed_notes": true,
+    "assets": {
+      "papergraph_mcp-1.2.2-py3-none-any.whl": {
+        "id": 647947474,
+        "bytes": 181071,
+        "sha256": "7525ef81a49f8f0b1d639d4f1656df0f406cc926f2164e6f9f7dbaf62fdc0dc9"
+      },
+      "papergraph_mcp-1.2.2.tar.gz": {
+        "id": 647947333,
+        "bytes": 1186215,
+        "sha256": "06bfa9369d7debae9381418bd14914c9011a728e8a18e9100c2d30805ea8adad"
+      }
+    }
+  },
   "immutable_release_files_rewritten": false
 }

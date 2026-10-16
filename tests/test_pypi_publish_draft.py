@@ -13,8 +13,8 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_SHA = '8da46bb3c95dd83b31815da6d33f636ea67ed2bb'
-SOURCE_DIGEST = '704f2a4dc699cd44e337f51d3733e7fe9f9334cc9e4ffad797e7aa49ec4cae7c'
+SOURCE_SHA = '663c7c4aec6f05673a99c30ea7d5d71f1d84f6a3'
+SOURCE_DIGEST = 'e92a0f3967fe24b9f236402877d6d6f86fe4bed195214ed9ab0467f761e72d0c'
 
 
 def validator():

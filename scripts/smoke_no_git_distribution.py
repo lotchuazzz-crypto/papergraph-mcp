@@ -11,8 +11,8 @@ import tempfile
 
 PUBLIC_REQUIREMENT = 'papergraph-mcp==1.2.2'
 PUBLIC_INDEX = 'https://pypi.org/simple'
-PUBLIC_SOURCE_SHA = '8da46bb3c95dd83b31815da6d33f636ea67ed2bb'
-PUBLIC_SOURCE_DIGEST = '704f2a4dc699cd44e337f51d3733e7fe9f9334cc9e4ffad797e7aa49ec4cae7c'
+PUBLIC_SOURCE_SHA = '663c7c4aec6f05673a99c30ea7d5d71f1d84f6a3'
+PUBLIC_SOURCE_DIGEST = 'e92a0f3967fe24b9f236402877d6d6f86fe4bed195214ed9ab0467f761e72d0c'
 
 
 def consumer_command(uvx, artifact=None, *, public_index=False):

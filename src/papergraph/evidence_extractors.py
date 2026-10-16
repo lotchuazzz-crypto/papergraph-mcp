@@ -46,6 +46,11 @@ class _PDFProofHeading:
 _SINGLE_PROOF_GOAL_RE = re.compile(
     r"(?:(?P<kind>Theorem|Lemma|Proposition|Corollary|Claim)\s+)?"
     r"(?P<number>[A-Za-z]?\d+(?:\.\d+)*|(?-i:[A-Z]))", re.I)
+_HEADING_GOAL = (
+    r"(?:(?:Theorems?|Lemmas?|Propositions?|Corollar(?:y|ies)|Claims?)\s+)?"
+    r"(?:[A-Za-z]?\d+(?:\.\d+)*|(?-i:[A-Z]))")
+_HEADING_GOALS_RE = re.compile(
+    _HEADING_GOAL + r"(?:\s*(?:[/,;&]|\band\b|\bor\b)\s*" + _HEADING_GOAL + r")*", re.I)
 
 
 def _named_heading_boundary(line: str, start: int) -> tuple[int, int, str] | None:
@@ -125,7 +130,7 @@ def _pdf_proof_heading(line: str) -> _PDFProofHeading | None:
         if boundary is None:
             return _PDFProofHeading(len(line))
         stop, body_start, plain_goal = boundary
-        if _SINGLE_PROOF_GOAL_RE.fullmatch(plain_goal.strip()) is None:
+        if _HEADING_GOALS_RE.fullmatch(plain_goal.strip()) is None:
             return _PDFProofHeading(len(line))
         goal = _SINGLE_PROOF_GOAL_RE.fullmatch(line[start:stop].strip())
         # Alternatives after an apparent delimiter are still ambiguous goals.

@@ -104,3 +104,13 @@ def test_annotated_heading_keeps_distinct_real_body_citation(annotation):
     assert [mention.raw_text for mention in doc.local_result_mentions] == ['Lemma 1.1']
     assert [mention.raw_text for mention in doc.citation_mentions] == ['[10, Theorem 4.1]']
     assert [mention.raw_text for mention in doc.external_result_mentions] == ['[10, Theorem 4.1]']
+
+
+@pytest.mark.parametrize('goals', ['Theorem 2.1 and Theorem 3.1', 'Theorem 2.1/3.1',
+                                 'Theorems 2.1 and 3.1'])
+def test_known_compound_heading_keeps_distinct_real_body_evidence(goals):
+    doc = document(f'Proof of {goals}. Apply [10, Theorem 4.1] and Lemma 1.1. QED.')
+    assert doc.proofs[-1].result_id is None
+    assert [mention.raw_text for mention in doc.local_result_mentions] == ['Lemma 1.1']
+    assert [mention.raw_text for mention in doc.citation_mentions] == ['[10, Theorem 4.1]']
+    assert [mention.raw_text for mention in doc.external_result_mentions] == ['[10, Theorem 4.1]']

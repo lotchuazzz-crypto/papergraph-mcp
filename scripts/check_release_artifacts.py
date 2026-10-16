@@ -11,11 +11,11 @@ import tarfile
 import zipfile
 
 
-SOURCE_SHA = 'd4c232efb4736eb37fad8975708abd773b0e90d7'
-SOURCE_DIGEST = '9998e8b65d75c9b500edf5bb2b04f664f242241ad9d8a926b2372af6e4beff6f'
+SOURCE_SHA = '8da46bb3c95dd83b31815da6d33f636ea67ed2bb'
+SOURCE_DIGEST = '704f2a4dc699cd44e337f51d3733e7fe9f9334cc9e4ffad797e7aa49ec4cae7c'
 APPROVED_HASHES = {
-    'papergraph_mcp-1.2.2-py3-none-any.whl': 'df8c699faadcf9b313816022242ad6aab7f145305b0657ca2d7f5e137300b9c2',
-    'papergraph_mcp-1.2.2.tar.gz': '5e7cb363d57e0caae7b3afb025059e21e4628d7e9acd9b31a779926b99711f8e',
+    'papergraph_mcp-1.2.2-py3-none-any.whl': '28b2e31ad0200f73911c79c9ca5937fd732ebe8292013ccd58d36d33990a927b',
+    'papergraph_mcp-1.2.2.tar.gz': '7ca61a9b601fa54e57e7e496f3f46bce312d4070a88e895c0d28563e76b29e4e',
 }
 EXPECTED_IDENTITY = {
     'schema_version': 1, 'source_commit': SOURCE_SHA,

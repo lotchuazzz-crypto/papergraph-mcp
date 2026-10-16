@@ -20,9 +20,20 @@ papergraph-mcp doctor
 
 If you do not use an MCP-capable client yet, run PaperGraph from the CLI:
 
+This checkout prepares 1.2.2. Run the read-only onboarding checker first;
+ordinary installation remains blocked until its official-index acceptance.
+After that gate, the default route needs uv/uvx and no Git:
+
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.1 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.1 papergraph-mcp doctor
+uvx --from papergraph-mcp==1.2.2 papergraph-mcp --version
+uvx --from papergraph-mcp==1.2.2 papergraph-mcp doctor
+```
+
+Optional Git source requires Git and a verified exact release tag:
+
+```powershell
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.2 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.2 papergraph-mcp doctor
 ```
 
 ## Workspace Hygiene
@@ -261,4 +272,4 @@ workspace_create_reading_queue(result_id=<target result id>)
 workspace_create_reading_session(paper_id=<paper id>)
 ```
 
-PaperGraph does not verify proofs, infer hidden prerequisites, perform semantic theorem matching, bypass paywalls, or perform unlimited crawling. The standalone scholarly resolver only imports or records a target when a candidate is explicitly applied. v1.1.5 additionally offers [bounded reference expansion](bounded-reference-expansion.md): an explicitly approved finite policy permits unique strong imports, with ambiguous branches waiting for review. The pinned install commands target v1.2.1 after its exact tag is verified; use `uv run papergraph-mcp` to test this checkout.
+PaperGraph does not verify proofs, infer hidden prerequisites, perform semantic theorem matching, bypass paywalls, or perform unlimited crawling. The standalone scholarly resolver only imports or records a target when a candidate is explicitly applied. v1.1.5 additionally offers [bounded reference expansion](bounded-reference-expansion.md): an explicitly approved finite policy permits unique strong imports, with ambiguous branches waiting for review. The prepared install commands target v1.2.2 after version-specific index acceptance or exact Git tag verification; use `uv run papergraph-mcp` to test this checkout.

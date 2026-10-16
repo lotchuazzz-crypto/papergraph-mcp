@@ -51,11 +51,11 @@ def test_verified_index_launch_uses_the_versioned_package_not_git(monkeypatch):
 
     def runner(command, **kwargs):
         calls.append(command)
-        return subprocess.CompletedProcess(command, 0, 'papergraph-mcp 1.2.1\n', '')
+        return subprocess.CompletedProcess(command, 0, 'papergraph-mcp 1.2.2\n', '')
 
     result = module.validate_launch(runner=runner, install_source='pypi')
     assert result['ok'] is True
-    assert calls == [['uvx', '--from', 'papergraph-mcp==1.2.1', 'papergraph-mcp', '--version']]
+    assert calls == [['uvx', '--from', 'papergraph-mcp==1.2.2', 'papergraph-mcp', '--version']]
 
 
 def test_preparation_workflow_cannot_publish_or_request_oidc():
@@ -73,7 +73,7 @@ def test_preparation_workflow_cannot_publish_or_request_oidc():
     assert 'id-token' not in text
     assert 'secrets.' not in text
     assert not re.search(r'\b(?:uv\s+publish|twine\s+upload)\b', text)
-    assert 'd4c232efb4736eb37fad8975708abd773b0e90d7' in text
+    assert '40d2daf8fd0d1c8b23c8d9ac03d8bf66cd2f5fa0' in text
     ci = yaml.load((ROOT / '.github/workflows/ci.yml').read_text(encoding='utf-8'), Loader=yaml.BaseLoader)
     assert ci['jobs']['pypi-preparation']['uses'] == './.github/workflows/pypi-preparation.yml'
 
@@ -107,13 +107,15 @@ def test_default_index_readiness_does_not_require_git(monkeypatch):
     assert module.inspect_prerequisites(locator=paths.get, install_source='git')['ready_for_smoke_test'] is False
 
 
-def test_explicit_git_launch_preserves_tag_source():
+def test_explicit_verified_git_launch_preserves_tag_source():
     module = checker()
     calls = []
     def runner(command, **kwargs):
         calls.append(command)
-        return subprocess.CompletedProcess(command, 0, 'papergraph-mcp 1.2.1\n', '')
-    assert module.validate_launch(runner=runner, install_source='git')['ok'] is True
+        return subprocess.CompletedProcess(command, 0, 'papergraph-mcp 1.2.2\n', '')
+    verification = module.inspect_git_release('a' * 40, runner=lambda command, **kwargs:
+        subprocess.CompletedProcess(command, 0, f'{"a" * 40}\trefs/tags/v1.2.2\n', ''))
+    assert module.validate_launch(runner=runner, install_source='git', git_release_verification=verification)['ok'] is True
     assert calls == [['uvx', '--from', module.PAPERGRAPH_SOURCE, 'papergraph-mcp', '--version']]
 
 

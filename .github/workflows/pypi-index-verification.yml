@@ -1,4 +1,4 @@
-name: Verify public PyPI 1.2.1 without Git
+name: Verify public PyPI 1.2.2 without Git
 
 on:
   workflow_dispatch:
@@ -37,5 +37,5 @@ jobs:
               export UV_PYTHON_DOWNLOADS=never
               test ! -e "$UV_CACHE_DIR"
               uv run --no-project --no-config --no-env-file --default-index https://pypi.org/simple \
-                --with papergraph-mcp==1.2.1 python /checks/smoke_no_git_distribution.py --public-index
+                --with papergraph-mcp==1.2.2 python /checks/smoke_no_git_distribution.py --public-index
             '

@@ -1,0 +1,2 @@
+# Keep source bytes and embedded build identities reproducible on Windows/Linux.
+* text=auto eol=lf

@@ -13,8 +13,8 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_SHA = 'd4c232efb4736eb37fad8975708abd773b0e90d7'
-SOURCE_DIGEST = '9998e8b65d75c9b500edf5bb2b04f664f242241ad9d8a926b2372af6e4beff6f'
+SOURCE_SHA = '40d2daf8fd0d1c8b23c8d9ac03d8bf66cd2f5fa0'
+SOURCE_DIGEST = '6298a1f30921ccf85c38b1b3e82324d2e58cc7dd2f388bd24b9e8afc5b4ec724'
 
 
 def validator():
@@ -26,21 +26,21 @@ def validator():
     return module
 
 
-def candidate(tmp_path, kind, *, source=SOURCE_SHA, dirty=False, version='1.2.1'):
+def candidate(tmp_path, kind, *, source=SOURCE_SHA, dirty=False, version='1.2.2'):
     manifest = json.dumps({'schema_version': 1, 'source_commit': source,
                            'source_tree_sha256': SOURCE_DIGEST,
                            'tracked_dirty': dirty, 'origin': 'git_checkout'}).encode()
     metadata = f'Metadata-Version: 2.3\nName: papergraph-mcp\nVersion: {version}\n'.encode()
     if kind == 'wheel':
-        path = tmp_path / 'papergraph_mcp-1.2.1-py3-none-any.whl'
+        path = tmp_path / 'papergraph_mcp-1.2.2-py3-none-any.whl'
         with zipfile.ZipFile(path, 'w') as archive:
             archive.writestr('papergraph/_build_info.json', manifest)
-            archive.writestr('papergraph_mcp-1.2.1.dist-info/METADATA', metadata)
+            archive.writestr('papergraph_mcp-1.2.2.dist-info/METADATA', metadata)
     else:
-        path = tmp_path / 'papergraph_mcp-1.2.1.tar.gz'
+        path = tmp_path / 'papergraph_mcp-1.2.2.tar.gz'
         with tarfile.open(path, 'w:gz') as archive:
             for name, data in [('src/papergraph/_build_info.json', manifest), ('PKG-INFO', metadata)]:
-                info = tarfile.TarInfo('papergraph_mcp-1.2.1/' + name)
+                info = tarfile.TarInfo('papergraph_mcp-1.2.2/' + name)
                 info.size = len(data)
                 archive.addfile(info, io.BytesIO(data))
     return path, hashlib.sha256(path.read_bytes()).hexdigest()

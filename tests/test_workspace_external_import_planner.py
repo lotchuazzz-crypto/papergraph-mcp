@@ -87,8 +87,9 @@ def test_result_plan_groups_external_mentions_by_arxiv(tmp_path: Path):
             "citation_mention",
             "bibliography_entry",
         }
-        assert plan["summary"]["blocked_count"] == 1
-        assert plan["blocked"][0]["reason"] == "missing_arxiv_id"
+        assert plan["summary"]["blocked_count"] == 0
+        assert plan["unresolved_local_mentions"][0]["raw_text"] == "Lemma 9.9"
+        assert plan['unresolved_local_mentions'][0]['classification'] == 'internal_unresolved'
     finally:
         workspace.close()
 
@@ -147,7 +148,8 @@ def test_queue_plan_uses_saved_queue_caution_items(tmp_path: Path):
             "recursive": None,
         }
         assert plan["summary"]["candidate_count"] == 1
-        assert plan["summary"]["blocked_count"] == 1
+        assert plan["summary"]["blocked_count"] == 0
+        assert plan["unresolved_local_mentions"][0]["raw_text"] == "Lemma 9.9"
         assert all(
             evidence["source"].startswith(("reading_queue", "result"))
             for candidate in plan["candidates"]
@@ -225,8 +227,8 @@ def test_result_plan_preserves_unresolved_stop_paper_id(tmp_path: Path, monkeypa
                 "unresolved_stops": [
                     {
                         "result_id": external_result["result_id"],
-                        "kind": "unresolved_local_results",
-                        "mentions": [],
+                        "kind": "local_result_mentions",
+                        "mentions": [{"mention_id": "internal:missing", "paper_id": "arxiv:dep", "raw_text": "Lemma 9.9"}],
                     }
                 ],
             },
@@ -234,7 +236,8 @@ def test_result_plan_preserves_unresolved_stop_paper_id(tmp_path: Path, monkeypa
 
         plan = workspace.plan_external_imports_for_result(result_id)
 
-        assert plan["blocked"][0]["evidence"][0]["paper_id"] == "arxiv:dep"
+        assert plan["unresolved_local_mentions"][0]["paper_id"] == "arxiv:dep"
+        assert not plan["blocked"]
     finally:
         workspace.close()
 

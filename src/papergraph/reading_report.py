@@ -291,7 +291,8 @@ def _render_external_risks(external_risks: dict[str, Any]) -> list[str]:
     lines = [
         f"- Import candidates: {summary.get('import_candidate_count', 0)}",
         f"- Already imported: {summary.get('already_imported_count', 0)}",
-        f"- Blocked items: {summary.get('blocked_count', 0)}",
+        f"- Blocked items: {summary.get('unique_blocked_targets', summary.get('blocked_count', 0))} (unique targets)",
+        f"- Blocker records: {summary.get('blocked_count', 0)}; evidence records: {summary.get('evidence_records', 0)}",
     ]
     candidates = external_risks.get("candidates", [])
     if candidates:
@@ -322,12 +323,14 @@ def _render_external_risks(external_risks: dict[str, Any]) -> list[str]:
     for item in already_imported:
         lines.append(f"- Already imported: `{item.get('paper_id')}`")
 
-    blocked = external_risks.get("blocked", [])
+    blocked = external_risks.get("blocked_groups", external_risks.get("blocked", []))
     for item in blocked:
         lines.append(
             "- Blocked: "
             f"{_text(item.get('reason') or item.get('message') or _compact_json(item))}"
         )
+        if item.get('blocked_ids'):
+            lines.append(f"  - Original blocker IDs: {_compact_json(item['blocked_ids'])}")
     return lines
 
 

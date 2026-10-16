@@ -1,5 +1,14 @@
 # PyPI publication and installation
 
+## v1.2.2 preparation — unpublished
+
+The current checkout prepares 1.2.2 for independent acceptance, with
+`publication_verified=false`. Follow the [1.2.2 release gates](v1.2.2-release-notes.md)
+and [current checklist](v1-release-checklist.md). Both the PyPI and optional Git
+recipes require their version-specific publication/tag checks. Prior acceptance
+does not enable this version. Protected publishing and exact source/artifact
+binding remain mandatory; no publication occurs during development.
+
 ## v1.2.1 published and verified
 
 Status checked 2026-10-16: [PyPI 1.2.1](https://pypi.org/project/papergraph-mcp/1.2.1/)
@@ -18,7 +27,7 @@ passed with Python 3.12.15, no Git, a fresh uvx cache and
 all passed, with clean R provenance. The resolved consumer image was
 `python@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258`.
 
-`PYPI_PUBLICATION_VERIFIED` is now true for 1.2.1. It records this completed
+`PYPI_PUBLICATION_VERIFIED` was enabled for 1.2.1. It recorded this completed
 acceptance, not live index availability. The default commands are:
 
 ```text

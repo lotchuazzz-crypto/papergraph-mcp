@@ -14,13 +14,24 @@ def with_pdf_coverage(workspace, payload, kind, spans):
     source = workspace.get_source_slice(**arguments)
     coverage = {
         'status': 'unverified', 'complete': False, 'may_be_truncated': True,
-        'basis': 'bounded_pdf_text_blocks', 'captured_span_count': len(spans),
+        'basis': ('first_line_pdf_excerpt' if payload.get('method', '').startswith('pdf_proof_first_line_')
+                  else 'bounded_pdf_text_blocks'), 'captured_span_count': len(spans),
         'completeness_verified': False,
         'mathematical_layout_reconstructed': False,
         'continuation_source': {'tool': 'workspace_get_source_slice', 'arguments': arguments},
+        'source_reading': source['source_reading'],
+        'association_boundary': ('explicit_terminal_marker' if payload.get('method') in
+                                 ('pdf_proof_explicit_end', 'pdf_proof_first_line_explicit_end')
+                                 else 'unverified_excerpt'),
         'adjacent_after': [{key: row[key] for key in ('span_id', 'page', 'block_index')}
                            for row in source['slices'] if row['role'] == 'after'],
         'adjacent_context_is_proof_evidence': False,
         'warning': PDF_COVERAGE_WARNING,
     }
+    if kind == 'proof':
+        coverage['automatic_ownership_policy'] = (
+            'heading_line_only_no_automatic_continuation'
+            if payload.get('method', '').startswith('pdf_proof_first_line_')
+            else 'legacy_stored_excerpt_unverified')
+        coverage['raw_continuation_is_proof_evidence'] = False
     return {**payload, kind + '_complete': False, 'text_coverage': coverage}

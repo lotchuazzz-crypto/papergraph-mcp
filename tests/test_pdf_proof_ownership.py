@@ -114,6 +114,18 @@ def test_only_explicit_proof_word_can_start_automatic_evidence(word):
     assert document.local_result_mentions == ()
 
 
+@pytest.mark.parametrize('named', [False, True])
+def test_generic_proof_cannot_borrow_owner_across_unrelated_source_blocks(named):
+    from tests.test_evidence_extractors import span
+    from papergraph.evidence_extractors import build_pdf_evidence_document
+
+    heading = 'Proof of Theorem 2.1.' if named else 'Proof.'
+    document = build_pdf_evidence_document('local:paper-a', 'paper.pdf', (
+        span(0, 'Theorem 2.1. Assertion.'), span(1, 'An unrelated new discussion.'),
+        span(2, heading + ' Apply Lemma 1.1. QED.')))
+    assert document.proofs[0].result_id == ('local:paper-a::pdf:theorem:2.1' if named else None)
+
+
 def test_fragment_and_raw_locators_survive_restart_without_writes(tmp_path):
     path = tmp_path / 'restart.pdf'
     write_pdf(path, ['Proof. Direct. QED.\nUnrelated discussion uses Lemma 1.1.'])

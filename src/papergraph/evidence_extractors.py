@@ -259,7 +259,8 @@ def extract_proof_blocks(
             for preceding_index in range(span_index - 1, -1, -1):
                 result = result_by_span.get(preceding_index)
                 if result is not None:
-                    if result.result_id not in already_associated:
+                    if (result.result_id not in already_associated
+                            and max(result.span_indices) + 1 == span_index):
                         result_id = result.result_id
                         association_basis = "immediately_follows_result"
                         association_confidence = 0.75

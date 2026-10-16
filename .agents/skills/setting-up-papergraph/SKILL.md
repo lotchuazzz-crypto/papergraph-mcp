@@ -156,7 +156,10 @@ Use its continuation-source locator before interpreting truncated text. Follow
 raw source reading (limit 1..50); source-slice `context` is 0..5. Raw blocks do
 not assert proof ownership. New PDF proof evidence is limited to the first
 physical line carrying an explicit proof heading. It does not automatically
-join later lines or blocks or use their QED to establish ownership. The first
+join later lines or blocks or use their QED to establish ownership. An unnamed
+Proof heading requires a directly preceding result span; intervening
+unattributed source text leaves the owner unknown, unless the heading explicitly
+names one unique result. The first
 marker clips that line; an ambiguous marker mention stops without certifying
 closure. Fragment offsets are block-relative; the bbox identifies the raw
 container. `automatic_ownership_policy` distinguishes this policy from legacy

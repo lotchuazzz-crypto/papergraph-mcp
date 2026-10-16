@@ -41,6 +41,9 @@ Raw blocks remain source context. For new PDF imports, automatic proof evidence
 is limited to the **first physical line** carrying an explicit `Proof…` heading
 (at most 12,000 characters; oversized lines retain the heading only). It does
 not automatically join later lines or blocks, even when they contain a QED.
+An unnamed Proof heading also needs a directly preceding result span; intervening
+unattributed text leaves its owner unknown. A uniquely named proof can identify
+its result explicitly.
 The first marker on that line clips the excerpt; ambiguous mentions of “QED”
 stop the excerpt without certifying closure or borrowing a later marker.
 Exact block-relative offsets identify a proof fragment; its bounding box still

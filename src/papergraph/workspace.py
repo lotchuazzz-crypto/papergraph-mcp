@@ -3905,7 +3905,7 @@ class Workspace(ReferenceExpansionMixin):
             ).fetchall()
             if not rows and selector_value.startswith('source-block:'):
                 from papergraph.source_navigation import locate
-                return locate(self, selector_value)
+                return self._raw_source_anchors(locate(self, selector_value))
         elif selector_kind == "result_id":
             self._ensure_result_exists(selector_value)
             rows = self._connection.execute(
@@ -3946,20 +3946,26 @@ class Workspace(ReferenceExpansionMixin):
         else:
             raise ValueError(f"Invalid source slice selector: {selector_kind!r}")
         records = [_source_slice_record_from_row(row) for row in rows]
+        return self._raw_source_anchors(records)
+
+    def _raw_source_anchors(self, records: list[dict]) -> list[dict]:
+        """Project derived evidence locators onto their original PDF container."""
         anchors = []
         for record in records:
-            if record['method'] != 'pdf_proof_fragment':
+            if record['source_type'] != 'pdf' or record['method'] not in {
+                    'pdf_proof_fragment', 'pdf_bibliography_block'}:
                 anchors.append(record)
                 continue
-            # Proof evidence may cover a strict substring of its raw block.
-            # Source context/navigation still starts at that complete container.
+            # Derived proof/bibliography evidence remains directly accessible;
+            # raw context/navigation visits the complete container exactly once.
             containers = [row for row in self._source_slice_rows_for_source(
                 record['paper_id'], record['source_type'], record['source_ref'])
                 if row['page'] == record['page'] and row['block_index'] == record['block_index']
-                and row['method'] != 'pdf_bibliography_block'
-                and (row['start_offset'] or 0) <= record['start_offset']
+                and (row['start_offset'] or 0) <= (record['start_offset'] or 0)
                 and (row['end_offset'] if row['end_offset'] is not None else
-                     (row['start_offset'] or 0) + len(row['text'])) >= record['end_offset']]
+                     (row['start_offset'] or 0) + len(row['text'])) >=
+                    (record['end_offset'] if record['end_offset'] is not None else
+                     (record['start_offset'] or 0) + len(record['text']))]
             if len(containers) != 1:
                 raise KeyError(f"Unknown or ambiguous raw container for fragment: {record['span_id']}")
             anchors.extend(containers)
@@ -3980,7 +3986,8 @@ class Workspace(ReferenceExpansionMixin):
                 method, confidence
             FROM source_spans
             WHERE paper_id = ? AND source_type = ? AND source_ref = ?
-                AND method != 'pdf_proof_fragment'
+                AND (source_type != 'pdf' OR method NOT IN
+                     ('pdf_proof_fragment', 'pdf_bibliography_block'))
             ORDER BY page, block_index, id
             """,
             (paper_id, source_type, source_ref),

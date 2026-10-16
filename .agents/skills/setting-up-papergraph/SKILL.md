@@ -159,7 +159,10 @@ physical line carrying an explicit proof heading. It does not automatically
 join later lines or blocks or use their QED to establish ownership. An unnamed
 Proof heading requires a directly preceding result span; intervening
 unattributed source text leaves the owner unknown, unless the heading explicitly
-names one unique result. The first
+names one unique result. The complete heading must name a single goal; compound,
+alternative or unsupported goals stay unowned and never use proximity fallback.
+Heading goals are not proof-body references. Bibliography entry evidence remains
+accessible by ID while raw navigation returns its original container once. The first
 marker clips that line; an ambiguous marker mention stops without certifying
 closure. Fragment offsets are block-relative; the bbox identifies the raw
 container. `automatic_ownership_policy` distinguishes this policy from legacy

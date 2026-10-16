@@ -43,7 +43,10 @@ is limited to the **first physical line** carrying an explicit `Proof…` headin
 not automatically join later lines or blocks, even when they contain a QED.
 An unnamed Proof heading also needs a directly preceding result span; intervening
 unattributed text leaves its owner unknown. A uniquely named proof can identify
-its result explicitly.
+its result explicitly. The complete heading must name exactly one goal; compound,
+alternative or unsupported goals keep an unknown owner, without proximity fallback.
+All heading goals are excluded from proof-body reference extraction. Derived
+bibliography entries retain their evidence IDs but do not repeat raw blocks.
 The first marker on that line clips the excerpt; ambiguous mentions of “QED”
 stop the excerpt without certifying closure or borrowing a later marker.
 Exact block-relative offsets identify a proof fragment; its bounding box still

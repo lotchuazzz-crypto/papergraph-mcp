@@ -39,7 +39,11 @@ New imports retain only the first physical line carrying an explicit proof
 heading as automatic proof evidence. The importer does not automatically join
 later lines or blocks. An unnamed heading requires a directly preceding result span, while a uniquely
 named heading can identify its owner explicitly. Intervening unattributed text
-leaves the owner unknown. The first terminal-marker position clips the line;
+leaves the owner unknown. Only a complete single-goal heading can explicitly
+name its owner. Compound, alternative and unsupported goals stay unowned without
+proximity fallback; heading goals never become proof-body references. Derived
+bibliography entries keep evidence access but do not duplicate raw pagination.
+The first terminal-marker position clips the line;
 ambiguous QED mentions stop without claiming closure. Exact block-relative
 fragment offsets remain auditable, and source navigation returns the complete
 raw block. Inspect `automatic_ownership_policy`; legacy stored excerpts stay

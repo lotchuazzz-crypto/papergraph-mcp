@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import asdict, replace
+from dataclasses import asdict, dataclass, replace
 
 from papergraph.arxiv import InvalidArxivIdError, normalize_arxiv_id
 from papergraph.author_correspondence import declared_target, RELATION
@@ -33,6 +33,59 @@ PROOF_RE = re.compile(
     r"(?P<number>[A-Za-z]?(?:\d+(?:\.\d+)*|[A-Z]))(?![\w.]*\w))?\.?\s*(?P<body>.*)$",
     re.I,
 )
+
+
+@dataclass(frozen=True)
+class _PDFProofHeading:
+    body_start: int
+    unnamed: bool = False
+    kind: str | None = None
+    number: str | None = None
+
+
+_SINGLE_PROOF_GOAL_RE = re.compile(
+    r"(?:(?P<kind>Theorem|Lemma|Proposition|Corollary|Claim)\s+)?"
+    r"(?P<number>[A-Za-z]?\d+(?:\.\d+)*|(?-i:[A-Z]))", re.I)
+
+
+def _pdf_proof_heading(line: str) -> _PDFProofHeading | None:
+    """Parse the entire heading, never a first-goal prefix of a goal list.
+
+    The same boundary controls ownership and every proof-body mention extractor.
+    Unsupported or compound goal syntax stays visible but cannot acquire an
+    owner by proximity. A decimal point is not a heading/body delimiter.
+    """
+    prefix = re.match(r"^Proof\b", line, re.I)
+    if prefix is None:
+        return None
+    tail = line[prefix.end():]
+    named = re.match(r"\s+of\b\s*", tail, re.I)
+    if named is not None:
+        start = prefix.end() + named.end()
+        delimiter = re.search(r"\.(?=\s|$)|:", line[start:])
+        stop = start + delimiter.start() if delimiter else len(line)
+        body_start = start + delimiter.end() if delimiter else len(line)
+        goal = _SINGLE_PROOF_GOAL_RE.fullmatch(line[start:stop].strip())
+        # Alternatives after an apparent delimiter are still ambiguous goals.
+        alternative = re.match(r"\s*(?:(?:and|or)\b|[/&]|\(\s*(?:and|or)\b)",
+                               line[body_start:], re.I)
+        if goal is not None and alternative is None:
+            return _PDFProofHeading(body_start, kind=goal.group('kind'),
+                                    number=goal.group('number'))
+        return _PDFProofHeading(body_start if alternative is None else len(line))
+    generic = re.match(r"\s*[.:]\s*", tail)
+    if generic is not None:
+        return _PDFProofHeading(prefix.end() + generic.end(), unnamed=True)
+    if not tail.strip():
+        return _PDFProofHeading(prefix.end(), unnamed=True)
+    return _PDFProofHeading(len(line))
+
+
+def _proof_body(proof: ProofEvidence) -> str:
+    if not proof.method.startswith('pdf_proof_first_line_'):
+        return proof.text
+    heading = _pdf_proof_heading(proof.text)
+    return proof.text[heading.body_start:] if heading is not None else ''
 
 _BIBLIOGRAPHY_ENTRY_RE = re.compile(r"^\[(?P<label>[^\]]+)\]\s*(?P<body>.+)$")
 _ARXIV_RE = re.compile(
@@ -234,9 +287,9 @@ def extract_proof_blocks(
     proofs: list[ProofEvidence] = []
 
     for span_index, span in enumerate(spans[:limit]):
-        text = _normalized_text(span.text)
-        match = PROOF_RE.match(text)
-        if match is None:
+        line = span.text.lstrip().splitlines()[0] if span.text.strip() else ''
+        heading = _pdf_proof_heading(line)
+        if heading is None:
             continue
 
         result_id: str | None = None
@@ -244,18 +297,18 @@ def extract_proof_blocks(
         association_confidence = 0.0
         proof_id = f"{paper_id}::proof:{len(proofs) + 1}"
 
-        if match.group("number"):
-            if match.group("kind"):
-                result = _resolve_named_result(lookup, match.group("kind"), match.group("number"))
+        if heading.number:
+            if heading.kind:
+                result = _resolve_named_result(lookup, heading.kind, heading.number)
             else:
                 matches = [r for r in results if r.visible_number is not None
-                           and r.visible_number.casefold() == match.group("number").casefold()]
+                           and r.visible_number.casefold() == heading.number.casefold()]
                 result = matches[0] if len(matches) == 1 else None
             if result is not None:
                 result_id = result.result_id
                 association_basis = "proof_heading_names_result"
                 association_confidence = 0.95
-        elif not re.match(r"^Proof\s+of\b", text, re.I):
+        elif heading.unnamed:
             for preceding_index in range(span_index - 1, -1, -1):
                 result = result_by_span.get(preceding_index)
                 if result is not None:
@@ -305,14 +358,14 @@ def _proof_first_line_excerpt(span):
     newline = re.search(r'[\r\n]', span.text[start:])
     end = start + newline.start() if newline else len(span.text)
     line = span.text[start:end]
-    heading = PROOF_RE.match(line)
+    heading = _pdf_proof_heading(line)
     if heading is None:
         return '', start, start, False
     # A second explicit proof heading on this same line is not a continuation.
-    another = _ANOTHER_PROOF_RE.search(line, heading.start('body'))
+    another = _ANOTHER_PROOF_RE.search(line, heading.body_start)
     boundary = another.start() if another else len(line)
     if len(line) > 12000:
-        boundary = heading.start('body')
+        boundary = heading.body_start
     marker = _PROOF_TERMINATOR_RE.search(line, 0, boundary)
     terminated = False
     if marker:
@@ -455,6 +508,7 @@ def extract_local_result_mentions(
     mentions: list[LocalResultMentionEvidence] = []
 
     for proof in proofs:
+        proof = replace(proof, text=_proof_body(proof))
         excluded_ranges = _local_mention_excluded_ranges(proof.text)
         for match in _LATEX_REF_RE.finditer(proof.text):
             raw_text = match.group(0)
@@ -662,6 +716,7 @@ def extract_citation_mentions(
     mentions: list[CitationMentionEvidence] = []
 
     for proof in proofs:
+        proof = replace(proof, text=_proof_body(proof))
         tex_matches = list(tex_citation_re.finditer(proof.text))
         matches = [(m, [k.strip() for k in m.group('keys').split(',') if k.strip()],
                     'proof_latex_citation') for m in tex_matches

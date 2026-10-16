@@ -85,7 +85,9 @@ def _proof_body(proof: ProofEvidence) -> str:
     if not proof.method.startswith('pdf_proof_first_line_'):
         return proof.text
     heading = _pdf_proof_heading(proof.text)
-    return proof.text[heading.body_start:] if heading is not None else ''
+    # Existing extractor callers may supply body-only ProofEvidence. There is
+    # no heading role to exclude in that case; retain their original evidence.
+    return proof.text[heading.body_start:] if heading is not None else proof.text
 
 _BIBLIOGRAPHY_ENTRY_RE = re.compile(r"^\[(?P<label>[^\]]+)\]\s*(?P<body>.+)$")
 _ARXIV_RE = re.compile(

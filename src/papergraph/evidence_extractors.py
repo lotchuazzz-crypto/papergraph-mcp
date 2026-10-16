@@ -48,6 +48,65 @@ _SINGLE_PROOF_GOAL_RE = re.compile(
     r"(?P<number>[A-Za-z]?\d+(?:\.\d+)*|(?-i:[A-Z]))", re.I)
 
 
+def _named_heading_boundary(line: str, start: int) -> tuple[int, int, str] | None:
+    """Find top-level punctuation, retaining a checkable unannotated goal.
+
+    Parentheses, brackets, braces and quotes are heading regions until closed;
+    their punctuation cannot introduce body evidence. Mismatches, unfinished
+    structures and unsupported quote syntax have no reliable body boundary.
+    The caller also checks the remaining goal grammar, so an abbreviation in
+    unsupported top-level text cannot certify a boundary merely by ending in a
+    period. No vocabulary of annotation abbreviations is needed.
+    """
+    pairs = {'(': ')', '[': ']', '{': '}', '（': '）', '【': '】'}
+    quotes = {'"': '"', "'": "'", '“': '”', '‘': '’', '«': '»', '‹': '›'}
+    stack: list[str] = []
+    plain: list[str] = []
+    quote: str | None = None
+    escaped = False
+    for index in range(start, len(line)):
+        char = line[index]
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == '\\':
+                escaped = True
+            elif char == quote:
+                stack.pop()
+                quote = None
+            continue
+        # An apostrophe inside a word is not an opening quotation mark.
+        apostrophe = (char in {"'", '’'} and index > start and index + 1 < len(line)
+                      and line[index - 1].isalnum() and line[index + 1].isalnum())
+        if char in quotes and not apostrophe:
+            if index > start and line[index - 1] == '\\':
+                return None
+            if not stack:
+                plain.append(' ')
+            quote = quotes[char]
+            stack.append(quote)
+        elif char in pairs:
+            if not stack:
+                plain.append(' ')
+            stack.append(pairs[char])
+        elif char in pairs.values() or (char in quotes.values() and not apostrophe):
+            if not stack or stack[-1] != char:
+                return None
+            stack.pop()
+            if not stack:
+                plain.append(' ')
+        elif char == '`':
+            return None
+        elif not stack:
+            if char == ':' or (char == '.' and (index + 1 == len(line)
+                                                or line[index + 1].isspace())):
+                return index, index + 1, ''.join(plain)
+            plain.append(char)
+    if stack:
+        return None
+    return len(line), len(line), ''.join(plain)
+
+
 def _pdf_proof_heading(line: str) -> _PDFProofHeading | None:
     """Parse the entire heading, never a first-goal prefix of a goal list.
 
@@ -62,9 +121,12 @@ def _pdf_proof_heading(line: str) -> _PDFProofHeading | None:
     named = re.match(r"\s+of\b\s*", tail, re.I)
     if named is not None:
         start = prefix.end() + named.end()
-        delimiter = re.search(r"\.(?=\s|$)|:", line[start:])
-        stop = start + delimiter.start() if delimiter else len(line)
-        body_start = start + delimiter.end() if delimiter else len(line)
+        boundary = _named_heading_boundary(line, start)
+        if boundary is None:
+            return _PDFProofHeading(len(line))
+        stop, body_start, plain_goal = boundary
+        if _SINGLE_PROOF_GOAL_RE.fullmatch(plain_goal.strip()) is None:
+            return _PDFProofHeading(len(line))
         goal = _SINGLE_PROOF_GOAL_RE.fullmatch(line[start:stop].strip())
         # Alternatives after an apparent delimiter are still ambiguous goals.
         alternative = re.match(r"\s*(?:(?:and|or)\b|[/&]|\(\s*(?:and|or)\b)",

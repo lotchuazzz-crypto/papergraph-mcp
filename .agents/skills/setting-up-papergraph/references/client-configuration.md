@@ -41,7 +41,9 @@ later lines or blocks. An unnamed heading requires a directly preceding result s
 named heading can identify its owner explicitly. Intervening unattributed text
 leaves the owner unknown. Only a complete single-goal heading can explicitly
 name its owner. Compound, alternative and unsupported goals stay unowned without
-proximity fallback; heading goals never become proof-body references. Derived
+proximity fallback; heading goals never become proof-body references. Nested
+brackets and quotations keep their punctuation inside the heading. Unbalanced
+structures or unsupported heading syntax leave body references unknown. Derived
 bibliography entries keep evidence access but do not duplicate raw pagination.
 The first terminal-marker position clips the line;
 ambiguous QED mentions stop without claiming closure. Exact block-relative

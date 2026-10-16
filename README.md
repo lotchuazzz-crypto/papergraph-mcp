@@ -45,7 +45,10 @@ An unnamed Proof heading also needs a directly preceding result span; intervenin
 unattributed text leaves its owner unknown. A uniquely named proof can identify
 its result explicitly. The complete heading must name exactly one goal; compound,
 alternative or unsupported goals keep an unknown owner, without proximity fallback.
-All heading goals are excluded from proof-body reference extraction. Derived
+All heading goals are excluded from proof-body reference extraction. Heading
+boundaries respect nested brackets and quotations; their internal punctuation
+cannot open the body. Unbalanced or unsupported heading syntax leaves body
+references unknown. Derived
 bibliography entries retain their evidence IDs but do not repeat raw blocks.
 The first marker on that line clips the excerpt; ambiguous mentions of “QED”
 stop the excerpt without certifying closure or borrowing a later marker.

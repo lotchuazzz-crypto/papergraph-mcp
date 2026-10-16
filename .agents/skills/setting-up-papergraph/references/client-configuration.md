@@ -12,7 +12,7 @@ PyPI 1.2.1 is published and its Git-free, clean-cache CLI/MCP/PDF launch has bee
 [verified](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)
 on Linux/Python 3.12.15. The version-specific publication_verified flag is true;
 this does not guarantee current index availability or any particular client environment.
-The GitHub v1.2.1 tag/Release remain a separate pending step as of 2026-10-16.
+The [GitHub v1.2.1 Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.1) was published on 2026-10-16; its tag targets package source R.
 Verify the exact tag target `d4c232efb4736eb37fad8975708abd773b0e90d7` before
 using its Git recipe. The PyPI recipes require uv/uvx and index access,
 without Git or a checkout. Optional Git-source installation uses

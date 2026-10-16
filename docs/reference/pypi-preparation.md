@@ -26,8 +26,10 @@ uvx --from papergraph-mcp==1.2.1 papergraph-mcp --version
 uvx --from papergraph-mcp==1.2.1 papergraph-mcp doctor
 ```
 
-GitHub tag/Release creation remains pending as of this check; tag `v1.2.1` must
-point to R. Do not rebuild, replace or re-upload the published packages. Client
+The [GitHub Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.1) is published,
+and tag `v1.2.1` was verified to point to R. It is neither a draft nor a
+prerelease and has no uploaded assets. Do not rebuild, replace or re-upload
+the published packages. Client
 configuration/restart and MCPVault listing changes remain separate actions.
 See [v1.2.1 notes](v1.2.1-release-notes.md) for package changes. Everything below
 documents the historical 1.2.0 release, including its installation commands.

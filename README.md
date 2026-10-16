@@ -35,8 +35,8 @@ See the [v1.2.1 notes](docs/reference/v1.2.1-release-notes.md) for compatibility
 [Official-index acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)
 passed on Linux/Python 3.12.15 without Git and with a fresh cache: CLI, stdio MCP
 and PDF reading all passed. The repository checker records this version-specific
-acceptance; it is not a live availability check. GitHub tag/Release creation
-remains a separate pending step as of 2026-10-16.
+acceptance; it is not a live availability check. The [GitHub Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.1)
+was published on 2026-10-16 with its tag pointing to the packaged source.
 
 ### v1.2.0: DOI inputs and dependency reading
 
@@ -154,7 +154,7 @@ PyPI startup. See [publication and no-Git acceptance](docs/reference/pypi-prepar
 
 Optional Git-source installation requires Git as well as uv/uvx. Before using
 these commands, verify that tag `v1.2.1` exists and targets packaged source
-`d4c232efb4736eb37fad8975708abd773b0e90d7`; the tag is still pending as of 2026-10-16:
+`d4c232efb4736eb37fad8975708abd773b0e90d7`; the published tag must retain this target:
 
 ```powershell
 uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.1 papergraph-mcp --version
@@ -230,7 +230,7 @@ For raw user requests, prefer `load_arxiv_request(input=...)` or `papergraph-mcp
 
 PaperGraph v1.2.1 提供保留原文证据的 evidence-first 数学论文阅读工作流：先看 Paper Map，再检查 proof 和 citation 证据，用 Evidence Triage 理解稀疏抽取结果，对被阻塞的外部引用做 scholarly metadata 搜索，然后把选定候选闭环到用户确认的 arXiv、本地 PDF、DOI、URL 或出版信息。
 
-v1.2.1 修复普通 TeX proof 引用、BibTeX 原文身份、嵌套 input 文件偏移、明确 PDF proof 标题关联，以及后续命令、只读规划和分页 schema。1.2.1 已在 PyPI 发布，并通过[官方索引、无 Git、全新缓存验收](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)：Linux/Python 3.12.15 的 CLI、stdio MCP 和 PDF 阅读均通过。仓库预检已记录该版本验收；这不是实时可用性检查。GitHub 标签和 Release 仍待单独创建。见 [v1.2.1 说明](docs/reference/v1.2.1-release-notes.md)。
+v1.2.1 修复普通 TeX proof 引用、BibTeX 原文身份、嵌套 input 文件偏移、明确 PDF proof 标题关联，以及后续命令、只读规划和分页 schema。1.2.1 已在 PyPI 发布，并通过[官方索引、无 Git、全新缓存验收](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)：Linux/Python 3.12.15 的 CLI、stdio MCP 和 PDF 阅读均通过。仓库预检已记录该版本验收；这不是实时可用性检查。[GitHub 标签和 Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.1)也已创建，标签指向实际打包源码。见 [v1.2.1 说明](docs/reference/v1.2.1-release-notes.md)。
 
 v1.2.0 改善首次使用诊断、DOI 公开正文入口和证明依赖阅读。[GitHub Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.0) 和 [PyPI 1.2.0](https://pypi.org/project/papergraph-mcp/1.2.0/) 已发布。根 DOI 论文仅在阅读策略允许且存在唯一合格公开 PDF 时直接导入；其他候选需要选择，新发现的外部引用仍先审阅。直接与递归依赖、共享前置结果、环和未知证据分别报告，不推断隐藏的数学关系。见 [v1.2.0 说明](docs/reference/v1.2.0-release-notes.md)。
 
@@ -263,7 +263,7 @@ uvx --from papergraph-mcp==1.2.1 papergraph-mcp doctor
 不加 `--smoke-test` 时只做只读检查，不下载或启动服务器；仓库新鲜度与 PyPI 启动就绪状态分开报告。
 已发布的 1.2.0 doctor 仍推荐 Git-source，并可能提示缺少 Git 上下文；该非致命提示不阻止 PyPI 启动。
 
-可选 Git-source 路径才需要 Git；先确认 `v1.2.1` 标签存在且指向实际打包源码 `d4c232efb4736eb37fad8975708abd773b0e90d7`（截至 2026-10-16 尚待创建），再将 `--from` 参数改为 `git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.1`；检查器使用 `--install-source git`。
+可选 Git-source 路径才需要 Git；先确认 `v1.2.1` 标签存在且指向实际打包源码 `d4c232efb4736eb37fad8975708abd773b0e90d7`（已创建，使用前仍应核对目标），再将 `--from` 参数改为 `git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.1`；检查器使用 `--install-source git`。
 修改 main README 不会同步更新 PyPI 1.2.0 已发布包中的旧描述；更正应随下一次单独批准的新版本发布，不移动 v1.2.0 标签或覆盖发布文件。
 
 如果你的 MCP client 使用 JSON 风格的 stdio server 配置，可以添加：

@@ -47,7 +47,7 @@ uv run papergraph-mcp <command> --help
 ## GitHub Release
 
 - PR49 is merged at configuration commit `6375d95ba9caf78b03d61f8ccfc468766dae1316`; [main CI](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38704231803) passed all seven jobs. Manual PyPI publication and official-index acceptance have completed.
-- Create tag `v1.2.1` from immutable package source R, `d4c232efb4736eb37fad8975708abd773b0e90d7`, not the configuration merge or closeout commit; never move an existing tag.
+- Tag `v1.2.1` and the [formal GitHub Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.1) are published. The tag was verified at immutable package source R, `d4c232efb4736eb37fad8975708abd773b0e90d7`, not the configuration merge or closeout commit; never move it. Release flags: draft=false, prerelease=false, no uploaded assets.
 - Record the exact source identity and two Linux-built artifact hashes before updating the fixed publisher guards. Preserve same-run immutable artifact IDs, strict metadata/manifest/hash checks and the protected `pypi` human deployment review.
 - Publish a formal GitHub release using an English introduction and Highlights, Compatibility, Verification and Install sections. Describe first use, DOI bodies and dependency reading with explicit coverage/identity boundaries.
 - Existing recent releases have no uploaded assets; do not add a new distribution channel.

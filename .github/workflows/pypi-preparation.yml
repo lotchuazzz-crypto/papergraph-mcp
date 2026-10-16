@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   prepare:
-    name: Build v1.2.1 and verify without Git
+    name: Build v1.2.2 and verify without Git
     runs-on: ubuntu-latest
     outputs:
       artifact_id: ${{ steps.save.outputs.artifact-id }}
@@ -66,7 +66,7 @@ jobs:
         if: ${{ inputs.save_artifacts }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: papergraph-v1.2.1-${{ github.run_id }}-${{ github.run_attempt }}
+          name: papergraph-v1.2.2-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/papergraph-pypi-candidates/*
           if-no-files-found: error
           retention-days: 7

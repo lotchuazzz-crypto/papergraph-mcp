@@ -9,7 +9,7 @@ import subprocess
 import sys
 import tempfile
 
-PUBLIC_REQUIREMENT = 'papergraph-mcp==1.2.1'
+PUBLIC_REQUIREMENT = 'papergraph-mcp==1.2.2'
 PUBLIC_INDEX = 'https://pypi.org/simple'
 PUBLIC_SOURCE_SHA = 'd4c232efb4736eb37fad8975708abd773b0e90d7'
 PUBLIC_SOURCE_DIGEST = '9998e8b65d75c9b500edf5bb2b04f664f242241ad9d8a926b2372af6e4beff6f'
@@ -90,10 +90,10 @@ async def verify(artifact, expected_sha, *, public_index=False):
         assert not tool_dir.exists()
         env = consumer_environment(cache, tool_dir, public_index=public_index)
         version = run_cli(command + ['--version'], env=env, timeout=240).strip()
-        assert version == 'papergraph-mcp 1.2.1'
+        assert version == 'papergraph-mcp 1.2.2'
         doctor = json.loads(run_cli(command + ['doctor'], env=env, timeout=90))
         identity = doctor['build_identity']
-        assert doctor['version'] == '1.2.1' and doctor['git'] is None
+        assert doctor['version'] == '1.2.2' and doctor['git'] is None
         assert identity['source_commit'] == expected_sha
         assert identity['tracked_dirty'] is False
         assert len(identity['source_tree_sha256']) == 64
@@ -110,7 +110,7 @@ async def verify(artifact, expected_sha, *, public_index=False):
         async with stdio_client(params) as (reader, writer):
             async with ClientSession(reader, writer) as session:
                 initialized = await session.initialize()
-                assert initialized.server_info.version == '1.2.1'
+                assert initialized.server_info.version == '1.2.2'
                 tools = {tool.name for tool in (await session.list_tools()).tools}
                 assert {'discover_doi_paper', 'workspace_add_doi_paper',
                         'workspace_import_doi_candidate', 'workspace_get_dependency_reading'} <= tools
@@ -122,7 +122,7 @@ async def verify(artifact, expected_sha, *, public_index=False):
                         c.text for c in result.content if c.type == 'text'))
 
                 diagnostics = await call('get_environment_diagnostics', {})
-                assert diagnostics['version'] == '1.2.1' and diagnostics['git'] is None
+                assert diagnostics['version'] == '1.2.2' and diagnostics['git'] is None
                 assert diagnostics['build_identity'] == identity
                 await call('open_workspace', {'path': str(root / 'workspace.sqlite3')})
                 await call('workspace_add_pdf_paper', {'path': str(pdf), 'paper_id': 'local:no-git'})
@@ -132,7 +132,7 @@ async def verify(artifact, expected_sha, *, public_index=False):
                 assert reading['paper']['import_state']['body_imported'] is True
                 assert [item['result_id'] for item in reading['reading_path']['bottom_up']] == [
                     'local:no-git::pdf:lemma:1.1', 'local:no-git::pdf:theorem:1.2']
-        receipt = {'artifact': artifact.name if artifact else None, 'version': '1.2.1',
+        receipt = {'artifact': artifact.name if artifact else None, 'version': '1.2.2',
                    'build_identity': identity, 'git': 'absent', 'fresh_uvx_cache': True,
                    'cli_version_doctor': 'passed', 'stdio_initialize_tools_diagnostics': 'passed',
                    'generated_pdf_reading': 'passed', 'consumer_git_download': False}

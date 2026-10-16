@@ -10,10 +10,10 @@ from pathlib import Path
 from typing import Any
 
 
-PAPERGRAPH_VERSION = "1.2.1"
+PAPERGRAPH_VERSION = "1.2.2"
 PAPERGRAPH_SOURCE = (
     "git+https://github.com/lotchuazzz-crypto/"
-    "papergraph-mcp.git@v1.2.1"
+    "papergraph-mcp.git@v1.2.2"
 )
 LAUNCH_COMMAND = [
     "uvx",
@@ -23,10 +23,9 @@ LAUNCH_COMMAND = [
     "--version",
 ]
 PYPI_SOURCE = f"papergraph-mcp=={PAPERGRAPH_VERSION}"
-# v1.2.1 official-index acceptance, 2026-10-16:
-# https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223
-# This records version-specific acceptance, not live availability. Reset for a new version.
-PYPI_PUBLICATION_VERIFIED = True
+# v1.2.2 is prepared, not published or independently accepted.
+# Enable only after version-specific official-index acceptance is recorded.
+PYPI_PUBLICATION_VERIFIED = False
 
 
 def inspect_prerequisites(

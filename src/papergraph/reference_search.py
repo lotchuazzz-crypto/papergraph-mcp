@@ -2,6 +2,7 @@
 from papergraph.evidence import slug_fragment
 from papergraph import reference_search_legacy as legacy
 from papergraph.reference_search_legacy import _compact_key
+from hashlib import sha256
 
 RESOLVER_VERSIONS = ("legacy_v1", "deterministic_v2")
 SEARCH_SCHEMA_VERSION = 2
@@ -27,9 +28,9 @@ def rank_reference_candidates(query, provider_results, max_candidates=10, *, res
 
 def search_run_id(source_paper_id: str, blocked_id: str, query: dict, ordinal: int) -> str:
     stable = "|".join([source_paper_id, blocked_id, str(ordinal), _compact_key(query)])
-    return f"reference-search:{slug_fragment(stable)}"
+    return f"reference-search:{sha256(stable.encode()).hexdigest()}:{ordinal}"
 
 
 def candidate_id_for(source_paper_id: str, blocked_id: str, target: dict) -> str:
     stable = "|".join([source_paper_id, blocked_id, _compact_key(target)])
-    return f"reference-candidate:{slug_fragment(stable)}"
+    return f"reference-candidate:{sha256(stable.encode()).hexdigest()}"

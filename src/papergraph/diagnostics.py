@@ -55,17 +55,14 @@ def environment_diagnostics(cwd: Path | None = None) -> dict:
     if candidate:
         warnings.append('Unreleased development candidate; recommended_source launches the stable release, not this build.')
 
-    if git is None:
-        warnings.append(
-            "Git context unavailable; use the release-pinned uvx source for "
-            "reproducible first use."
-        )
-
     return {
         "package_name": PACKAGE_NAME,
         "version": version,
         "release_tag": release_tag,
-        "recommended_source": f"{REPOSITORY_SOURCE}@{STABLE_RELEASE_TAG if candidate else release_tag}",
+        "recommended_source": f"papergraph-mcp=={STABLE_RELEASE_TAG[1:] if candidate else version}",
+        "optional_git_source": f"{REPOSITORY_SOURCE}@{STABLE_RELEASE_TAG if candidate else release_tag}",
+        "publication_status": 'not_checked_by_diagnostics',
+        "git_required_for_default_install": False,
         "recommended_source_role": 'stable_release_not_running_candidate' if candidate else 'running_release',
         "build_identity": build_identity,
         "dependency_extraction_basis": DEPENDENCY_EXTRACTION_BASIS,

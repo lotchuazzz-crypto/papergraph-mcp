@@ -453,7 +453,7 @@ def workspace_get_source_slice(
     span_id: str | None = None,
     result_id: str | None = None,
     proof_id: str | None = None,
-    context: int = 1,
+    context: Annotated[int, Field(ge=0, le=5, strict=True)] = 1,
 ) -> dict:
     """Return bounded source text around one span, result, or proof."""
 
@@ -464,6 +464,22 @@ def workspace_get_source_slice(
             proof_id=proof_id,
             context=context,
         )
+    except _WORKSPACE_TOOL_ERRORS as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool()
+@_serialized_workspace_tool
+def workspace_read_source_blocks(
+    span_id: str, limit: Annotated[int, Field(ge=1, le=50, strict=True)] = 20,
+) -> dict:
+    """Read raw source blocks from a slice locator; follow next until null.
+
+    Blocks are source text, with no inferred proof ownership. Works for legacy
+    imports without changing reading data. A changed extraction needs new locators.
+    """
+    try:
+        return require_workspace().read_source_blocks(span_id, limit)
     except _WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc
 
@@ -489,7 +505,8 @@ def workspace_get_result_reading_path(
 @_serialized_workspace_tool
 def workspace_get_dependency_reading(
     paper_id: str, target_result_id: str | None = None,
-    recursive: bool = True, max_candidates: int = 5,
+    recursive: bool = True, max_candidates: Annotated[int, Field(ge=1, le=20, strict=True)] = 5,
+    detail: Literal['full', 'compact'] = 'full',
 ) -> dict:
     """List main-result candidates or read a user-selected target with evidence.
 
@@ -498,7 +515,7 @@ def workspace_get_dependency_reading(
     """
     try:
         return require_workspace().get_dependency_reading(
-            paper_id, target_result_id, recursive, max_candidates)
+            paper_id, target_result_id, recursive, max_candidates, detail)
     except _WORKSPACE_TOOL_ERRORS as exc:
         raise ToolError(str(exc)) from exc
 
@@ -756,7 +773,7 @@ def workspace_search_external_reference(
     paper_id: str,
     blocked_id: str,
     providers: list[str] | None = None,
-    max_candidates: int = 10,
+    max_candidates: Annotated[int, Field(ge=1, strict=True)] = 10,
     refresh: bool = False,
     resolver_version: str = "deterministic_v2",
 ) -> dict:
@@ -821,7 +838,7 @@ def workspace_resolve_external_reference_candidate(
 @_serialized_workspace_tool
 def workspace_get_paper_map(
     paper_id: str,
-    max_candidates: int = 5,
+    max_candidates: Annotated[int, Field(ge=1, le=20, strict=True)] = 5,
 ) -> dict:
     """Return an evidence-first first-load map for one stored paper."""
 
@@ -838,7 +855,7 @@ def workspace_get_paper_map(
 @_serialized_workspace_tool
 def workspace_export_paper_reading_report(
     paper_id: str,
-    max_candidates: int = 5,
+    max_candidates: Annotated[int, Field(ge=1, le=20, strict=True)] = 5,
 ) -> dict:
     """Export a deterministic Markdown reading report for one stored paper."""
 
@@ -856,7 +873,7 @@ def workspace_export_paper_reading_report(
 def workspace_export_cross_paper_reading_plan(
     paper_ids: list[str],
     focus: str | None = None,
-    max_candidates_per_paper: int = 3,
+    max_candidates_per_paper: Annotated[int, Field(ge=1, le=20, strict=True)] = 3,
 ) -> dict:
     """Export a deterministic Markdown reading plan for selected papers."""
 
@@ -881,7 +898,7 @@ def workspace_plan_starter_project(
     target_result_id: str | None = None,
     create_queue: bool = True,
     create_session: bool = True,
-    max_candidates: int = 5,
+    max_candidates: Annotated[int, Field(ge=1, le=20, strict=True)] = 5,
 ) -> dict:
     """Plan a Workspace Starter run without writing files."""
 
@@ -912,7 +929,7 @@ def workspace_bootstrap_reading_project(
     target_result_id: str | None = None,
     create_queue: bool = True,
     create_session: bool = True,
-    max_candidates: int = 5,
+    max_candidates: Annotated[int, Field(ge=1, le=20, strict=True)] = 5,
 ) -> dict:
     """Create starter artifacts for a first reading project."""
 
@@ -1454,6 +1471,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     dependency_parser.add_argument('--target-result-id')
     dependency_parser.add_argument('--direct', action='store_true')
     dependency_parser.add_argument('--max-candidates', type=int, default=5)
+    dependency_parser.add_argument('--detail', choices=('full', 'compact'), default='full')
     subparsers.add_parser(
         "doctor",
         help="Print PaperGraph environment diagnostics as JSON.",
@@ -1517,7 +1535,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     source_slice_parser.add_argument("--span-id")
     source_slice_parser.add_argument("--result-id")
     source_slice_parser.add_argument("--proof-id")
-    source_slice_parser.add_argument("--context", type=int, default=1)
+    source_slice_parser.add_argument("--context", type=int, choices=range(6), default=1)
+    source_blocks_parser = subparsers.add_parser('read-source-blocks', help='Read raw source blocks with bounded continuation.')
+    source_blocks_parser.add_argument('--workspace', required=True)
+    source_blocks_parser.add_argument('--span-id', required=True)
+    source_blocks_parser.add_argument('--limit', type=int, choices=range(1, 51), default=20)
     reading_path_parser = subparsers.add_parser(
         "get-result-reading-path",
         help="Export top-down and bottom-up local reading paths for one result.",
@@ -1739,7 +1761,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     if args.command == 'get-dependency-reading':
         _run_workspace_cli_command(args.command, args.workspace,
             lambda workspace: workspace.get_dependency_reading(args.paper_id, args.target_result_id,
-                recursive=not args.direct, max_candidates=args.max_candidates))
+                recursive=not args.direct, max_candidates=args.max_candidates, detail=args.detail))
         return
     if args.command == "validate-arxiv":
         _print_json(
@@ -1793,6 +1815,10 @@ def main(argv: Sequence[str] | None = None) -> None:
             args.workspace,
             lambda workspace: workspace.export_result_reading_context(args.result_id),
         )
+        return
+    if args.command == 'read-source-blocks':
+        _run_workspace_cli_command(args.command, args.workspace,
+            lambda workspace: workspace.read_source_blocks(args.span_id, args.limit))
         return
     if args.command == "get-source-slice":
         _run_workspace_cli_command(

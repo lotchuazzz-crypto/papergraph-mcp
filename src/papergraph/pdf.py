@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
 import pymupdf as fitz
 
 from papergraph.evidence import SourceSpanEvidence
+from papergraph.source_navigation import block_locator
 
 
 class PdfExtractionError(ValueError):
@@ -84,7 +85,7 @@ def pdf_pages_to_spans(
                     confidence=1.0,
                 )
             )
-    return tuple(spans)
+    return tuple(replace(span, span_id=block_locator(asdict(span))) for span in spans)
 
 
 def load_pdf_evidence_spans(

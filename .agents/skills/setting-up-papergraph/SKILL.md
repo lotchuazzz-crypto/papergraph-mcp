@@ -32,20 +32,25 @@ Before loading arXiv papers:
 For local LaTeX, supply the main `.tex` file, such as
 `tests/fixtures/workspace/paper_a/main.tex`, rather than its directory. MCP starter
 inputs use `kind: local_tex` and `path` pointing to that file. Inspect the running
-server's tools/schema before choosing a workflow. In the locally repaired build,
+server's tools/schema before choosing a workflow. In v1.2.2,
 starter planning performs read-only file preflight and does not open a database
 or create directories; `ready` means input preflight passed, not successful parsing
 or import. Bootstrap writes the workspace and artifacts and actually imports the
 inputs. Historical/published builds may behave differently: disclose their actual
 capability and side effects before calling them.
 
-Use command-first CLI syntax with explicit IDs, for example
+Use command-first CLI syntax, checking the named command's `--help`. Most
+workspace commands use flags; `get-dependency-reading WORKSPACE PAPER_ID`,
+`discover-doi DOI`, `add-doi-paper WORKSPACE DOI`, and
+`import-doi-candidate WORKSPACE DOI CANDIDATE_ID --confirm` use positional
+arguments. Do not carry `--workspace`/`--paper-id` onto those positional commands.
+For example
 `papergraph-mcp get-paper-map --workspace '<WORKSPACE>' --paper-id 'local:example-a'`.
 Replace placeholders before execution and use the block for the user's shell.
 Quote Windows paths with spaces using PowerShell single quotes (double embedded
 apostrophes); POSIX shell quoting is separate. Checkpoint `target_kind` is
 `result_id`, not `result`; obtain the other supported enum values from the live
-schema. For `workspace_list_results`, the repaired schema exposes `limit` 1..100
+schema. For `workspace_list_results`, the current schema exposes `limit` 1..100
 (default 50) and nonnegative `offset` (default 0). Read successive pages in a stable
 workspace until an empty/short page; a single response is not necessarily complete.
 
@@ -58,15 +63,14 @@ does not authorize external downloads.
 
 For a published DOI, do not pass it to an arXiv loader or claim metadata is an imported paper. Explain the supported inputs: arXiv source, local LaTeX, or a local born-digital PDF. Identify an unambiguous legally accessible full-text source, or ask for the user's local PDF; never bypass a paywall. A root paper requested by the user is distinct from newly discovered external references, which still require a reviewable import plan before downloads.
 
-For v1.2.0 servers advertising `discover_doi_paper`, use it to find
+For servers advertising `discover_doi_paper`, use it to find
 exact DOI metadata/body candidates without downloading. Review access reports,
 provider outcomes and reported versions. When the user's reading policy allows
 automatic loading of a requested root, use `workspace_add_doi_paper`: it imports
 only when one exact-identity public PDF candidate is eligible. For multiple
 candidates ask the user to select, then use `workspace_import_doi_candidate` with
 `confirmed=true`. Report actual import state and provenance. Never treat this as
-permission for recursive external-reference downloads. These tools are available
-in the pinned v1.2.0 package; historical versions may not provide them.
+permission for recursive external-reference downloads. These tools are available in v1.2.2; historical versions may not provide them.
 
 If available, `workspace_get_dependency_reading` lists source-backed main-result
 candidates without silently choosing one. Pass a user-selected target to separate
@@ -96,16 +100,14 @@ python scripts/check_onboarding.py
 Use its facts for `git`, `uv`, and `uvx`; also detect the active MCP client without mutation. Infer the client only from reliable host or executable evidence. If it remains ambiguous, ask one concise question: “Which MCP client should I configure?”
 
 The default pinned PyPI launch requires `uv` and `uvx`, index access, and no Git
-or checkout. PyPI 1.2.1 was published on 2026-10-16;
-[Git-free clean-cache official-index acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)
-passed CLI, stdio MCP and PDF reading on Linux/Python 3.12.15. The repository's
-version-specific publication guard is true; this is recorded acceptance, not a
-live availability check. The checker defaults to `pypi`;
-`--install-source pypi` is also explicit. Do not install Git solely for a PyPI
-consumer. Missing repository/Git context and unknown checkout freshness are
-separate from index-launch readiness. The published doctor still recommends Git
-source and may emit a nonfatal Git-context warning outside a checkout; report
-that separately from actual launch failure.
+or checkout. This checkout prepares v1.2.2; it has not been published or
+independently accepted. `publication_verified` remains false until its own
+official-index acceptance. The checker defaults to `pypi`; `--install-source pypi`
+is also explicit. Do not install Git solely for a PyPI consumer. Missing
+repository/Git context is separate from index readiness. Doctor recommends the
+PyPI version pin and reports optional Git source separately; it does not verify
+publication. Prior [v1.2.1 index acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)
+applies only to that immutable version.
 
 The optional Git-source launch requires Git as well as `uv` and `uvx`. Inspect
 that route with `python scripts/check_onboarding.py --install-source git`.
@@ -121,39 +123,33 @@ There are three separate approval boundaries:
 2. **configuration approval:** show the exact client change and ask before a native command or any edit outside this repository. For file-based configuration, parse first, preserve unrelated servers, and create a timestamped adjacent backup. If parsing fails, stop and show the error. If safe mutation is unavailable, provide the minimal snippet and exact placement guidance instead.
 3. **restart approval:** after configuration and launch validation, ask before controlling or restarting the client. If control is unavailable or permission is declined, provide one direct manual restart instruction.
 
-The recipe below pins 1.2.1. Before ordinary installation, run the read-only
+The recipes below pin 1.2.2 and are release instructions, not a claim that
+the package or tag already exists. Before ordinary installation, run the read-only
 checker and confirm version-specific official-index acceptance. If
-`publication_verified` is false, report that launch is blocked; do not run the
-new PyPI recipe or claim readiness. Never substitute a mutable branch:
+`publication_verified` is false, report that ordinary PyPI launch is blocked;
+do not run the new recipe or silently substitute a mutable Git branch.
+Verify the exact `v1.2.2` tag before using the optional Git-source recipe.
+The Git recipe uses `git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.2`
+as `--from`; do not substitute this for the default PyPI route.
 
-```text
-papergraph-mcp==1.2.1
-```
-
-The prior [1.2.0 release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.0)
-remains immutable. Verify the exact v1.2.1 tag before using the optional Git-source recipe
-`git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.1` in `--from`;
-validate both version and doctor with the same selected source. Switching an
-existing client's source requires configuration approval and a backup.
-An explicitly requested development test is separate: use the
-requested checkout's locked environment or install its built wheel in a separate environment,
-then launch that exact interpreter. Check CLI version, `doctor.build_identity`
-(source commit, tracked changes and source-tree digest), and MCP initialization
-version. A dirty build's commit is its base; unknown build provenance is unknown.
-Release diagnostics name the package version's tag but do not themselves establish
-tag availability. The commands below target 1.2.1 and require its publication guard; future package
-versions or tags must be verified before they are recommended.
-Keep the user's active MCP registration intact unless they explicitly authorize a
-configuration change, and never invent a development release/tag.
-
-The first-use repairs are included in the verified PyPI version 1.2.1, whose
-package source is `d4c232efb4736eb37fad8975708abd773b0e90d7`. Record the
-exact interpreter, doctor.build_identity and isolated artifact hashes for local
-tests. Version equality alone does not establish source identity or publication;
-never attribute these repairs to the earlier published 1.2.0 build.
+An explicitly requested development test is separate: use the requested checkout's
+locked environment or install its built wheel in a separate environment, then
+launch that exact interpreter. Record CLI/MCP version, interpreter,
+`doctor.build_identity` (source commit, tracked changes, source-tree digest) and
+artifact hashes. A dirty build's commit is its base; unknown provenance remains
+unknown. Version equality does not establish publication. Keep active client
+registration intact. Switching installation sources requires configuration
+approval and a backup; never invent a release/tag.
 
 For PDF reading, surface `text_coverage` and unverified statement/proof completeness.
-Use its continuation-source locator before interpreting truncated text. Adjacent
+Use its continuation-source locator before interpreting truncated text. Follow
+`source_reading` / `workspace_read_source_blocks` and its `next` handle for bounded
+raw source reading (limit 1..50); source-slice `context` is 0..5. Raw blocks do
+not assert proof ownership. Explicit closed multi-block proof regions retain
+unverified completeness. For a selected dependency target use `detail: compact`
+to omit repeated bodies/catalogs and follow `full_evidence` for original records.
+Use `blocked_groups` / unique target counts for display; legacy `blocked_count`
+counts records and original `blocked_ids` remain valid. Adjacent
 context is not additional proof evidence, and delayed proof ownership remains
 unresolved unless supported. Author `partial_overlap` is not full-list equivalence.
 
@@ -161,22 +157,22 @@ Never request credentials, upload papers, guess the identity of ambiguous refere
 
 ### What changed
 
-Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `1.2.1`; file presence alone is insufficient:
+Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `1.2.2`; file presence alone is insufficient:
 
 ```text
-uvx --from papergraph-mcp==1.2.1 papergraph-mcp --version
+uvx --from papergraph-mcp==1.2.2 papergraph-mcp --version
 ```
 
 Also validate the pinned diagnostics command:
 
 ```text
-uvx --from papergraph-mcp==1.2.1 papergraph-mcp doctor
+uvx --from papergraph-mcp==1.2.2 papergraph-mcp doctor
 ```
 
 The expected output is:
 
 ```text
-papergraph-mcp 1.2.1
+papergraph-mcp 1.2.2
 ```
 
 Before restart, say “launch command validated”; never say “client has loaded the PaperGraph tools.” Tool loading can be confirmed only after the restarted client discovers the server.

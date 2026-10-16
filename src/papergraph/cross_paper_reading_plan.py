@@ -327,7 +327,7 @@ def _external_risks(
                     "candidate": candidate,
                 }
             )
-        for item in plan.get("blocked", []):
+        for item in plan.get("blocked_groups", plan.get("blocked", [])):
             risks.append(
                 {
                     "source_paper_id": source_paper_id,

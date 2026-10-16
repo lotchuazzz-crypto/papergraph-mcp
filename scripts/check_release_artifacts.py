@@ -1,4 +1,4 @@
-"""Check the reviewed v1.2.1 bytes and provenance without executing a package."""
+"""Check the reviewed v1.2.2 bytes and provenance without executing a package."""
 import argparse
 from email.parser import BytesParser
 import hashlib
@@ -14,8 +14,8 @@ import zipfile
 SOURCE_SHA = 'd4c232efb4736eb37fad8975708abd773b0e90d7'
 SOURCE_DIGEST = '9998e8b65d75c9b500edf5bb2b04f664f242241ad9d8a926b2372af6e4beff6f'
 APPROVED_HASHES = {
-    'papergraph_mcp-1.2.1-py3-none-any.whl': 'df8c699faadcf9b313816022242ad6aab7f145305b0657ca2d7f5e137300b9c2',
-    'papergraph_mcp-1.2.1.tar.gz': '5e7cb363d57e0caae7b3afb025059e21e4628d7e9acd9b31a779926b99711f8e',
+    'papergraph_mcp-1.2.2-py3-none-any.whl': 'df8c699faadcf9b313816022242ad6aab7f145305b0657ca2d7f5e137300b9c2',
+    'papergraph_mcp-1.2.2.tar.gz': '5e7cb363d57e0caae7b3afb025059e21e4628d7e9acd9b31a779926b99711f8e',
 }
 EXPECTED_IDENTITY = {
     'schema_version': 1, 'source_commit': SOURCE_SHA,
@@ -42,11 +42,11 @@ def validate_distribution(path, expected_sha256):
     if path.name.endswith('.whl'):
         with zipfile.ZipFile(path) as archive:
             manifest = archive.read('papergraph/_build_info.json')
-            metadata = archive.read('papergraph_mcp-1.2.1.dist-info/METADATA')
+            metadata = archive.read('papergraph_mcp-1.2.2.dist-info/METADATA')
     elif path.name.endswith('.tar.gz'):
         with tarfile.open(path, 'r:gz') as archive:
             def read_member(name):
-                member = archive.getmember('papergraph_mcp-1.2.1/' + name)
+                member = archive.getmember('papergraph_mcp-1.2.2/' + name)
                 if not member.isfile():
                     raise ValueError('Distribution metadata must be a regular file')
                 with archive.extractfile(member) as stream:
@@ -59,7 +59,7 @@ def validate_distribution(path, expected_sha256):
     if identity != EXPECTED_IDENTITY:
         raise ValueError(f'Unexpected release identity: {path.name}')
     package = BytesParser().parsebytes(metadata)
-    if package.get_all('Name') != ['papergraph-mcp'] or package.get_all('Version') != ['1.2.1']:
+    if package.get_all('Name') != ['papergraph-mcp'] or package.get_all('Version') != ['1.2.2']:
         raise ValueError(f'Unexpected package metadata: {path.name}')
     return {'artifact': path.name, 'sha256': actual, 'build_identity': identity}
 
@@ -102,7 +102,7 @@ def main():
                          if args.stage_to else verify_directory(args.directory))
     except (OSError, ValueError, KeyError, zipfile.BadZipFile, tarfile.TarError) as error:
         parser.exit(1, f'Release candidate verification failed: {error}\n')
-    print(json.dumps({'version': '1.2.1', 'source_commit': SOURCE_SHA,
+    print(json.dumps({'version': '1.2.2', 'source_commit': SOURCE_SHA,
                       'producer_run_id': args.producer_run_id,
                       'distributions': distributions}))
 

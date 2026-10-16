@@ -136,22 +136,27 @@ def build_result_reading_path(workspace, result_id, recursive, parser_version):
     }
 
 
-def build_dependency_reading(workspace, paper_id, target_result_id=None, recursive=True, max_candidates=5):
+def build_dependency_reading(workspace, paper_id, target_result_id=None, recursive=True, max_candidates=5, detail='full'):
     """Present candidates or a user-selected target with separated evidence."""
     if not isinstance(recursive, bool):
         raise ValueError('recursive must be a boolean')
+    if detail not in ('full', 'compact'):
+        raise ValueError('detail must be full or compact')
     paper = workspace.get_paper(paper_id)
     paper_id = paper['paper_id']
     if target_result_id is not None:
         target = workspace.get_result(target_result_id)
         if target['paper_id'] != paper_id:
             raise ValueError('target_result_id must belong to the selected paper')
-    overview = workspace.get_paper_map(paper_id, max_candidates=max_candidates)
+    from papergraph.paper_map import _validate_max_candidates
+    _validate_max_candidates(max_candidates)
+    overview = workspace.get_paper_map(paper_id, max_candidates=max_candidates) if not (target_result_id and detail == 'compact') else None
     result = {
         'dependency_reading_schema_version': 1,
         'paper': paper,
-        'results': _list_all_results(workspace, paper_id),
-        'main_result_candidates': overview['main_result_candidates'],
+        'results': _list_all_results(workspace, paper_id) if detail == 'full' else [],
+        'main_result_candidates': overview['main_result_candidates'] if overview else [],
+        'detail': detail,
         'selection': {'status': 'selected' if target_result_id else 'choose_target',
                       'basis': 'user_selected' if target_result_id else 'unselected',
                       'target_result_id': target_result_id,
@@ -185,4 +190,7 @@ def build_dependency_reading(workspace, paper_id, target_result_id=None, recursi
     result['reading_path'] = workspace.get_result_reading_path(target_result_id, recursive=recursive)
     result['external_import_plan'] = workspace.plan_external_imports_for_result(target_result_id, recursive=recursive)
     result['warnings'] = result['reading_path']['warnings']
+    if detail == 'compact':
+        from papergraph.compact_reading import compact_reading
+        return compact_reading(result)
     return result

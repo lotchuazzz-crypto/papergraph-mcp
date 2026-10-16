@@ -33,7 +33,9 @@ def plan_starter_project(
     max_candidates: int = 5,
     overwrite: bool = False,
 ) -> dict:
-    del focus, max_candidates, overwrite
+    from papergraph.paper_map import _validate_max_candidates
+    _validate_max_candidates(max_candidates)
+    del focus, overwrite
     workspace_text = _path_text(workspace_path)
     artifact_text = _path_text(artifact_dir) if artifact_dir is not None else None
     planned_papers = [_normalize_paper_input(paper) for paper in papers]
@@ -121,6 +123,8 @@ def bootstrap_reading_project(
     max_candidates: int = 5,
     overwrite: bool = False,
 ) -> dict:
+    from papergraph.paper_map import _validate_max_candidates
+    _validate_max_candidates(max_candidates)
     del focus
     artifact_path = Path(artifact_dir)
     artifact_path.mkdir(parents=True, exist_ok=True)

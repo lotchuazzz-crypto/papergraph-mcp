@@ -18,6 +18,9 @@ def with_pdf_coverage(workspace, payload, kind, spans):
         'completeness_verified': False,
         'mathematical_layout_reconstructed': False,
         'continuation_source': {'tool': 'workspace_get_source_slice', 'arguments': arguments},
+        'source_reading': source['source_reading'],
+        'association_boundary': ('explicit_terminal_marker' if payload.get('method') == 'pdf_proof_explicit_end'
+                                 else 'unverified_excerpt'),
         'adjacent_after': [{key: row[key] for key in ('span_id', 'page', 'block_index')}
                            for row in source['slices'] if row['role'] == 'after'],
         'adjacent_context_is_proof_evidence': False,

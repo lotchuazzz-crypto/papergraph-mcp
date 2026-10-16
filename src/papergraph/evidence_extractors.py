@@ -46,7 +46,7 @@ _DOI_RE = re.compile(r"(?:doi:|https://doi\.org/)(?P<doi>\S+)", re.I)
 _URL_RE = re.compile(r"https?://\S+")
 _LOCAL_RESULT_MENTION_RE = re.compile(
     r"\b(?P<kind>Theorem|Lemma|Proposition|Corollary|Definition|Claim|Conjecture|Example|Remark)\s+"
-    r"(?P<number>[A-Za-z]?(?:\d+(?:\.\d+)*|[A-Z])?)\b",
+    r"(?P<number>(?:[A-Za-z]?\d+(?:\.\d+)*|(?-i:[A-Z])))\b",
     re.I,
 )
 _CITATION_RE = re.compile(
@@ -268,21 +268,49 @@ def extract_proof_blocks(
         if result_id is not None:
             already_associated.add(result_id)
 
+        proof_indices = _bounded_proof_indices(spans, span_index, limit)
         proofs.append(
             ProofEvidence(
                 proof_id=proof_id,
                 paper_id=paper_id,
                 result_id=result_id,
-                text=text,
-                span_indices=(span_index,),
+                text="\n".join(_normalized_text(spans[i].text) for i in proof_indices),
+                span_indices=proof_indices,
                 association_basis=association_basis,
                 association_confidence=association_confidence,
-                method="pdf_proof_heading",
+                method="pdf_proof_explicit_end" if _proof_end(spans[proof_indices[-1]].text) else "pdf_proof_heading",
                 confidence=0.85,
             )
         )
 
     return tuple(proofs)
+
+
+def _proof_end(text):
+    return re.search(r"(?:\bQ\.?E\.?D\.?|[\u25a1\u220e\u25a0])\s*$", text) is not None
+
+
+def _bounded_proof_indices(spans, start, limit):
+    """Only associate a lexical region closed by an explicit proof terminator.
+
+    New result/proof/section headings, bibliography and resource bounds abort
+    association. In that case retain the old heading excerpt; raw block reading
+    still reaches the entire source without asserting proof ownership.
+    """
+    included, size = [], 0
+    for index in range(start, min(limit, start + 200)):
+        text = _normalized_text(spans[index].text)
+        if index > start and (RESULT_RE.match(text) or PROOF_RE.match(text)
+                or re.match(r'^\d+(?:\.\d+)*\.?\s+[A-Z]', text)
+                or text.casefold() in ('references', 'bibliography')):
+            break
+        size += len(text)
+        if size > 100000:
+            break
+        included.append(index)
+        if _proof_end(text):
+            return tuple(included)
+    return (start,)
 
 
 def _split_arxiv_version(arxiv_id: str) -> tuple[str, str | None]:

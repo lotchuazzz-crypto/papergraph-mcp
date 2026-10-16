@@ -41,8 +41,7 @@ def save_search(connection, *, run_id, paper_id, blocked_id, ranked, providers,
     mapping = {}
     for candidate in ranked['candidates']:
         original = candidate['candidate_id']
-        mapping[original] = (candidate_id_for(paper_id, blocked_id, candidate['target'])
-                             if resolver_version == 'legacy_v1' else original) + suffix
+        mapping[original] = candidate_id_for(paper_id, blocked_id, candidate['target']) + suffix
         candidate['candidate_id'] = mapping[original]
     def remap(value):
         if isinstance(value, dict):

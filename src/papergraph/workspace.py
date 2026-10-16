@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from dataclasses import replace
+from dataclasses import asdict, replace
 from datetime import datetime, timezone
 from functools import wraps
 from importlib.metadata import PackageNotFoundError, version
@@ -24,6 +24,7 @@ from papergraph.evidence import (
 )
 from papergraph.evidence_extractors import build_pdf_evidence_document
 from papergraph.pdf_coverage import with_pdf_coverage
+from papergraph.source_navigation import block_locator
 from papergraph.graph import recursive_reference_ids
 from papergraph.identity import (
     global_theorem_id,
@@ -1729,11 +1730,21 @@ class Workspace(ReferenceExpansionMixin):
             "source_type": source_type,
             "source_ref": source_ref,
             "context": context,
-            "anchor_span_ids": [row["span_id"] for row in anchor_rows],
+            "anchor_span_ids": [block_locator(row) for row in anchor_rows],
+            "source_reading": {'tool': 'workspace_read_source_blocks',
+                               'arguments': {'span_id': block_locator(anchor_rows[0]), 'limit': 20}},
+            "next": {'tool': 'workspace_read_source_blocks',
+                     'arguments': {'span_id': block_locator(all_rows[end]), 'limit': 20}} if end < len(all_rows) else None,
             "slices": slices,
             "bounded": True,
             "warnings": [],
         }
+
+    @_synchronized
+    def read_source_blocks(self, span_id: str, limit: int = 20) -> dict:
+        """Read bounded raw source pages; this does not assign proof ownership."""
+        from papergraph.source_navigation import read_blocks
+        return read_blocks(self, span_id, limit)
 
     @_synchronized
     def export_reading_bundle(self, paper_id: str) -> dict:
@@ -1859,11 +1870,11 @@ class Workspace(ReferenceExpansionMixin):
     @_synchronized
     def get_dependency_reading(
         self, paper_id: str, target_result_id: str | None = None,
-        recursive: bool = True, max_candidates: int = 5,
+        recursive: bool = True, max_candidates: int = 5, detail: str = 'full',
     ) -> dict:
         """List evidence-backed candidates or read a user-selected dependency target."""
         from papergraph.dependency_reading import build_dependency_reading
-        return build_dependency_reading(self, paper_id, target_result_id, recursive, max_candidates)
+        return build_dependency_reading(self, paper_id, target_result_id, recursive, max_candidates, detail)
 
     @_synchronized
     def create_reading_queue(
@@ -2046,22 +2057,7 @@ class Workspace(ReferenceExpansionMixin):
                 "reading_path.external_stops",
             )
         for stop in path["unresolved_stops"]:
-            stop_result = self.get_result(stop["result_id"])
-            collector.add_blocked(
-                "missing_arxiv_id",
-                [
-                    {
-                        "kind": "unresolved_stop",
-                        "id": f"{stop['result_id']}:{stop['kind']}",
-                        "paper_id": stop_result["paper_id"],
-                        "result_id": stop["result_id"],
-                        "proof_id": None,
-                        "citation_key": None,
-                        "raw_text": stop["kind"],
-                        "source": "reading_path.unresolved_stops",
-                    }
-                ],
-            )
+            collector.add_unresolved(stop['result_id'], stop['kind'], stop['mentions'])
 
         return collector.payload(
             {
@@ -2094,21 +2090,9 @@ class Workspace(ReferenceExpansionMixin):
                     "reading_queue.external_stop",
                 )
             elif item["target_kind"] == "unresolved_stop":
-                collector.add_blocked(
-                    "missing_arxiv_id",
-                    [
-                        {
-                            "kind": "unresolved_stop",
-                            "id": item["target_id"],
-                            "paper_id": queue_payload["paper_id"],
-                            "result_id": item["evidence"].get("result_id"),
-                            "proof_id": None,
-                            "citation_key": None,
-                            "raw_text": item["reason"],
-                            "source": "reading_queue.unresolved_stop",
-                        }
-                    ],
-                )
+                evidence = item['evidence']
+                collector.add_unresolved(evidence.get('result_id'), evidence.get('kind'),
+                                         evidence.get('mentions', []))
 
         return collector.payload(
             {
@@ -3919,6 +3903,9 @@ class Workspace(ReferenceExpansionMixin):
                 """,
                 (selector_value,),
             ).fetchall()
+            if not rows and selector_value.startswith('source-block:'):
+                from papergraph.source_navigation import locate
+                return locate(self, selector_value)
         elif selector_kind == "result_id":
             self._ensure_result_exists(selector_value)
             rows = self._connection.execute(
@@ -4964,6 +4951,7 @@ class _ExternalImportPlanCollector:
         self._workspace = workspace
         self._candidates: dict[str, dict] = {}
         self._blocked: dict[str, dict] = {}
+        self._internal: list[dict] = []
 
     def add_external_mention(self, mention_id: str, source: str) -> None:
         mention = self._external_mention(mention_id)
@@ -5051,6 +5039,17 @@ class _ExternalImportPlanCollector:
             [*existing["evidence"], *evidence]
         )
 
+    def add_unresolved(self, result_id: str, kind: str, mentions: list[dict]) -> None:
+        if kind == 'local_result_mentions':
+            self._internal.extend({'classification': 'internal_unresolved', 'result_id': result_id,
+                                   **mention} for mention in mentions)
+            return
+        for mention in mentions:
+            if kind == 'citation_mentions':
+                self.add_citation_mention(mention['mention_id'], 'unresolved.citation_mentions')
+            elif kind == 'external_result_mentions':
+                self.add_external_mention(mention['mention_id'], 'unresolved.external_result_mentions')
+
     def payload(self, scope: dict) -> dict:
         candidates = [self._candidate_payload(candidate) for candidate in self._candidates.values()]
         candidates.sort(
@@ -5064,11 +5063,15 @@ class _ExternalImportPlanCollector:
         blocked.sort(key=lambda item: (item["reason"], item["blocked_id"]))
         for item in blocked:
             item["evidence"] = _dedupe_external_import_evidence(item["evidence"])
+        from papergraph.external_aggregation import aggregate_blockers
+        groups = aggregate_blockers(blocked)
         return {
             "plan_schema_version": 1,
             "scope": scope,
             "candidates": candidates,
             "blocked": blocked,
+            "blocked_groups": groups,
+            "unresolved_local_mentions": self._internal,
             "summary": {
                 "candidate_count": len(candidates),
                 "import_candidate_count": sum(
@@ -5078,6 +5081,11 @@ class _ExternalImportPlanCollector:
                     1 for candidate in candidates if candidate["status"] == "already_imported"
                 ),
                 "blocked_count": len(blocked),
+                "blocked_count_basis": 'legacy_blocker_records',
+                "unique_external_targets": len(groups) + len(candidates),
+                "unique_blocked_targets": len(groups),
+                "evidence_records": len({(e['kind'], e['id']) for b in [*blocked, *candidates] for e in b['evidence']}),
+                "unresolved_local_mentions": len(self._internal),
             },
             "warnings": _dedupe_strings(
                 warning
@@ -5527,6 +5535,8 @@ def _source_span_from_row(row: tuple) -> dict:
         method=row[10],
         confidence=row[11],
     )
+    if span.source_type == 'pdf' and span.span_id is None:
+        span = replace(span, span_id=block_locator(asdict(span)))
     return source_span_payload(span)
 
 
@@ -5550,7 +5560,7 @@ def _source_slice_record_from_row(row: tuple) -> dict:
 
 def _source_slice_from_row(row: dict, role: str) -> dict:
     return {
-        "span_id": row["span_id"],
+        "span_id": block_locator(row),
         "page": row["page"],
         "block_index": row["block_index"],
         "start_offset": row["start_offset"],

@@ -26,21 +26,21 @@ def validator():
     return module
 
 
-def candidate(tmp_path, kind, *, source=SOURCE_SHA, dirty=False, version='1.2.1'):
+def candidate(tmp_path, kind, *, source=SOURCE_SHA, dirty=False, version='1.2.2'):
     manifest = json.dumps({'schema_version': 1, 'source_commit': source,
                            'source_tree_sha256': SOURCE_DIGEST,
                            'tracked_dirty': dirty, 'origin': 'git_checkout'}).encode()
     metadata = f'Metadata-Version: 2.3\nName: papergraph-mcp\nVersion: {version}\n'.encode()
     if kind == 'wheel':
-        path = tmp_path / 'papergraph_mcp-1.2.1-py3-none-any.whl'
+        path = tmp_path / 'papergraph_mcp-1.2.2-py3-none-any.whl'
         with zipfile.ZipFile(path, 'w') as archive:
             archive.writestr('papergraph/_build_info.json', manifest)
-            archive.writestr('papergraph_mcp-1.2.1.dist-info/METADATA', metadata)
+            archive.writestr('papergraph_mcp-1.2.2.dist-info/METADATA', metadata)
     else:
-        path = tmp_path / 'papergraph_mcp-1.2.1.tar.gz'
+        path = tmp_path / 'papergraph_mcp-1.2.2.tar.gz'
         with tarfile.open(path, 'w:gz') as archive:
             for name, data in [('src/papergraph/_build_info.json', manifest), ('PKG-INFO', metadata)]:
-                info = tarfile.TarInfo('papergraph_mcp-1.2.1/' + name)
+                info = tarfile.TarInfo('papergraph_mcp-1.2.2/' + name)
                 info.size = len(data)
                 archive.addfile(info, io.BytesIO(data))
     return path, hashlib.sha256(path.read_bytes()).hexdigest()

@@ -5,14 +5,16 @@
 - `pyproject.toml` reports `1.2.1`.
 - `uv.lock` reports package version `1.2.1`.
 - Runtime diagnostics report `version: 1.2.1` and `release_tag: v1.2.1`; this does not verify tag availability.
-- Install commands target fixed `1.2.1`, with tag and public-index availability checked before launch. Keep `publication_verified` false until official-index acceptance is recorded; the GitHub Release page is a separate publication step.
+- Install commands target fixed `1.2.1`. [Official-index acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223) passed on 2026-10-16; `publication_verified` is true for this version. Git tag availability and the GitHub Release page remain separate checks.
 - Historical specs and release history may keep old versions.
 
 ## Installation Validation
 
-The tag commands below require an available Git tag. Before publishing a future
-tag, build the wheel with `uv build` and test it in an isolated environment. Do
-not claim an unpublished tag was installed.
+PyPI 1.2.1 is published and verified; prefer `uvx --from papergraph-mcp==1.2.1`.
+Do not rebuild or re-upload its frozen distributions. The optional tag commands
+below require an available tag pointing to package source R,
+`d4c232efb4736eb37fad8975708abd773b0e90d7`. Do not claim an unpublished tag was
+installed. Future versions require a separate build and isolated verification.
 
 ```powershell
 uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.1 papergraph-mcp --version
@@ -44,8 +46,8 @@ uv run papergraph-mcp <command> --help
 
 ## GitHub Release
 
-- Merge the reviewed v1.2.1 preparation branch into `main` after all checks pass.
-- Verify merge-commit CI, then create tag `v1.2.1` from that exact source commit; never move an existing tag.
+- PR49 is merged at configuration commit `6375d95ba9caf78b03d61f8ccfc468766dae1316`; [main CI](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38704231803) passed all seven jobs. Manual PyPI publication and official-index acceptance have completed.
+- Tag `v1.2.1` and the [formal GitHub Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.1) are published. The tag was verified at immutable package source R, `d4c232efb4736eb37fad8975708abd773b0e90d7`, not the configuration merge or closeout commit; never move it. Release flags: draft=false, prerelease=false, no uploaded assets.
 - Record the exact source identity and two Linux-built artifact hashes before updating the fixed publisher guards. Preserve same-run immutable artifact IDs, strict metadata/manifest/hash checks and the protected `pypi` human deployment review.
 - Publish a formal GitHub release using an English introduction and Highlights, Compatibility, Verification and Install sections. Describe first use, DOI bodies and dependency reading with explicit coverage/identity boundaries.
 - Existing recent releases have no uploaded assets; do not add a new distribution channel.

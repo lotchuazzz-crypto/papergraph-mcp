@@ -1,0 +1,50 @@
+{
+  "version": "1.2.2",
+  "source_commit": "40d2daf8fd0d1c8b23c8d9ac03d8bf66cd2f5fa0",
+  "source_tree_sha256": "6298a1f30921ccf85c38b1b3e82324d2e58cc7dd2f388bd24b9e8afc5b4ec724",
+  "publication_run_id": 38917392754,
+  "publication_workflow_commit": "d8a9791e646b5aac93ef74dbcd7a278ea1e24d98",
+  "publication_artifact_id": 12053450778,
+  "publication_archive_sha256": "4a8976c241a4c7a8fa428524421f6fc993519bb6994935106e2d589395f77c87",
+  "pypi": {
+    "published": true,
+    "public_bytes_verified": true,
+    "json_url": "https://pypi.org/pypi/papergraph-mcp/1.2.2/json",
+    "files": {
+      "papergraph_mcp-1.2.2-py3-none-any.whl": "7525ef81a49f8f0b1d639d4f1656df0f406cc926f2164e6f9f7dbaf62fdc0dc9",
+      "papergraph_mcp-1.2.2.tar.gz": "06bfa9369d7debae9381418bd14914c9011a728e8a18e9100c2d30805ea8adad"
+    }
+  },
+  "public_index_acceptance": {
+    "run_id": 38928131322,
+    "job_id": 117064883868,
+    "conclusion": "success",
+    "install_source": "public_index",
+    "installed_local_artifact": false,
+    "fresh_cache": true,
+    "platform": "linux",
+    "python": "3.12.15",
+    "image_digest": "python@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258",
+    "git_executable": "absent",
+    "git_package": "not_installed",
+    "cli_mcp_generated_pdf_reading": "passed"
+  },
+  "windows_public_index_acceptance": {
+    "fresh_cache": true,
+    "local_artifact_used": false,
+    "editable": false,
+    "direct_url": null,
+    "cli_mcp_snapshot": "passed",
+    "root_paper_calls": 34,
+    "root_counts": {"theorem": 14, "lemma": 14, "proposition": 5},
+    "structural_cases": 25,
+    "structural_calls": 209
+  },
+  "git_tag": {
+    "name": "v1.2.2",
+    "target": "40d2daf8fd0d1c8b23c8d9ac03d8bf66cd2f5fa0",
+    "live_verification_still_required_for_setup": true
+  },
+  "github_release": {"published": false, "status": "pending_separate_creation"},
+  "immutable_release_files_rewritten": false
+}

@@ -96,9 +96,11 @@ python scripts/check_onboarding.py
 Use its facts for `git`, `uv`, and `uvx`; also detect the active MCP client without mutation. Infer the client only from reliable host or executable evidence. If it remains ambiguous, ask one concise question: “Which MCP client should I configure?”
 
 The default pinned PyPI launch requires `uv` and `uvx`, index access, and no Git
-or checkout. PyPI 1.2.0 is published; [Git-free clean-cache acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/37123289066)
-passed CLI, stdio MCP and PDF reading. That recorded acceptance applies only to 1.2.0. The new 1.2.1 publication
-guard remains false until its official-index acceptance is recorded. The checker defaults to `pypi`;
+or checkout. PyPI 1.2.1 was published on 2026-10-16;
+[Git-free clean-cache official-index acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)
+passed CLI, stdio MCP and PDF reading on Linux/Python 3.12.15. The repository's
+version-specific publication guard is true; this is recorded acceptance, not a
+live availability check. The checker defaults to `pypi`;
 `--install-source pypi` is also explicit. Do not install Git solely for a PyPI
 consumer. Missing repository/Git context and unknown checkout freshness are
 separate from index-launch readiness. The published doctor still recommends Git
@@ -144,8 +146,8 @@ versions or tags must be verified before they are recommended.
 Keep the user's active MCP registration intact unless they explicitly authorize a
 configuration change, and never invent a development release/tag.
 
-The first-use repairs are included in version 1.2.1. Until official-index
-acceptance succeeds, do not call this a verified PyPI installation. Record the
+The first-use repairs are included in the verified PyPI version 1.2.1, whose
+package source is `d4c232efb4736eb37fad8975708abd773b0e90d7`. Record the
 exact interpreter, doctor.build_identity and isolated artifact hashes for local
 tests. Version equality alone does not establish source identity or publication;
 never attribute these repairs to the earlier published 1.2.0 build.

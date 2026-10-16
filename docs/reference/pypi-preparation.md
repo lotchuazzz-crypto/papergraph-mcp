@@ -1,23 +1,36 @@
 # PyPI publication and installation
 
-## v1.2.1 preparation
+## v1.2.1 published and verified
 
-Version 1.2.1 includes the first-use repairs from PR47. Local publication
-configuration now binds the exact source commit
-`d4c232efb4736eb37fad8975708abd773b0e90d7` and the measured Linux artifacts.
-Both distributions passed Twine, direct manifest inspection and separate fresh
-Git-free CLI, stdio MCP and generated-PDF checks on Linux/Python 3.14.4.
-See the [v1.2.1 artifact record](v1.2.1-artifact-verification.md) for hashes,
-environment details and remaining manual gates, and the
-[v1.2.1 notes](v1.2.1-release-notes.md) for package changes.
+Status checked 2026-10-16: [PyPI 1.2.1](https://pypi.org/project/papergraph-mcp/1.2.1/)
+is published. The user-approved [manual publisher](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38836766630)
+passed build, same-run verification and protected publishing. Official PyPI JSON
+confirms both frozen distribution hashes in the
+[artifact record](v1.2.1-artifact-verification.md).
 
-This is local preparation, not publication or public-index acceptance.
-`PYPI_PUBLICATION_VERIFIED` remains false. The configured Linux/Python 3.12
-container workflow has not been run for these new bindings; it must reproduce
-the reviewed bytes and pass before a human approves the protected publisher.
-No tag, workflow dispatch, upload or client-registration change is part of this
-local preparation. Everything below documents the historical 1.2.0 release;
-its commands, hashes and acceptance results do not establish 1.2.1 publication.
+Configuration commit `6375d95ba9caf78b03d61f8ccfc468766dae1316` passed
+[all seven main CI jobs](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38704231803),
+including the official Linux/Python 3.12 wheel/sdist consumers. Package source R
+remains `d4c232efb4736eb37fad8975708abd773b0e90d7`, not that configuration commit.
+[Official-index acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)
+passed with Python 3.12.15, no Git, a fresh uvx cache and
+`https://pypi.org/simple`: CLI version/doctor, stdio MCP and generated PDF reading
+all passed, with clean R provenance. The resolved consumer image was
+`python@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258`.
+
+`PYPI_PUBLICATION_VERIFIED` is now true for 1.2.1. It records this completed
+acceptance, not live index availability. The default commands are:
+
+```text
+uvx --from papergraph-mcp==1.2.1 papergraph-mcp --version
+uvx --from papergraph-mcp==1.2.1 papergraph-mcp doctor
+```
+
+GitHub tag/Release creation remains pending as of this check; tag `v1.2.1` must
+point to R. Do not rebuild, replace or re-upload the published packages. Client
+configuration/restart and MCPVault listing changes remain separate actions.
+See [v1.2.1 notes](v1.2.1-release-notes.md) for package changes. Everything below
+documents the historical 1.2.0 release, including its installation commands.
 
 ## Historical 1.2.0 publication
 

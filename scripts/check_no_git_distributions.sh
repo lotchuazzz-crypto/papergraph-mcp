@@ -25,7 +25,7 @@ for artifact in papergraph_mcp-1.2.1-py3-none-any.whl papergraph_mcp-1.2.1.tar.g
       # Readiness checks do not launch/download; artifact acceptance follows below.
       python /checks/check_onboarding.py > /tmp/pypi-check.json
       python /checks/check_onboarding.py --install-source git > /tmp/git-check.json
-      python -c '\''import json; p=json.load(open("/tmp/pypi-check.json")); g=json.load(open("/tmp/git-check.json")); assert p["commands"]["git"] is None; assert p["install_source"] == "pypi"; assert p["required_commands"] == ["uv", "uvx"]; assert p["prerequisites_satisfied"] is True; assert p["publication_verified"] is False; assert p["ready_for_smoke_test"] is False; assert "launch" not in p; assert g["required_commands"] == ["git", "uv", "uvx"]; assert g["ready_for_smoke_test"] is False; print(json.dumps({"pypi_prerequisites_without_git": "passed", "git_source_without_git": "not_ready"}))'\''
+      python -c '\''import json; p=json.load(open("/tmp/pypi-check.json")); g=json.load(open("/tmp/git-check.json")); assert p["commands"]["git"] is None; assert p["install_source"] == "pypi"; assert p["required_commands"] == ["uv", "uvx"]; assert p["prerequisites_satisfied"] is True; assert p["publication_verified"] is True; assert p["ready_for_smoke_test"] is True; assert "launch" not in p; assert g["required_commands"] == ["git", "uv", "uvx"]; assert g["ready_for_smoke_test"] is False; print(json.dumps({"pypi_prerequisites_without_git": "passed", "git_source_without_git": "not_ready"}))'\''
       uv run --no-project --with "/dist/$1" python /checks/smoke_no_git_distribution.py \
         --artifact "/dist/$1" --expected-sha d4c232efb4736eb37fad8975708abd773b0e90d7
     ' sh "$artifact"

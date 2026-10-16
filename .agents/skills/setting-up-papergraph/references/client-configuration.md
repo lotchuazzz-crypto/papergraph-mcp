@@ -8,10 +8,13 @@ The default pinned source is:
 papergraph-mcp==1.2.1
 ```
 
-PyPI 1.2.0 is published and its Git-free, clean-cache CLI/MCP/PDF launch has been
-[verified](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/37123289066). That evidence applies to 1.2.0 only. These 1.2.1 recipes must wait until
-its official-index acceptance is recorded and publication_verified is true.
-Verify the exact tag before using its Git recipe. The recipes require uv/uvx and index access,
+PyPI 1.2.1 is published and its Git-free, clean-cache CLI/MCP/PDF launch has been
+[verified](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)
+on Linux/Python 3.12.15. The version-specific publication_verified flag is true;
+this does not guarantee current index availability or any particular client environment.
+The GitHub v1.2.1 tag/Release remain a separate pending step as of 2026-10-16.
+Verify the exact tag target `d4c232efb4736eb37fad8975708abd773b0e90d7` before
+using its Git recipe. The PyPI recipes require uv/uvx and index access,
 without Git or a checkout. Optional Git-source installation uses
 `git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.1` in `--from` and additionally requires Git;
 validate version and doctor with the same selected source. Switching an existing

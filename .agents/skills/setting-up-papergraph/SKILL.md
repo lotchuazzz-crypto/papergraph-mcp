@@ -154,8 +154,15 @@ For PDF reading, surface `text_coverage` and unverified statement/proof complete
 Use its continuation-source locator before interpreting truncated text. Follow
 `source_reading` / `workspace_read_source_blocks` and its `next` handle for bounded
 raw source reading (limit 1..50); source-slice `context` is 0..5. Raw blocks do
-not assert proof ownership. Explicit closed multi-block proof regions retain
-unverified completeness. For a selected dependency target use `detail: compact`
+not assert proof ownership. New PDF proof evidence is limited to the first
+physical line carrying an explicit proof heading. It does not automatically
+join later lines or blocks or use their QED to establish ownership. The first
+marker clips that line; an ambiguous marker mention stops without certifying
+closure. Fragment offsets are block-relative; the bbox identifies the raw
+container. `automatic_ownership_policy` distinguishes this policy from legacy
+stored excerpts, which remain unverified and unchanged until an explicitly
+chosen reimport. Long-proof late references stay unknown; offer raw source for
+review without promoting it to dependency evidence. For a selected dependency target use `detail: compact`
 to omit repeated bodies/catalogs and follow `full_evidence` for original records.
 Use `blocked_groups` / unique target counts for display; legacy `blocked_count`
 counts records and original `blocked_ids` remain valid. Adjacent

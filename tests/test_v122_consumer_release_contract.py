@@ -111,3 +111,15 @@ def test_contradiction_guard_detects_rejected_current_version_claims(claim):
 
 def test_historical_acceptance_and_explicit_nonpublication_are_distinct():
     assert not contradictory_claims('PyPI 1.2.1 is published. 1.2.2 is not published.', '1.2.2')
+
+
+def test_current_guidance_discloses_fail_closed_pdf_policy():
+    for path in GUIDANCE:
+        text = path.read_text(encoding='utf-8')
+        assert 'automatic_ownership_policy' in text, path
+        if path.name == 'usage-prompt.md':
+            assert '首个原始文本行' in text and '后续行或块不自动关联' in text
+        else:
+            normalized = plain(text)
+            assert 'first physical line' in normalized, path
+            assert 'not automatically join' in normalized, path

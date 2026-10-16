@@ -26,9 +26,10 @@ def save(path, value):
 def pdf_fixture(path, closed):
     doc = pymupdf.open()
     lines = ['Lemma 1.1. Base case.', 'Proof. Direct. QED.',
-             'Theorem 1.2. Main result.', 'Proof. We proceed in steps.']
+             'Theorem 1.2. Main result.',
+             'Proof. Apply Lemma 1.1 and Lemma 9.9. QED.' if closed else 'Proof. We proceed in steps.']
     lines += [f'Step {i}: a bounded synthetic calculation.' for i in range(30)]
-    lines[22] = 'DEPENDENCY_MIDDLE. Apply Lemma 1.1 and Lemma 9.9.'
+    lines[22] = 'DEPENDENCY_MIDDLE. Apply Lemma 8.8.'
     lines += ['This concludes. QED.' if closed else 'Further discussion continues.']
     lines += ['Unrelated prose uses Lemma 8.8.']
     for start in range(0, len(lines), 12):

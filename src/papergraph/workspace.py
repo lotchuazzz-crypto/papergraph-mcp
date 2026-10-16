@@ -3945,7 +3945,25 @@ class Workspace(ReferenceExpansionMixin):
             ).fetchall()
         else:
             raise ValueError(f"Invalid source slice selector: {selector_kind!r}")
-        return [_source_slice_record_from_row(row) for row in rows]
+        records = [_source_slice_record_from_row(row) for row in rows]
+        anchors = []
+        for record in records:
+            if record['method'] != 'pdf_proof_fragment':
+                anchors.append(record)
+                continue
+            # Proof evidence may cover a strict substring of its raw block.
+            # Source context/navigation still starts at that complete container.
+            containers = [row for row in self._source_slice_rows_for_source(
+                record['paper_id'], record['source_type'], record['source_ref'])
+                if row['page'] == record['page'] and row['block_index'] == record['block_index']
+                and row['method'] != 'pdf_bibliography_block'
+                and (row['start_offset'] or 0) <= record['start_offset']
+                and (row['end_offset'] if row['end_offset'] is not None else
+                     (row['start_offset'] or 0) + len(row['text'])) >= record['end_offset']]
+            if len(containers) != 1:
+                raise KeyError(f"Unknown or ambiguous raw container for fragment: {record['span_id']}")
+            anchors.extend(containers)
+        return list({record['id']: record for record in anchors}.values())
 
     @_synchronized
     def _source_slice_rows_for_source(
@@ -3962,6 +3980,7 @@ class Workspace(ReferenceExpansionMixin):
                 method, confidence
             FROM source_spans
             WHERE paper_id = ? AND source_type = ? AND source_ref = ?
+                AND method != 'pdf_proof_fragment'
             ORDER BY page, block_index, id
             """,
             (paper_id, source_type, source_ref),

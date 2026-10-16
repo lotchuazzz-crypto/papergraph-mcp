@@ -64,14 +64,14 @@ def test_actual_pdf_unnumbered_larger_heading_is_an_ambiguous_boundary(tmp_path)
         assert workspace.get_proof_dependencies(result_id)['known']['resolved_local_results'] == []
 
 
-def test_actual_pdf_ordinary_continuation_retains_explicit_late_evidence(tmp_path):
+def test_actual_pdf_ordinary_continuation_remains_raw_without_automatic_late_evidence(tmp_path):
     path = tmp_path / 'continuation.pdf'
     # The same plain body size is intentionally not a layout heading signal.
     write_boundary_pdf(path, 'We continue with the required construction.')
     with closing(Workspace.open(tmp_path / 'reading.sqlite3')) as workspace:
         workspace.import_pdf(path, 'local:continuation')
         deps = workspace.get_proof_dependencies('local:continuation::pdf:theorem:2.1')
-        assert [r['visible_number'] for r in deps['known']['resolved_local_results']] == ['1.1']
+        assert deps['known']['resolved_local_results'] == []
 
 
 @pytest.mark.parametrize('embedded_in_opening', [True, False])
@@ -94,7 +94,7 @@ def test_actual_pdf_boundary_inside_one_text_block_does_not_leak_mentions(tmp_pa
         result_id = 'local:multiline::pdf:theorem:2.1'
         proof = workspace.get_result_proof(result_id)['known']['proof']
         assert proof['text'] == 'Proof. An incomplete main argument.'
-        assert proof['method'] == 'pdf_proof_heading'
+        assert proof['method'] == 'pdf_proof_first_line_excerpt'
         assert workspace.get_proof_dependencies(result_id)['known']['resolved_local_results'] == []
 
 

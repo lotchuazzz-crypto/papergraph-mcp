@@ -33,6 +33,17 @@ client's source still requires configuration approval and a backup. Missing Git
 context in doctor is a nonfatal repository diagnostic, separate
 from PyPI launch readiness.
 
+## PDF evidence boundary
+
+New imports retain only the first physical line carrying an explicit proof
+heading as automatic proof evidence. The importer does not automatically join
+later lines or blocks. The first terminal-marker position clips the line;
+ambiguous QED mentions stop without claiming closure. Exact block-relative
+fragment offsets remain auditable, and source navigation returns the complete
+raw block. Inspect `automatic_ownership_policy`; legacy stored excerpts stay
+unverified and are not silently rewritten. Long-proof late references require
+raw review and remain unknown in the automatic dependency graph.
+
 ## Install `uv` and `uvx`
 
 - **Detection:** run `uv --version` and `uvx --version` without modifying the host. Do nothing when both work.

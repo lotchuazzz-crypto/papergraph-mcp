@@ -56,7 +56,7 @@ def test_same_size_named_heading_prevents_false_proof_edge_and_keeps_raw(tmp_pat
         proof = workspace.get_result_proof(result_id)['known']['proof']
         assert proof['text'] == 'Proof. An incomplete main argument.'
         assert proof['text_coverage']['complete'] is False
-        assert proof['method'] == 'pdf_proof_heading'
+        assert proof['method'] == 'pdf_proof_first_line_excerpt'
         assert workspace.get_proof_dependencies(result_id)['known']['resolved_local_results'] == []
         assert workspace.get_result_reading_path(result_id)['edges'] == []
         args = workspace.get_source_slice(proof_id=proof['proof_id'])['source_reading']['arguments']
@@ -95,26 +95,50 @@ def test_named_boundary_within_pdf_block_does_not_leak_later_qed(tmp_path, headi
 @pytest.mark.parametrize('prefix', ['A', 'b', 'II', 'iv', '1', '12'])
 @pytest.mark.parametrize('middle', ['1', '2.a', 'II.3', 'a.2.10'])
 @pytest.mark.parametrize('wrapper', ['{}', '{}.', '{}:', '{} )', '({})', '[{}]'])
-def test_outline_grammar_handles_hierarchical_segments_without_title_case_assumptions(prefix, middle, wrapper):
-    from papergraph.evidence_extractors import _proof_lexical_boundary
-
+def test_outline_shapes_cannot_authorize_continuation(prefix, middle, wrapper):
     label = wrapper.format(prefix + '.' + middle)
-    assert _proof_lexical_boundary(label + ' auxiliary estimates')
-    assert _proof_lexical_boundary(label)
+    assert_no_automatic_continuation(label + ' auxiliary estimates')
+    assert_no_automatic_continuation(label)
 
 
 @pytest.mark.parametrize('heading', HEADINGS)
 @pytest.mark.parametrize('case', ['lower', 'upper'])
-def test_named_heading_grammar_is_case_independent(heading, case):
-    from papergraph.evidence_extractors import _proof_lexical_boundary
-
-    assert _proof_lexical_boundary(getattr(heading, case)())
+def test_named_heading_case_never_authorizes_continuation(heading, case):
+    assert_no_automatic_continuation(getattr(heading, case)())
 
 
 def test_unicode_apostrophe_in_named_author_contributions():
-    from papergraph.evidence_extractors import _proof_lexical_boundary
+    assert_no_automatic_continuation('Authors’ Contributions')
 
-    assert _proof_lexical_boundary('Authors’ Contributions')
+
+def assert_no_automatic_continuation(title):
+    from tests.test_evidence_extractors import span
+    from papergraph.evidence_extractors import build_pdf_evidence_document
+
+    document = build_pdf_evidence_document('local:paper-a', 'paper.pdf', (
+        span(0, 'Theorem 2.1. Main assertion.'), span(1, 'Proof. We begin.'),
+        span(2, title), span(3, 'Apply Lemma 1.1. QED.')))
+    assert document.proofs[0].text == 'Proof. We begin.'
+    assert document.local_result_mentions == ()
+
+
+@pytest.mark.parametrize('label', ['7.2.4', 'C.2', 'c.2', 'C.2.d', 'iv.3', 'III.b.4', 'D', 'vii'])
+@pytest.mark.parametrize('wrapper', ['{}', '({})', '[{}]'])
+@pytest.mark.parametrize('suffix', ['', '.', ':'])
+@pytest.mark.parametrize('position', ['separate', 'opening', 'continuation'])
+def test_wrapped_outline_punctuation_and_unknown_bare_letters_never_join(label, wrapper, suffix, position):
+    from tests.test_evidence_extractors import span
+    from papergraph.evidence_extractors import build_pdf_evidence_document
+
+    title = wrapper.format(label) + suffix + ' auxiliary material'
+    opening, tail = 'Proof. We begin.', 'OUTSIDE_WITNESS. Apply Lemma 1.1. QED.'
+    blocks = ([opening, title, tail] if position == 'separate' else
+              [opening + '\n' + title + '\n' + tail] if position == 'opening' else
+              [opening, 'We continue.\n' + title + '\n' + tail])
+    document = build_pdf_evidence_document('local:paper-a', 'paper.pdf', tuple(
+        span(i, text) for i, text in enumerate(['Theorem 2.1. Main assertion.', *blocks])))
+    assert document.proofs[0].text == opening
+    assert document.local_result_mentions == ()
 
 
 @pytest.mark.parametrize('continuation', [
@@ -122,10 +146,10 @@ def test_unicode_apostrophe_in_named_author_contributions():
     'References to Lemma 1.1 suffice for the next bound.',
     'The supplementary material is not used in this construction.',
 ])
-def test_heading_words_inside_ordinary_prose_are_not_named_headings(tmp_path, continuation):
+def test_even_ordinary_prose_continuation_is_not_automatically_owned(tmp_path, continuation):
     path = tmp_path / 'continuation.pdf'
     write_boundary_pdf(path, continuation)
     with closing(Workspace.open(tmp_path / 'reading.sqlite3')) as workspace:
         workspace.import_pdf(path, 'local:continuation')
         result_id = 'local:continuation::pdf:theorem:2.1'
-        assert workspace.get_proof_dependencies(result_id)['known']['resolved_local_results']
+        assert workspace.get_proof_dependencies(result_id)['known']['resolved_local_results'] == []

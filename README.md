@@ -37,16 +37,22 @@ only to 1.2.1. See [v1.2.2 changes and release gates](docs/reference/v1.2.2-rele
 PDF slices now expose stable block locators and `source_reading`; follow
 `workspace_read_source_blocks` and its `next` handle to reach long unanchored
 proofs (1..50 blocks per page). `get-source-slice --context` accepts 0..5.
-Raw adjacent blocks remain source context. Multi-block proof evidence requires
-an explicit terminal marker and stops at result/proof/section boundaries;
-mathematical completeness remains unverified.
-Headings are conservatively rejected by outline structure (including `B.1` and
-`a.1`) and common section names, including US/UK acknowledgment spellings,
-even at the same body size or inside one raw block. A later QED never overrides
-a recognized boundary; unknown titles and OCR/layout ambiguities remain limits.
-Old imports gain raw navigation
-without reimport; extraction improvements require an explicitly chosen reimport,
-which preserves existing reading state under the existing reimport contract.
+Raw blocks remain source context. For new PDF imports, automatic proof evidence
+is limited to the **first physical line** carrying an explicit `Proof…` heading
+(at most 12,000 characters; oversized lines retain the heading only). It does
+not automatically join later lines or blocks, even when they contain a QED.
+The first marker on that line clips the excerpt; ambiguous mentions of “QED”
+stop the excerpt without certifying closure or borrowing a later marker.
+Exact block-relative offsets identify a proof fragment; its bounding box still
+identifies the raw container, not reconstructed glyph geometry. Raw continuation
+remains complete and available independently. Late references in a long proof
+therefore remain unknown; reading them does not create a formal dependency.
+
+`text_coverage.automatic_ownership_policy` distinguishes this heading-line policy
+from legacy stored excerpts, whose ownership remains unverified. Existing imports
+and reading state are unchanged. Choose a separate explicit reimport to refresh
+stored extraction; raw navigation already works without reimport. Mathematical
+completeness and all PDF layouts remain unverified.
 
 `get-dependency-reading WORKSPACE PAPER_ID --target-result-id RESULT --detail compact`
 omits the repeated whole-paper catalog and bodies, with full-evidence accessors.

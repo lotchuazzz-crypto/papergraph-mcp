@@ -10,13 +10,15 @@ from papergraph.workspace import Workspace
 from papergraph import server
 
 
-def document(*, closed=True):
+def document(*, closed=True, short_reference=False):
     texts = ['Lemma 1.1. Base case.', 'Proof. Direct. QED.',
              'Theorem 1.2. Long assertion.', 'Proof. We proceed in several steps.']
     texts += [f'Step {i}: intermediate reasoning.' for i in range(30)]
     texts[20] = 'DEPENDENCY_MIDDLE. Apply Lemma 1.1 and Lemma 9.9.'
     texts += ['The argument concludes. QED.' if closed else 'The argument continues.']
     texts += ['Unrelated prose refers to Lemma 8.8.']
+    if short_reference:
+        texts[3] = 'Proof. Apply Lemma 1.1 and Lemma 9.9. QED.'
     spans = tuple(SourceSpanEvidence('local:long', 'pdf', 'long.pdf', i // 10 + 1, i % 10,
                    0, len(text), None, text, 'pdf_text_block', 1.0) for i, text in enumerate(texts))
     return build_pdf_evidence_document('local:long', 'long.pdf', spans)
@@ -50,26 +52,28 @@ def test_unanchored_long_proof_middle_and_all_raw_blocks_reachable_after_restart
         assert deps['unresolved']['local_result_mentions'] == []
 
 
-def test_explicit_closed_proof_includes_late_dependency_but_not_adjacent_prose(tmp_path):
+def test_late_qed_does_not_authorize_any_continuation_block(tmp_path):
     doc = document()
     proof = doc.proofs[1]
-    assert len(proof.span_indices) > 20
-    assert 'DEPENDENCY_MIDDLE' in proof.text and 'Unrelated prose' not in proof.text
+    assert len(proof.span_indices) == 1
+    assert 'DEPENDENCY_MIDDLE' not in proof.text and 'Unrelated prose' not in proof.text
     with closing(Workspace.open(tmp_path / 'ws.sqlite3')) as ws:
         ws.import_evidence_document(doc)
         deps = ws.get_proof_dependencies(doc.results[1].result_id)
-        assert [r['visible_number'] for r in deps['known']['resolved_local_results']] == ['1.1']
-        assert [m['raw_text'] for m in deps['unresolved']['local_result_mentions']] == ['Lemma 9.9']
-        assert deps['proof_coverage']['association_boundary'] == 'explicit_terminal_marker'
+        assert deps['known']['resolved_local_results'] == []
+        assert deps['unresolved']['local_result_mentions'] == []
+        assert deps['proof_coverage']['association_boundary'] == 'unverified_excerpt'
+        assert deps['proof_coverage']['automatic_ownership_policy'] == 'heading_line_only_no_automatic_continuation'
         assert deps['proof_coverage']['complete'] is False
         plan = ws.plan_external_imports_for_result(doc.results[1].result_id)
         assert not plan['blocked']
-        assert plan['unresolved_local_mentions'][0]['raw_text'] == 'Lemma 9.9'
-        assert plan['unresolved_local_mentions'][0]['spans']
+        assert plan['unresolved_local_mentions'] == []
         queue = ws.create_reading_queue(doc.results[1].result_id)
         qplan = ws.plan_external_imports_for_queue(queue['queue_id'])
         assert not qplan['blocked']
-        assert qplan['unresolved_local_mentions'][0]['raw_text'] == 'Lemma 9.9'
+        assert qplan['unresolved_local_mentions'] == []
+        args = ws.get_source_slice(proof_id=proof.proof_id)['source_reading']['arguments']
+        assert any('DEPENDENCY_MIDDLE' in row['text'] for row in ws.read_source_blocks(**args)['blocks'])
 
 
 def test_ordinary_definition_of_is_not_a_number_but_valid_references_survive(tmp_path):
@@ -109,7 +113,7 @@ def test_schema_and_runtime_bounds_are_consistent(tmp_path):
 
 def test_compact_reading_keeps_access_to_full_evidence_without_catalog(tmp_path):
     with closing(Workspace.open(tmp_path / 'ws.sqlite3')) as ws:
-        ws.import_evidence_document(document())
+        ws.import_evidence_document(document(short_reference=True))
         rid = 'local:long::pdf:theorem:1.2'
         full = ws.get_dependency_reading('local:long', rid)
         compact = ws.get_dependency_reading('local:long', rid, detail='compact')

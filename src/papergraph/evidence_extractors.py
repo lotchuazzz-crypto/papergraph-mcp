@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import replace
+from dataclasses import asdict, replace
 
 from papergraph.arxiv import InvalidArxivIdError, normalize_arxiv_id
 from papergraph.author_correspondence import declared_target, RELATION
@@ -29,7 +29,7 @@ RESULT_RE = re.compile(
     re.I,
 )
 PROOF_RE = re.compile(
-    r"^Proof(?:\s+of\s+(?:(?P<kind>Theorem|Lemma|Proposition|Corollary|Claim)\s+)?"
+    r"^Proof\b(?:\s+of\s+(?:(?P<kind>Theorem|Lemma|Proposition|Corollary|Claim)\s+)?"
     r"(?P<number>[A-Za-z]?(?:\d+(?:\.\d+)*|[A-Z]))(?![\w.]*\w))?\.?\s*(?P<body>.*)$",
     re.I,
 )
@@ -268,9 +268,8 @@ def extract_proof_blocks(
         if result_id is not None:
             already_associated.add(result_id)
 
-        proof_indices = _bounded_proof_indices(spans, span_index, limit)
-        proof_text = (_proof_opening_excerpt(span) if len(proof_indices) == 1 else
-                      "\n".join(_normalized_text(spans[i].text) for i in proof_indices))
+        proof_text, _start, _end, terminated = _proof_first_line_excerpt(span)
+        proof_indices = (span_index,)
         proofs.append(
             ProofEvidence(
                 proof_id=proof_id,
@@ -280,7 +279,7 @@ def extract_proof_blocks(
                 span_indices=proof_indices,
                 association_basis=association_basis,
                 association_confidence=association_confidence,
-                method="pdf_proof_explicit_end" if _proof_end(proof_text) else "pdf_proof_heading",
+                method="pdf_proof_first_line_explicit_end" if terminated else "pdf_proof_first_line_excerpt",
                 confidence=0.85,
             )
         )
@@ -288,107 +287,72 @@ def extract_proof_blocks(
     return tuple(proofs)
 
 
-def _proof_end(text):
-    return re.search(r"(?:\bQ\.?E\.?D\.?|[\u25a1\u220e\u25a0])\s*$", text) is not None
+
+# A PDF text block is a container, not a proof region. Never infer ownership of
+# later lines or blocks from a later QED, title vocabulary, font size or budget.
+# Retain only the physical line carrying the explicit proof heading. Ambiguous
+# marker mentions stop this excerpt without claiming a closed proof.
+_PROOF_TERMINATOR_RE = re.compile(r'(?<!\w)(?:Q\.?E\.?D\.?|[\u25a1\u220e\u25a0])(?!\w)', re.I)
+_ANOTHER_PROOF_RE = re.compile(r'\bProof(?:[.:]|\s+of\b)', re.I)
 
 
-_PROOF_DECLARATION_BOUNDARY_RE = re.compile(
-    r'^(?:Theorem|Lemma|Proposition|Corollary|Definition|Claim|Conjecture|Example|Remark|Proof)\b',
-    re.I,
-)
-# Outline labels have a grammar, independent of the title's capitalization:
-# numeric, alphabetic or Roman segments can form A.1, 2.a.3, IV.B.2, etc.
-# A bare single letter still needs punctuation/wrapping, avoiding "A ..." prose.
-_PROOF_OUTLINE_SEGMENT = r'(?:\d+|[A-Z]|[IVXLCDM]{2,})'
-_PROOF_OUTLINE_HIERARCHY = rf'{_PROOF_OUTLINE_SEGMENT}(?:\.{_PROOF_OUTLINE_SEGMENT})+'
-_PROOF_OUTLINE_LABEL = (
-    rf'(?:{_PROOF_OUTLINE_HIERARCHY}[.):]?|\d+[.):]?|[A-Z][.):]|[IVXLCDM]{{2,}}[.):]?'
-    rf'|\((?:{_PROOF_OUTLINE_HIERARCHY}|{_PROOF_OUTLINE_SEGMENT})\)'
-    rf'|\[(?:{_PROOF_OUTLINE_HIERARCHY}|{_PROOF_OUTLINE_SEGMENT})\])'
-)
-_PROOF_NAMED_SECTION = (
-    r'(?:Acknowledg(?:e)?ments?|References?(?:\s+Cited)?|Bibliograph(?:y|ies|ic(?:al)?\s+References?)'
-    r'|Literature(?:\s+Cited)?|Works\s+Cited|Further\s+Reading'
-    r'|(?:(?:Electronic\s+)?Supplement(?:ary|al)|Supporting)\s+(?:Materials?|Information|Data)'
-    r'|(?:Data|Code|Data\s+and\s+Code)\s+Availability(?:\s+Statement)?'
-    r'|Availability\s+of\s+Data\s+and\s+Materials'
-    r'|Authors?[\x27\u2019]?\s+Contributions?|Funding(?:\s+(?:Information|Statement))?'
-    r'|Competing\s+Interests?|Conflicts?\s+of\s+Interests?(?:\s+Statement)?|Disclosures?'
-    r'|Declarations?(?:\s+of\s+(?:Competing\s+)?Interests?)?|Ethic(?:s|al)\s+Approval|Notes|Endnotes'
-    r'|Abstract|Contents|Table\s+of\s+Contents|Introduction|Background|Preliminaries'
-    r'|Motivation|Notation|Methods|Materials\s+and\s+Methods|Results'
-    r'|Conclusions?|Discussion|Summary|Future\s+Work|Outlook)'
-)
-_PROOF_SECTION_BOUNDARY_RE = re.compile(
-    rf'^(?:{_PROOF_OUTLINE_LABEL}(?:\s+\S|\s*$)'
-    r'|(?:Appendix|Appendices|Sections?|Chapters?|Parts?|Annex(?:es)?|Supplements?|Sec|Ch)\b'
-    rf'|{_PROOF_NAMED_SECTION}(?:\s+(?:and|&)\s+{_PROOF_NAMED_SECTION})*'
-    r'(?:\s*[.:]\s*(?:\S.*)?)?\s*$)',
-    re.I,
-)
+def _proof_first_line_excerpt(span):
+    first = re.search(r'\S', span.text)
+    if first is None:
+        return '', 0, 0, False
+    start = first.start()
+    newline = re.search(r'[\r\n]', span.text[start:])
+    end = start + newline.start() if newline else len(span.text)
+    line = span.text[start:end]
+    heading = PROOF_RE.match(line)
+    if heading is None:
+        return '', start, start, False
+    # A second explicit proof heading on this same line is not a continuation.
+    another = _ANOTHER_PROOF_RE.search(line, heading.start('body'))
+    boundary = another.start() if another else len(line)
+    if len(line) > 12000:
+        boundary = heading.start('body')
+    marker = _PROOF_TERMINATOR_RE.search(line, 0, boundary)
+    terminated = False
+    if marker:
+        before, after = line[:marker.start()].rstrip(), line[marker.end():boundary].lstrip()
+        token = marker.group()
+        # Standalone or sentence-final markers are explicit. A word such as
+        # "QED is ...", a quotation or an abbreviation mention is ambiguous;
+        # do not skip it and borrow a later marker. In either case nothing
+        # after this first marker can become proof evidence.
+        terminated = (not before or before.endswith(('.', '!', '?'))) and (
+            not after or (token.endswith('.') and after[0].isupper()))
+        boundary = marker.end() if terminated else marker.start()
+    end = start + boundary
+    while end > start and span.text[end - 1].isspace():
+        end -= 1
+    return _normalized_text(span.text[start:end]), start, end, terminated
 
 
-def _proof_lexical_boundary(line):
-    return bool(_PROOF_DECLARATION_BOUNDARY_RE.match(line.strip())
-                or _PROOF_SECTION_BOUNDARY_RE.match(line.strip()))
+def _materialize_pdf_proof_fragments(spans, proofs):
+    """Persist exact block-relative ranges without altering the raw source."""
+    from papergraph.source_navigation import block_locator
 
-
-def _proof_opening_excerpt(span):
-    # A PDF block can itself contain a heading after its opening proof line.
-    # Keep source provenance, but never extract mentions from beyond that line.
-    included = []
-    for line in span.text.splitlines():
-        if not line.strip():
+    fragments, linked = [], []
+    for proof in proofs:
+        index = proof.span_indices[0]
+        original = spans[index]
+        text, start, end, _terminated = _proof_first_line_excerpt(original)
+        if text != proof.text:
+            raise ValueError('PDF proof excerpt does not match its source range')
+        if start == 0 and end == len(original.text):
+            linked.append(proof)
             continue
-        if included and _proof_lexical_boundary(line):
-            break
-        included.append(line)
-    return _normalized_text('\n'.join(included))
-
-
-def _proof_region_boundary(candidate, opening):
-    """Fail closed at lexical declarations/headings or an ambiguous layout title.
-
-    A nested claim, numbered step, or title-like larger block can belong to the
-    proof, but does not establish ownership of everything up to a later QED.
-    Prefer a partial excerpt plus raw navigation over such an uncertain join.
-    """
-    if any(_proof_lexical_boundary(line) for line in candidate.text.splitlines() if line.strip()):
-        return True
-    text = _normalized_text(candidate.text)
-    if not candidate.bbox or not opening.bbox or len(text) > 200:
-        return False
-    # Block height per text line approximates a size change without claiming
-    # font reconstruction. Restrict to prose-like short blocks, not equations.
-    if re.fullmatch(r"[\w\s.,:;'’()\u2013\u2014-]+", text) is None:
-        return False
-    def line_height(span):
-        lines = max(1, sum(bool(line.strip()) for line in span.text.splitlines()))
-        return (span.bbox[3] - span.bbox[1]) / lines
-    return line_height(candidate) > 1.25 * line_height(opening)
-
-
-def _bounded_proof_indices(spans, start, limit):
-    """Only associate a lexical region closed by an explicit proof terminator.
-
-    New result/proof/section headings, bibliography and resource bounds abort
-    association. In that case retain the old heading excerpt; raw block reading
-    still reaches the entire source without asserting proof ownership.
-    """
-    included, size = [], 0
-    if any(_proof_lexical_boundary(line) for line in spans[start].text.splitlines()[1:]):
-        return (start,)
-    for index in range(start, min(limit, start + 200)):
-        text = _normalized_text(spans[index].text)
-        if index > start and _proof_region_boundary(spans[index], spans[start]):
-            break
-        size += len(text)
-        if size > 100000:
-            break
-        included.append(index)
-        if _proof_end(text):
-            return tuple(included)
-    return (start,)
+        fragment = replace(original, text=original.text[start:end],
+                           start_offset=(original.start_offset or 0) + start,
+                           end_offset=(original.start_offset or 0) + end,
+                           method='pdf_proof_fragment', span_id=None)
+        locator = block_locator(asdict(fragment)).replace('source-block:', 'source-fragment:', 1)
+        fragment = replace(fragment, span_id=locator)
+        linked.append(replace(proof, span_indices=(len(spans) + len(fragments),)))
+        fragments.append(fragment)
+    return tuple(fragments), tuple(linked)
 
 
 def _split_arxiv_version(arxiv_id: str) -> tuple[str, str | None]:
@@ -778,6 +742,7 @@ def build_pdf_evidence_document(
 
     results = extract_result_blocks(paper_id, spans)
     proofs = extract_proof_blocks(paper_id, spans, results)
+    proof_fragments, proofs = _materialize_pdf_proof_fragments(spans, proofs)
     bibliography_entries = extract_bibliography_entries(paper_id, spans)
     # Bibliography entries can be uncited in extracted proof blocks. Keep their
     # actual PDF block locations so import validation does not require a citation
@@ -822,7 +787,7 @@ def build_pdf_evidence_document(
         title=title,
         authors=authors,
         main_file=source_ref,
-        spans=(*spans, *bibliography_spans),
+        spans=(*spans, *proof_fragments, *bibliography_spans),
         results=results,
         proofs=proofs,
         bibliography_entries=bibliography_entries,

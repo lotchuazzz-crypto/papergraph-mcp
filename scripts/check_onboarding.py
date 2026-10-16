@@ -24,9 +24,9 @@ LAUNCH_COMMAND = [
     "--version",
 ]
 PYPI_SOURCE = f"papergraph-mcp=={PAPERGRAPH_VERSION}"
-# v1.2.2 is prepared, not published or independently accepted.
-# Enable only after version-specific official-index acceptance is recorded.
-PYPI_PUBLICATION_VERIFIED = False
+# v1.2.2 public bytes and fresh Git-free public-index acceptance are recorded in
+# docs/reference/v1.2.2-publication.md. Frozen R/tag/package files remain unchanged.
+PYPI_PUBLICATION_VERIFIED = True
 
 
 def inspect_prerequisites(

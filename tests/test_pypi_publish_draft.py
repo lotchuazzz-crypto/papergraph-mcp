@@ -215,3 +215,23 @@ def test_only_validated_candidates_are_saved_and_same_run_artifact_is_reused():
     assert ci['pypi-preparation']['with']['save_artifacts'] == 'true'
     assert ci['pypi-artifact-verification']['needs'] == 'pypi-preparation'
     assert ci['pypi-artifact-verification']['with']['artifact_id'] == '${{ needs.pypi-preparation.outputs.artifact_id }}'
+
+
+def test_public_index_pr_acceptance_has_no_publication_authority_or_local_artifact():
+    acceptance = workflow('pypi-public-acceptance.yml')
+    assert set(acceptance['on']) == {'pull_request'}
+    assert acceptance['permissions'] == {'contents': 'read'}
+    verify = acceptance['jobs']['verify']
+    assert 'environment' not in verify
+    steps = verify['steps']
+    assert steps[0]['with']['persist-credentials'] == 'false'
+    script = steps[1]['run']
+    assert script.index('--check-environment') < script.index('pip install')
+    assert '--read-only --cap-drop=ALL --security-opt=no-new-privileges' in script
+    assert 'target=/checks,readonly' in script
+    assert 'target=/dist' not in script and '--artifact' not in script
+    assert '--no-project --no-config --no-env-file --default-index https://pypi.org/simple' in script
+    assert '--with papergraph-mcp==1.2.2' in script and '--public-index' in script
+    assert 'test ! -e "$UV_CACHE_DIR"' in script
+    text = (ROOT / '.github/workflows/pypi-public-acceptance.yml').read_text()
+    assert not any(value in text for value in ('secrets.', 'id-token:', 'upload-artifact@', 'pypa/gh-action-pypi-publish'))

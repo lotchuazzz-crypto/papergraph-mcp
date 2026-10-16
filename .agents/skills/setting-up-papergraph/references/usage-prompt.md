@@ -11,7 +11,7 @@ Present this prompt before asking for installation permission:
 
 若使用未发布的本地修复，请同时记录实际启动解释器、`doctor.build_identity` 的基准提交、修改状态和源码摘要；版本显示 1.2.2 也不代表已发布；请核对官方索引验收，不把本地行为归于未经验证的 PyPI 包。保持现有 MCP 客户端配置不变，安装、配置和重启分别需要批准。
 
-当前检出准备 1.2.2，尚未发布或独立验收，`publication_verified=false`；普通 PyPI 及版本标签安装命令须等待各自发布证据，不用历史 1.2.1 验收替代。源码审阅和本地制品通过也不代表官方入口已发布。
+PyPI 1.2.2 已完成[实际公开字节及无 Git 官方索引验收](../../../../docs/reference/v1.2.2-publication.md)，当前 main 为 `PyPI publication_verified=true`，可使用固定 PyPI 版本。Git 标签已核对但设置时仍须实时验证；GitHub Release 尚待创建。不可变 R/tag/包保留构建时的准备态文件，当前状态以 main 的版本验收记录为准，不用历史 1.2.1 验收替代。源码审阅或本地制品通过本身仍不能证明官方入口已发布。
 
 Git 固定提交能安装不等于版本标签已发布。checker 的 `--install-source git` 默认只做本地前置条件检查，不应显示 publication verified；需要明确联网验证时，再用 `--verify-git-release --expected-source-commit SHA`，其中 SHA 必须来自审阅过的打包源码记录。只有实时标签目标与该 SHA 相符才允许继续标签 launch；标签缺失、网络不可用或不匹配都保持未验证。
 

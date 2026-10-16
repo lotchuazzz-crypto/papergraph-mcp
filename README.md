@@ -23,16 +23,19 @@ It helps AI agents turn arXiv papers, local LaTeX projects, and born-digital PDF
 
 ---
 
-### v1.2.2: prepared for independent acceptance — not published
+### v1.2.2: public PyPI and Git tag verified
 
-This checkout prepares **1.2.2**. The PyPI and optional Git recipes below are
-release instructions: do not claim either is available until the corresponding
-version/tag and official-index acceptance are verified. The checker deliberately
-keeps `publication_verified=false`. The immutable 1.2.1 acceptance below applies
-only to 1.2.1. See [v1.2.2 changes and release gates](docs/reference/v1.2.2-release-notes.md).
+PyPI **1.2.2** is published. Its downloaded wheel/sdist bytes and a fresh Linux
+public-index consumer with no Git have passed [version-specific acceptance](docs/reference/v1.2.2-publication.md).
+Current main sets **PyPI publication_verified=true**. The public Git tag matches
+the reviewed package source; Git setup still requires explicit live verification.
+GitHub Release creation remains pending. Immutable R/tag/package guidance keeps
+its historical prepared-state snapshot; main records the later public acceptance.
+The 1.2.1 evidence below applies only to 1.2.1. See [v1.2.2 changes](docs/reference/v1.2.2-release-notes.md).
 
-本检出准备 1.2.2，尚未独立验收或发布。下方 1.2.2 安装命令须在对应标签及
-官方索引验收后使用；`publication_verified=false`。历史 1.2.1 验收不代表 1.2.2。
+PyPI 1.2.2 已发布并完成实际公开字节及全新无 Git Linux 消费者验收；当前 main 的
+**PyPI publication_verified=true**。Git 标签已核对，Git 路线仍须实时验证目标。
+GitHub Release 尚待创建；不可变 R/tag/包中的准备态文件保留为历史快照。
 
 PDF slices now expose stable block locators and `source_reading`; follow
 `workspace_read_source_blocks` and its `next` handle to reach long unanchored
@@ -131,7 +134,7 @@ mathematical contents. Unavailable providers, conflicting DOI identities and
 missing public PDFs are reported separately. Use `workspace_add_pdf_paper` for a
 legally obtained local PDF when no usable candidate is available. HTTPS PDF
 downloads are bounded to 50 MiB and preserve source/version/hash receipts beside
-the workspace. Installation examples target the prepared 1.2.2 with the publication guard described above.
+the workspace. Installation examples target verified PyPI 1.2.2; the optional Git route retains its live-tag guard.
 
 `get-dependency-reading WORKSPACE PAPER_ID` (MCP
 `workspace_get_dependency_reading`) lists results and source-backed main-result
@@ -322,11 +325,11 @@ uvx --from papergraph-mcp==1.2.2 papergraph-mcp doctor
 ```
 
 [1.2.1 官方索引验收](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)已通过 CLI、stdio MCP 和 PDF 阅读；MCPVault 实际环境仍未验证。
-仓库检查器默认选择 PyPI 1.2.2，目前 `publication_verified=false`，会阻止尚未验收版本的普通安装启动。该版本官方索引验收并记录后，`python scripts/check_onboarding.py --smoke-test` 才会实际启动固定版本命令，可能访问网络并写入缓存。
+仓库检查器默认选择已完成[1.2.2 官方索引验收](docs/reference/v1.2.2-publication.md)的 PyPI 固定版本；当前 main 为 `PyPI publication_verified=true`。`python scripts/check_onboarding.py --smoke-test` 会实际启动该固定版本命令，可能访问网络并写入缓存。
 不加 `--smoke-test` 时只做只读检查，不下载或启动服务器；仓库新鲜度与 PyPI 启动就绪状态分开报告。
 1.2.2 doctor 默认推荐 PyPI 固定版本，单独列出可选 Git-source；缺少 Git 上下文不再对 PyPI 用户发出警告。doctor 不验证发布状态。
 
-可选 Git-source 路径才需要 Git；先确认 `v1.2.2` 标签存在且指向 [1.2.2 发布说明](docs/reference/v1.2.2-release-notes.md)记录的打包源码（开发期间尚未创建），再将 `--from` 参数改为 `git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.2`；检查器使用 `--install-source git`。
+可选 Git-source 路径才需要 Git；`v1.2.2` 已存在并指向[制品记录](docs/reference/v1.2.2-artifact-verification.md)的打包源码，每次设置仍须以 `--install-source git --verify-git-release --expected-source-commit SHA` 实时核对后再用标签 launch；`--from` 为 `git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.2`。
 修改 main README 不会同步更新 PyPI 1.2.0 已发布包中的旧描述；更正应随下一次单独批准的新版本发布，不移动 v1.2.0 标签或覆盖发布文件。
 
 如果你的 MCP client 使用 JSON 风格的 stdio server 配置，可以添加：

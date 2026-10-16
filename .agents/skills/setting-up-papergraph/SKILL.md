@@ -100,9 +100,10 @@ python scripts/check_onboarding.py
 Use its facts for `git`, `uv`, and `uvx`; also detect the active MCP client without mutation. Infer the client only from reliable host or executable evidence. If it remains ambiguous, ask one concise question: “Which MCP client should I configure?”
 
 The default pinned PyPI launch requires `uv` and `uvx`, index access, and no Git
-or checkout. This checkout prepares v1.2.2; it has not been published or
-independently accepted. `publication_verified` remains false until its own
-official-index acceptance. The checker defaults to `pypi`; `--install-source pypi`
+or checkout. PyPI v1.2.2 has passed [public-byte and Git-free official-index acceptance](../../../docs/reference/v1.2.2-publication.md).
+Current main records `PyPI publication_verified=true`; immutable R/tag/package
+files retain their historical prepared-state snapshot. GitHub Release creation
+remains pending. The checker defaults to `pypi`; `--install-source pypi`
 is also explicit. Do not install Git solely for a PyPI consumer. Missing
 repository/Git context is separate from index readiness. Doctor recommends the
 PyPI version pin and reports optional Git source separately; it does not verify

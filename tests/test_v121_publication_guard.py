@@ -11,10 +11,8 @@ def load_checker():
     return checker
 
 
-def test_verified_release_is_ready_without_git_and_launches_the_pinned_index_package(monkeypatch):
+def test_verified_release_is_ready_without_git_and_launches_the_pinned_index_package():
     checker = load_checker()
-    assert checker.PYPI_PUBLICATION_VERIFIED is False
-    monkeypatch.setattr(checker, "PYPI_PUBLICATION_VERIFIED", True)
     assert checker.PAPERGRAPH_VERSION == '1.2.2'
     assert checker.PYPI_PUBLICATION_VERIFIED is True
     result = checker.inspect_prerequisites(locator={'uv': '/tools/uv', 'uvx': '/tools/uvx'}.get)

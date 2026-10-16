@@ -8,22 +8,21 @@ The default pinned source is:
 papergraph-mcp==1.2.2
 ```
 
-This checkout prepares 1.2.2; it is **not published** or independently accepted.
-The version-specific gate remains `publication_verified=false`. These are
-conditional release recipes: **do not run** the ordinary PyPI launch until
-version-specific official-index acceptance is recorded. Successful local wheel
-or fixed-commit tests do not verify a release. Prior
+PyPI 1.2.2 is published and its [actual public bytes and Git-free index consumer](../../../../docs/reference/v1.2.2-publication.md)
+have passed acceptance. Current main records `PyPI publication_verified=true`.
+These pinned PyPI recipes are available. A version string or local wheel alone
+does not establish that identity; immutable R/tag/package files retain their
+historical prepared-state guidance. Prior
 [v1.2.1 index acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)
 applies only to 1.2.1, not this version.
 
-The [future GitHub v1.2.2 Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.2)
-is not a claim that its tag exists. Obtain expected package source R from the
+The public Git tag exists; GitHub Release creation remains pending. Obtain expected package source R from the
 [reviewed artifact record](../../../../docs/reference/v1.2.2-artifact-verification.md),
 then explicitly check `--verify-git-release --expected-source-commit SHA` with
 `--install-source git`. Missing tags, unavailable networks and mismatched targets
 remain unverified; do not run the tag recipe before successful verification.
-Update publication status on main only after the actual release and acceptance;
-do not change the frozen source to claim publication in advance.
+This current status is recorded on main after actual public-index acceptance;
+the frozen source, version tag and published files remain unchanged.
 
 The PyPI recipes require uv/uvx and index access,
 without Git or a checkout. Optional Git-source installation uses

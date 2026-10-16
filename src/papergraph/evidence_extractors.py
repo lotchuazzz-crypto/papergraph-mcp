@@ -296,12 +296,34 @@ _PROOF_DECLARATION_BOUNDARY_RE = re.compile(
     r'^(?:Theorem|Lemma|Proposition|Corollary|Definition|Claim|Conjecture|Example|Remark|Proof)\b',
     re.I,
 )
+# Outline labels have a grammar, independent of the title's capitalization:
+# numeric, alphabetic or Roman segments can form A.1, 2.a.3, IV.B.2, etc.
+# A bare single letter still needs punctuation/wrapping, avoiding "A ..." prose.
+_PROOF_OUTLINE_SEGMENT = r'(?:\d+|[A-Z]|[IVXLCDM]{2,})'
+_PROOF_OUTLINE_HIERARCHY = rf'{_PROOF_OUTLINE_SEGMENT}(?:\.{_PROOF_OUTLINE_SEGMENT})+'
+_PROOF_OUTLINE_LABEL = (
+    rf'(?:{_PROOF_OUTLINE_HIERARCHY}[.):]?|\d+[.):]?|[A-Z][.):]|[IVXLCDM]{{2,}}[.):]?'
+    rf'|\((?:{_PROOF_OUTLINE_HIERARCHY}|{_PROOF_OUTLINE_SEGMENT})\)'
+    rf'|\[(?:{_PROOF_OUTLINE_HIERARCHY}|{_PROOF_OUTLINE_SEGMENT})\])'
+)
+_PROOF_NAMED_SECTION = (
+    r'(?:Acknowledg(?:e)?ments?|References?(?:\s+Cited)?|Bibliograph(?:y|ies|ic(?:al)?\s+References?)'
+    r'|Literature(?:\s+Cited)?|Works\s+Cited|Further\s+Reading'
+    r'|(?:(?:Electronic\s+)?Supplement(?:ary|al)|Supporting)\s+(?:Materials?|Information|Data)'
+    r'|(?:Data|Code|Data\s+and\s+Code)\s+Availability(?:\s+Statement)?'
+    r'|Availability\s+of\s+Data\s+and\s+Materials'
+    r'|Authors?[\x27\u2019]?\s+Contributions?|Funding(?:\s+(?:Information|Statement))?'
+    r'|Competing\s+Interests?|Conflicts?\s+of\s+Interests?(?:\s+Statement)?|Disclosures?'
+    r'|Declarations?(?:\s+of\s+(?:Competing\s+)?Interests?)?|Ethic(?:s|al)\s+Approval|Notes|Endnotes'
+    r'|Abstract|Contents|Table\s+of\s+Contents|Introduction|Background|Preliminaries'
+    r'|Motivation|Notation|Methods|Materials\s+and\s+Methods|Results'
+    r'|Conclusions?|Discussion|Summary|Future\s+Work|Outlook)'
+)
 _PROOF_SECTION_BOUNDARY_RE = re.compile(
-    # Numbered headings are not constrained by the title's capitalization.
-    # A single letter needs punctuation, avoiding ordinary "A ..." prose.
-    r'^(?:(?:\d+(?:\.\d+)*\.?|[A-Za-z][.)]|[IVXLCDMivxlcdm]{2,}[.)]?)\s+\S'
-    r'|(?:Appendix|Appendices|Section|Chapter|Part)\b'
-    r'|(?:References|Bibliography|Acknowledgements?|Introduction|Conclusions?|Discussion)\s*[.:]?\s*$)',
+    rf'^(?:{_PROOF_OUTLINE_LABEL}(?:\s+\S|\s*$)'
+    r'|(?:Appendix|Appendices|Sections?|Chapters?|Parts?|Annex(?:es)?|Supplements?|Sec|Ch)\b'
+    rf'|{_PROOF_NAMED_SECTION}(?:\s+(?:and|&)\s+{_PROOF_NAMED_SECTION})*'
+    r'(?:\s*[.:]\s*(?:\S.*)?)?\s*$)',
     re.I,
 )
 

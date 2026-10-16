@@ -39,7 +39,12 @@ PDF slices now expose stable block locators and `source_reading`; follow
 proofs (1..50 blocks per page). `get-source-slice --context` accepts 0..5.
 Raw adjacent blocks remain source context. Multi-block proof evidence requires
 an explicit terminal marker and stops at result/proof/section boundaries;
-mathematical completeness remains unverified. Old imports gain raw navigation
+mathematical completeness remains unverified.
+Headings are conservatively rejected by outline structure (including `B.1` and
+`a.1`) and common section names, including US/UK acknowledgment spellings,
+even at the same body size or inside one raw block. A later QED never overrides
+a recognized boundary; unknown titles and OCR/layout ambiguities remain limits.
+Old imports gain raw navigation
 without reimport; extraction improvements require an explicitly chosen reimport,
 which preserves existing reading state under the existing reimport contract.
 
@@ -68,8 +73,9 @@ See the [v1.2.1 notes](docs/reference/v1.2.1-release-notes.md) for compatibility
 [PyPI 1.2.1](https://pypi.org/project/papergraph-mcp/1.2.1/) is published.
 [Official-index acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)
 passed on Linux/Python 3.12.15 without Git and with a fresh cache: CLI, stdio MCP
-and PDF reading all passed. The repository checker records this version-specific
-acceptance; it is not a live availability check. The [GitHub Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.1)
+and PDF reading all passed. That evidence applies to 1.2.1 only; the current
+checker's publication gate concerns 1.2.2 and remains false. Neither is a live
+availability check. The [GitHub Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.1)
 was published on 2026-10-16 with its tag pointing to the packaged source.
 
 ### v1.2.0: DOI inputs and dependency reading
@@ -272,7 +278,7 @@ For raw user requests, prefer `load_arxiv_request(input=...)` or `papergraph-mcp
 
 PaperGraph v1.2.2 提供保留原文证据的 evidence-first 数学论文阅读工作流：先看 Paper Map，再检查 proof 和 citation 证据，用 Evidence Triage 理解稀疏抽取结果，对被阻塞的外部引用做 scholarly metadata 搜索，然后把选定候选闭环到用户确认的 arXiv、本地 PDF、DOI、URL 或出版信息。
 
-v1.2.1 修复普通 TeX proof 引用、BibTeX 原文身份、嵌套 input 文件偏移、明确 PDF proof 标题关联，以及后续命令、只读规划和分页 schema。1.2.1 已在 PyPI 发布，并通过[官方索引、无 Git、全新缓存验收](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)：Linux/Python 3.12.15 的 CLI、stdio MCP 和 PDF 阅读均通过。仓库预检已记录该版本验收；这不是实时可用性检查。[GitHub 标签和 Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.1)也已创建，标签指向实际打包源码。见 [v1.2.1 说明](docs/reference/v1.2.1-release-notes.md)。
+v1.2.1 修复普通 TeX proof 引用、BibTeX 原文身份、嵌套 input 文件偏移、明确 PDF proof 标题关联，以及后续命令、只读规划和分页 schema。1.2.1 已在 PyPI 发布，并通过[官方索引、无 Git、全新缓存验收](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)：Linux/Python 3.12.15 的 CLI、stdio MCP 和 PDF 阅读均通过。这些记录只属于 1.2.1；当前预检的 1.2.2 发布门禁仍为 false，二者都不是实时可用性检查。[GitHub 标签和 Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.1)也已创建，标签指向实际打包源码。见 [v1.2.1 说明](docs/reference/v1.2.1-release-notes.md)。
 
 v1.2.0 改善首次使用诊断、DOI 公开正文入口和证明依赖阅读。[GitHub Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.0) 和 [PyPI 1.2.0](https://pypi.org/project/papergraph-mcp/1.2.0/) 已发布。根 DOI 论文仅在阅读策略允许且存在唯一合格公开 PDF 时直接导入；其他候选需要选择，新发现的外部引用仍先审阅。直接与递归依赖、共享前置结果、环和未知证据分别报告，不推断隐藏的数学关系。见 [v1.2.0 说明](docs/reference/v1.2.0-release-notes.md)。
 

@@ -8,18 +8,29 @@ The default pinned source is:
 papergraph-mcp==1.2.2
 ```
 
-PyPI 1.2.2 is published and its Git-free, clean-cache CLI/MCP/PDF launch has been
-[verified](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)
-on Linux/Python 3.12.15. The version-specific publication_verified flag is true;
-this does not guarantee current index availability or any particular client environment.
-The [GitHub v1.2.2 Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.2) was published on 2026-10-16; its tag targets package source R.
-Verify the exact tag target `d4c232efb4736eb37fad8975708abd773b0e90d7` before
-using its Git recipe. The PyPI recipes require uv/uvx and index access,
+This checkout prepares 1.2.2; it is **not published** or independently accepted.
+The version-specific gate remains `publication_verified=false`. These are
+conditional release recipes: **do not run** the ordinary PyPI launch until
+version-specific official-index acceptance is recorded. Successful local wheel
+or fixed-commit tests do not verify a release. Prior
+[v1.2.1 index acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)
+applies only to 1.2.1, not this version.
+
+The [future GitHub v1.2.2 Release](https://github.com/lotchuazzz-crypto/papergraph-mcp/releases/tag/v1.2.2)
+is not a claim that its tag exists. Obtain expected package source R from the
+[reviewed artifact record](../../../../docs/reference/v1.2.2-artifact-verification.md),
+then explicitly check `--verify-git-release --expected-source-commit SHA` with
+`--install-source git`. Missing tags, unavailable networks and mismatched targets
+remain unverified; do not run the tag recipe before successful verification.
+Update publication status on main only after the actual release and acceptance;
+do not change the frozen source to claim publication in advance.
+
+The PyPI recipes require uv/uvx and index access,
 without Git or a checkout. Optional Git-source installation uses
 `git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.2` in `--from` and additionally requires Git;
 validate version and doctor with the same selected source. Switching an existing
 client's source still requires configuration approval and a backup. Missing Git
-context in the published doctor is a nonfatal repository diagnostic, separate
+context in doctor is a nonfatal repository diagnostic, separate
 from PyPI launch readiness.
 
 ## Install `uv` and `uvx`

@@ -18,7 +18,7 @@ class CustomBuildHook(BuildHookInterface):
         identity = module.build_source_identity(Path(self.root))
         self._temporary = tempfile.TemporaryDirectory(prefix='papergraph-build-identity-')
         manifest = Path(self._temporary.name) / '_build_info.json'
-        manifest.write_text(json.dumps(identity, sort_keys=True) + '\n', encoding='utf-8')
+        manifest.write_text(json.dumps(identity, sort_keys=True) + '\n', encoding='utf-8', newline='\n')
         destination = 'papergraph/_build_info.json' if self.target_name == 'wheel' else 'src/papergraph/_build_info.json'
         build_data['force_include'][str(manifest)] = destination
 

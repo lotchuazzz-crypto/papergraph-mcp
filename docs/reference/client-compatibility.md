@@ -1,5 +1,11 @@
 # v1.1.5 Client Compatibility
 
+This is historical v1.1.5 evidence from 2026-09-23, not a v1.2.2 client
+acceptance matrix. The statuses, versions, and scenarios below retain that
+scope. For current installation, use the [setup skill](../../.agents/skills/setting-up-papergraph/SKILL.md)
+and [current client recipes](../../.agents/skills/setting-up-papergraph/references/client-configuration.md).
+No new actual-client acceptance is claimed here.
+
 Status vocabulary: `verified`, `documented_not_run`, `failed`. A successful
 Python/protocol test is not evidence that a particular client UI works.
 

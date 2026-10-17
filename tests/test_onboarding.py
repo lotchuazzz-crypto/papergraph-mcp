@@ -361,7 +361,10 @@ def test_onboarding_requires_refresh_diagnostics_and_conflict_stop():
 
 def test_readme_exposes_agent_guided_setup():
     text = read(ROOT / "README.md")
-    assert "Ask your agent to set it up" in text
+    from tests.doc_contracts import linked_document
+    linked_document(ROOT / "README.md", ".agents/skills/setting-up-papergraph/SKILL.md")
+    assert "freshly fetched remote default revision" in text
+    assert "Preserve existing branches and local changes" in text
     assert "https://github.com/lotchuazzz-crypto/papergraph-mcp" in text
     assert ".agents/skills/setting-up-papergraph/SKILL.md" in text
 

@@ -102,8 +102,10 @@ Use its facts for `git`, `uv`, and `uvx`; also detect the active MCP client with
 The default pinned PyPI launch requires `uv` and `uvx`, index access, and no Git
 or checkout. PyPI v1.2.2 has passed [public-byte and Git-free official-index acceptance](../../../docs/reference/v1.2.2-publication.md).
 Current main records `PyPI publication_verified=true`; immutable R/tag/package
-files retain their historical prepared-state snapshot. GitHub Release creation
-remains pending. The checker defaults to `pypi`; `--install-source pypi`
+files retain their historical prepared-state snapshot. GitHub Release public
+assets are verified against the same approved PyPI bytes; see the publication
+record for source R and distribution hashes. The checker defaults to `pypi`;
+`--install-source pypi`
 is also explicit. Do not install Git solely for a PyPI consumer. Missing
 repository/Git context is separate from index readiness. Doctor recommends the
 PyPI version pin and reports optional Git source separately; it does not verify
@@ -133,10 +135,9 @@ There are three separate approval boundaries:
 2. **configuration approval:** show the exact client change and ask before a native command or any edit outside this repository. For file-based configuration, parse first, preserve unrelated servers, and create a timestamped adjacent backup. If parsing fails, stop and show the error. If safe mutation is unavailable, provide the minimal snippet and exact placement guidance instead.
 3. **restart approval:** after configuration and launch validation, ask before controlling or restarting the client. If control is unavailable or permission is declined, provide one direct manual restart instruction.
 
-The recipes below pin 1.2.2 and are release instructions, not a claim that
-the package or tag already exists. Before ordinary installation, run the read-only
-checker and confirm version-specific official-index acceptance. If
-`publication_verified` is false, report that ordinary PyPI launch is blocked;
+The recipes below pin the published 1.2.2 package. Before installation, run the
+read-only checker and consult the version-specific official-index acceptance
+record above. If `publication_verified` is false, report that ordinary PyPI launch is blocked;
 do not run the new recipe or silently substitute a mutable Git branch.
 Verify the exact `v1.2.2` tag before using the optional Git-source recipe.
 The Git recipe uses `git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.2`

@@ -270,7 +270,7 @@ def test_readme_is_a_version_pinned_launch_page_with_linked_workflows():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for badge in ("CI", "Python", "MIT", "Release"):
         assert f"![{badge}]" in readme
-    pin = "papergraph-mcp==1.2.2"
+    pin = "papergraph-mcp==1.2.3"
     for command in ("--version", "doctor"):
         assert f"uvx --from {pin} papergraph-mcp {command}" in readme
     config = json.loads(re.search(r"```json\n(.*?)```", readme, re.S)[1])

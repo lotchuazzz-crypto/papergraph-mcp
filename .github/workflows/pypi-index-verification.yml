@@ -1,4 +1,4 @@
-name: Verify public PyPI 1.2.2 without Git
+name: Verify public PyPI 1.2.3 without Git
 
 on:
   workflow_dispatch:
@@ -28,7 +28,7 @@ jobs:
             --tmpfs /tmp:rw,exec,size=2g \
             --mount "type=bind,source=$GITHUB_WORKSPACE/scripts,target=/checks,readonly" \
             --workdir /tmp "$image_digest" sh -eu -c '
-              python /checks/smoke_no_git_distribution.py --check-environment
+              python /checks/smoke_v123_no_git_distribution.py --check-environment
               python -m venv /tmp/tools
               /tmp/tools/bin/python -m pip install --disable-pip-version-check --no-cache-dir \
                 --only-binary=:all: --index-url https://pypi.org/simple uv
@@ -37,5 +37,5 @@ jobs:
               export UV_PYTHON_DOWNLOADS=never
               test ! -e "$UV_CACHE_DIR"
               uv run --no-project --no-config --no-env-file --default-index https://pypi.org/simple \
-                --with papergraph-mcp==1.2.2 python /checks/smoke_no_git_distribution.py --public-index
+                --with papergraph-mcp==1.2.3 python /checks/smoke_v123_no_git_distribution.py --public-index
             '

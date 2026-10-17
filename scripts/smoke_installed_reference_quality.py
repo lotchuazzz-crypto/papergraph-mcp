@@ -17,7 +17,7 @@ from mcp.client.stdio import stdio_client
 from papergraph.workspace import Workspace
 
 
-EXPECTED_VERSION = '1.2.2'
+EXPECTED_VERSION = '1.2.3'
 
 
 def cli(*args):

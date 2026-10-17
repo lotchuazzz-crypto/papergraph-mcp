@@ -1,4 +1,4 @@
-name: Publish reviewed v1.2.2 to PyPI
+name: Publish reviewed v1.2.3 to PyPI
 
 # Manual main dispatch and the protected pypi environment are both required.
 on:
@@ -50,8 +50,8 @@ jobs:
           if not producer.isdecimal() or int(producer) <= 0 or producer != os.environ['GITHUB_RUN_ID']:
               raise SystemExit('Distributions must come from the same workflow run')
           approved = {
-              'papergraph_mcp-1.2.2-py3-none-any.whl': '7525ef81a49f8f0b1d639d4f1656df0f406cc926f2164e6f9f7dbaf62fdc0dc9',
-              'papergraph_mcp-1.2.2.tar.gz': '06bfa9369d7debae9381418bd14914c9011a728e8a18e9100c2d30805ea8adad',
+              'papergraph_mcp-1.2.3-py3-none-any.whl': '25ad4ec7632bbd0f166e1d9a0508885ce2fe0125b620801f1b41c4d53bd93474',
+              'papergraph_mcp-1.2.3.tar.gz': '140c0aca282f87b431fcea984ed357024a7f368399195a214eb56f745cf2f153',
           }
           files = list(Path('dist').iterdir())
           if {path.name for path in files} != set(approved) or any(path.is_symlink() or not path.is_file() for path in files):

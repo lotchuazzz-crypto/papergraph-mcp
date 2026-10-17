@@ -7,14 +7,14 @@ image=python:3.12-slim-bookworm
 docker pull "$image"
 docker image inspect --format '{{json .RepoDigests}}' "$image"
 
-for artifact in papergraph_mcp-1.2.2-py3-none-any.whl papergraph_mcp-1.2.2.tar.gz; do
+for artifact in papergraph_mcp-1.2.3-py3-none-any.whl papergraph_mcp-1.2.3.tar.gz; do
   test -f "$dist_dir/$artifact"
   docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges \
     --tmpfs /tmp:rw,exec,size=2g \
     --mount "type=bind,source=$dist_dir,target=/dist,readonly" \
     --mount "type=bind,source=$checks_dir,target=/checks,readonly" \
     --workdir /tmp "$image" sh -eu -c '
-      python /checks/smoke_no_git_distribution.py --check-environment
+      python /checks/smoke_v123_no_git_distribution.py --check-environment
       python -m venv /tmp/tools
       /tmp/tools/bin/python -m pip install --disable-pip-version-check --no-cache-dir --only-binary=:all: uv
       # Add uv to the existing container PATH; do not hide any system directories.
@@ -26,7 +26,7 @@ for artifact in papergraph_mcp-1.2.2-py3-none-any.whl papergraph_mcp-1.2.2.tar.g
       python /checks/check_onboarding.py > /tmp/pypi-check.json
       python /checks/check_onboarding.py --install-source git > /tmp/git-check.json
       python -c '\''import json; p=json.load(open("/tmp/pypi-check.json")); g=json.load(open("/tmp/git-check.json")); assert p["commands"]["git"] is None; assert p["install_source"] == "pypi"; assert p["required_commands"] == ["uv", "uvx"]; assert p["prerequisites_satisfied"] is True; assert p["ready_for_smoke_test"] == p["publication_verified"]; assert "launch" not in p; assert g["required_commands"] == ["git", "uv", "uvx"]; assert g["ready_for_smoke_test"] is False; print(json.dumps({"pypi_prerequisites_without_git": "passed", "git_source_without_git": "not_ready"}))'\''
-      uv run --no-project --with "/dist/$1" python /checks/smoke_no_git_distribution.py \
-        --artifact "/dist/$1" --expected-sha 40d2daf8fd0d1c8b23c8d9ac03d8bf66cd2f5fa0
+      uv run --no-project --with "/dist/$1" python /checks/smoke_v123_no_git_distribution.py \
+        --artifact "/dist/$1" --expected-sha c513761e28b97f38b9efa7c1d3e54d722a64ba25
     ' sh "$artifact"
 done

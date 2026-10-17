@@ -568,8 +568,10 @@ def extract_local_result_mentions(
     results: tuple[ResultEvidence, ...],
 ) -> tuple[LocalResultMentionEvidence, ...]:
     """Extract proof-local references to results in the same paper."""
+    from papergraph.latex import masked_text
 
     lookup = _result_lookup(results)
+    unknown_number_kinds = {r.normalized_kind for r in results if r.visible_number is None}
     label_lookup: dict[str, list[ResultEvidence]] = {}
     for result in results:
         if result.label is not None:
@@ -578,6 +580,11 @@ def extract_local_result_mentions(
 
     for proof in proofs:
         proof = replace(proof, text=_proof_body(proof))
+        proof_lookup = lookup
+        if proof.method == 'latex_proof_environment':
+            proof = replace(proof, text=masked_text(proof.text))
+            proof_lookup = {key: values for key, values in lookup.items()
+                            if key[0] not in unknown_number_kinds}
         excluded_ranges = _local_mention_excluded_ranges(proof.text)
         for match in _LATEX_REF_RE.finditer(proof.text):
             raw_text = match.group(0)
@@ -616,7 +623,7 @@ def extract_local_result_mentions(
             raw_text = match.group(0)
             kind = _normalized_kind(match.group("kind"))
             visible_number = match.group("number") or None
-            matches = lookup.get((kind, visible_number.casefold()), []) if visible_number else []
+            matches = proof_lookup.get((kind, visible_number.casefold()), []) if visible_number else []
             target_result_id = matches[0].result_id if len(matches) == 1 else None
             if len(matches) == 1:
                 resolution_status = "resolved_unique"
@@ -644,7 +651,7 @@ def extract_local_result_mentions(
             _extract_roadmap_result_mentions(
                 paper_id,
                 proof,
-                lookup,
+                proof_lookup,
                 len(mentions),
                 {
                     mention.target_result_id
@@ -780,19 +787,31 @@ def extract_citation_mentions(
 
     from papergraph.citations import _CITATION_RE as tex_citation_re
     from papergraph.loader import _is_commented
+    from papergraph.latex import command_option_ranges, masked_text
 
     lookup = _bibliography_lookup(bibliography_entries)
     mentions: list[CitationMentionEvidence] = []
 
     for proof in proofs:
         proof = replace(proof, text=_proof_body(proof))
-        tex_matches = list(tex_citation_re.finditer(proof.text))
+        is_tex = proof.method == 'latex_proof_environment'
+        scan = masked_text(proof.text) if is_tex else proof.text
+        tex_matches = list(tex_citation_re.finditer(scan))
         matches = [(m, [k.strip() for k in m.group('keys').split(',') if k.strip()],
                     'proof_latex_citation') for m in tex_matches
                    if not _is_commented(proof.text, m.start())]
+        math_ranges = _latex_math_ranges(scan) if is_tex else ()
+        option_ranges = command_option_ranges(scan) if is_tex else ()
         matches.extend((m, [m.group('key').strip()], 'proof_citation_regex')
-                       for m in _CITATION_RE.finditer(proof.text)
-                       if not _overlaps_any_range(m.span(), tuple(t.span() for t in tex_matches)))
+                       for m in _CITATION_RE.finditer(scan)
+                       if not _overlaps_any_range(m.span(), tuple(t.span() for t in tex_matches))
+                       and (not is_tex or (
+                           (m.group('key').strip().casefold() in lookup
+                            or (m.group('kind') and m.group('number')))
+                           and not _overlaps_any_range(m.span(), math_ranges)
+                           and not _overlaps_any_range(m.span(), option_ranges)
+                           and (m.start() == 0 or scan[m.start() - 1] not in '\\=')
+                       )))
         for match, keys, method in sorted(matches, key=lambda item: item[0].start()):
             for raw_key in keys:
                 entries = lookup.get(raw_key.casefold(), [])
@@ -816,6 +835,30 @@ def extract_citation_mentions(
     return tuple(mentions)
 
 
+def _latex_math_ranges(text):
+    """Exclude TeX math from prose-bracket citation classification only."""
+    from papergraph.latex import group_at
+    pattern = re.compile(
+        r'(?<!\\)\$\$.*?(?<!\\)\$\$|(?<!\\)\$.*?(?<!\\)\$'
+        r'|\\\[.*?\\\]|\\\(.*?\\\)'
+        r'|\\begin\{(?P<env>(?:equation|align|alignat|gather|multline|displaymath|math|eqnarray)\*?)\}.*?\\end\{(?P=env)\}', re.S)
+    ranges = [match.span() for match in pattern.finditer(text)]
+    for command in re.finditer(r'(?<!\\)\\ensuremath\b', text):
+        argument = group_at(text, command.end())
+        if argument is not None:
+            ranges.append((command.start(), argument[1]))
+            continue
+        start = command.end()
+        while start < len(text) and text[start].isspace():
+            start += 1
+        # An unclosed group has no trustworthy end. A token argument consumes
+        # just that TeX token, rather than swallowing later prose citations.
+        token = re.match(r'\\[A-Za-z@]+|\\.|.', text[start:], re.S)
+        end = len(text) if text[start:start + 1] == '{' else start + (token.end() if token else 0)
+        ranges.append((command.start(), end))
+    return tuple(ranges)
+
+
 def extract_external_result_mentions(
     paper_id: str,
     citation_mentions: tuple[CitationMentionEvidence, ...],
@@ -829,7 +872,8 @@ def extract_external_result_mentions(
             from papergraph.citations import _CITATION_RE as tex_citation_re
             tex_match = tex_citation_re.fullmatch(citation.raw_text)
             locator = citation.raw_text[tex_match.end('command'):tex_match.start('keys') - 1]
-            locator_matches = list(_LOCAL_RESULT_MENTION_RE.finditer(locator))
+            # TeX's nonbreaking space is ordinary separation in a locator.
+            locator_matches = list(_LOCAL_RESULT_MENTION_RE.finditer(locator.replace('~', ' ')))
             match = locator_matches[0] if len(locator_matches) == 1 else None
         if match is None or not (match.group("kind") and match.group("number")):
             continue

@@ -15,6 +15,7 @@ from papergraph.identity import paper_id_from_arxiv
 from papergraph.loader import _is_commented
 from papergraph.models import CitationRecord
 from papergraph.project import LoadedProject
+from papergraph.latex import group_at, masked_text
 
 
 _COMMAND_START = r"(?<!\\)\\"
@@ -111,7 +112,59 @@ def _load_bibliography_entries(
                 continue
             if not _same_entry(previous[0], entry):
                 raise ValueError(f"Conflicting bibliography entries for key: {key}")
+    for key, entry, path, _, _ in _inline_bibliography_entries(project):
+        if any(existing.casefold() == key.casefold() for existing in entries):
+            raise BibliographyParseError(f'Duplicate bibliography key across sources: {key}')
+        entries[key] = (entry, path)
     return entries
+
+
+def _inline_bibliography_entries(project):
+    """Read bibitem bodies only inside an uncommented thebibliography block.
+
+    Preserve the original body as metadata evidence; do not guess author/title
+    fields from arbitrary bibliography prose. Cross-file entries fail closed.
+    """
+    scan = masked_text(project.text)
+    block_re = re.compile(r'\\begin\s*\{thebibliography\}.*?\\end\s*\{thebibliography\}', re.S)
+    seen = set()
+    for block in block_re.finditer(scan):
+        end_marker = re.search(r'\\end\s*\{thebibliography\}', block.group())
+        limit = block.start() + end_marker.start()
+        items = list(re.finditer(r'(?<!\\)\\bibitem\b', scan[block.start():limit]))
+        for index, item in enumerate(items):
+            start = block.start() + item.start()
+            cursor = block.start() + item.end()
+            optional = group_at(scan, cursor, '[', ']')
+            if optional:
+                cursor = optional[1]
+            key_group = group_at(scan, cursor)
+            if key_group is None:
+                raise BibliographyParseError('Malformed bibitem key')
+            key, body_start = key_group
+            key = key.strip()
+            if not key or key.casefold() in seen:
+                raise BibliographyParseError(f'Duplicate or empty bibitem key: {key}')
+            seen.add(key.casefold())
+            stop = block.start() + items[index + 1].start() if index + 1 < len(items) else limit
+            raw = project.text[start:stop].rstrip()
+            stop = start + len(raw)
+            segment = next((s for s in project.spans if s.start <= start and stop <= s.end), None)
+            if segment is None or segment.source_start is None:
+                raise BibliographyParseError(f'Cannot map cross-file bibitem: {key}')
+            body = masked_text(project.text[body_start:stop]).strip()
+            fields = {'note': body}
+            url = re.search(r'https?://[^\s{}]+', body)
+            if url:
+                fields['url'] = url.group().rstrip('.,;')
+            doi = re.search(r'(?:doi:\s*|https?://doi\.org/)(10\.\d{4,9}/[^\s{}]+)', body, re.I)
+            if doi:
+                fields['doi'] = doi.group(1).rstrip('.,;')
+            offset = segment.source_start + start - segment.start
+            original = segment.path.read_text(encoding='utf-8', errors='replace')
+            if original[offset:offset + len(raw)] != raw:
+                raise BibliographyParseError(f'TeX source changed while mapping bibitem: {key}')
+            yield key, Entry('misc', fields=fields), segment.path, offset, offset + len(raw)
 
 
 def _citation_record(
@@ -198,15 +251,21 @@ def build_bibliography_evidence(paper_id: str, project: LoadedProject):
 
     entries, spans = [], []
     source_entries = {}
+    inline = {key: (entry, path, start, end)
+              for key, entry, path, start, end in _inline_bibliography_entries(project)}
     for key, (entry, path) in _load_bibliography_entries(project).items():
         text = path.read_text(encoding='utf-8')
-        if path not in source_entries:
-            source_entries[path] = _bibliography_source_entries(text)
-        matches = [item for item in source_entries[path].get(key.casefold(), [])
-                   if _same_entry(item[0], entry)]
-        if len(matches) != 1:
-            raise BibliographyParseError(f"No unique original source for bibliography key: {key}")
-        _, start, end = matches[0]
+        method = 'latex_bibitem' if key in inline else 'bibtex_entry'
+        if key in inline:
+            _, _, start, end = inline[key]
+        else:
+            if path not in source_entries:
+                source_entries[path] = _bibliography_source_entries(text)
+            matches = [item for item in source_entries[path].get(key.casefold(), [])
+                       if _same_entry(item[0], entry)]
+            if len(matches) != 1:
+                raise BibliographyParseError(f"No unique original source for bibliography key: {key}")
+            _, start, end = matches[0]
         raw = text[start:end]
         fields = {name.lower(): value for name, value in entry.fields.items()}
         arxiv_id, version = _normalize_identifier(_resolve_arxiv_identifier(entry))
@@ -217,12 +276,12 @@ def build_bibliography_evidence(paper_id: str, project: LoadedProject):
             authors=tuple(str(person) for person in entry.persons.get('author', [])),
             year=int(fields['year']) if fields.get('year', '').isdigit() else None,
             arxiv_id=arxiv_id, arxiv_version=version, doi=fields.get('doi'),
-            url=fields.get('url'), method='bibtex_entry', confidence=1.0,
+            url=fields.get('url'), method=method, confidence=1.0,
         ))
         spans.append(SourceSpanEvidence(
             paper_id=paper_id, source_type='tex', source_ref=_relative_path(path, project.project_root),
             page=None, block_index=None, start_offset=start, end_offset=end,
-            bbox=None, text=raw, method='bibtex_entry', confidence=1.0, span_id=entry_id,
+            bbox=None, text=raw, method=method, confidence=1.0, span_id=entry_id,
         ))
     return tuple(entries), tuple(spans)
 

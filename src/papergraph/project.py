@@ -17,7 +17,7 @@ BIBLIOGRAPHY_RE = re.compile(
 )
 
 TITLE_RE = re.compile(
-    COMMAND_START + r"title\s*\{(?P<value>[^}]*)\}"
+    COMMAND_START + r"title\s*(?:\[[^]]*\]\s*)?\{(?P<value>[^}]*)\}"
 )
 AUTHOR_RE = re.compile(
     COMMAND_START + r"author\s*\{(?P<value>[^}]*)\}"

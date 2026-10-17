@@ -78,6 +78,7 @@ Arguments are command-specific: check each command's `--help`. Compact dependenc
 
 ## Documentation
 
+- [Local LaTeX extraction and independent acceptance](docs/reference/latex-extraction.md)
 - [Core contract](docs/reference/v1-core-contract.md) · [Historical v1.1.5 client evidence](docs/reference/client-compatibility.md)
 - Examples: [Reading Report](docs/examples/reading-report-example.md) · [Cross-Paper Reading Plan](docs/examples/cross-paper-reading-plan-example.md) · [Reference Search](docs/examples/reference-search-example.json) · [Reference Resolution](docs/examples/reference-resolution-example.json)
 - Starter outputs: [Summary](docs/examples/starter-summary-example.md) · [Manifest](docs/examples/papergraph-starter-manifest-example.json)

@@ -78,7 +78,7 @@ Arguments are command-specific: check each command's `--help`. Compact dependenc
 
 ## Documentation
 
-- [Core contract](docs/reference/v1-core-contract.md) · [Client compatibility](docs/reference/client-compatibility.md)
+- [Core contract](docs/reference/v1-core-contract.md) · [Historical v1.1.5 client evidence](docs/reference/client-compatibility.md)
 - Examples: [Reading Report](docs/examples/reading-report-example.md) · [Cross-Paper Reading Plan](docs/examples/cross-paper-reading-plan-example.md) · [Reference Search](docs/examples/reference-search-example.json) · [Reference Resolution](docs/examples/reference-resolution-example.json)
 - Starter outputs: [Summary](docs/examples/starter-summary-example.md) · [Manifest](docs/examples/papergraph-starter-manifest-example.json)
 - [v1.2.2 release notes](docs/reference/v1.2.2-release-notes.md) · [Publication evidence](docs/reference/v1.2.2-publication.md) · [Artifact verification](docs/reference/v1.2.2-artifact-verification.md)

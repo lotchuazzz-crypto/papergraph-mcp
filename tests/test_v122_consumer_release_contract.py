@@ -10,7 +10,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SETUP = ROOT / '.agents/skills/setting-up-papergraph'
-GUIDANCE = [ROOT / 'README.md', *sorted(SETUP.rglob('*.md'))]
+GUIDANCE = [ROOT / 'README.md', ROOT / 'docs/walkthroughs/first-workspace.md',
+            *sorted(SETUP.rglob('*.md'))]
 EVIDENCE = json.loads((ROOT / 'docs/reference/v1.2.2-publication.json').read_text(encoding='utf-8'))
 
 
@@ -70,7 +71,15 @@ def test_public_evidence_matches_unchanged_approved_release_bytes():
 def test_all_active_guidance_records_current_pypi_acceptance(path):
     text = path.read_text(encoding='utf-8')
     assert not contradictory_claims(text), path
-    assert 'PyPI publication_verified=true' in text, path
+    if path.is_relative_to(SETUP):
+        assert 'PyPI publication_verified=true' in text, path
+    else:
+        from tests.doc_contracts import linked_document
+        target = ('docs/reference/v1.2.2-publication.md' if path.name == 'README.md'
+                  else '../reference/v1.2.2-publication.md')
+        publication = linked_document(path, target)
+        assert 'PyPI publication_verified=true' in publication
+        assert 'PyPI 1.2.2 is published' in plain(text)
     assert 'v1.2.2-publication.md' in text, path
     # A consumer recipe must obtain source R from the reviewed artifact record,
     # never a copied prior-version SHA (nor an impossible self-referential SHA).
@@ -142,6 +151,11 @@ def test_current_pypi_historical_acceptance_and_verified_github_are_distinct():
 def test_current_guidance_discloses_fail_closed_pdf_policy():
     for path in GUIDANCE:
         text = path.read_text(encoding='utf-8')
+        if path.name == 'README.md':
+            from tests.doc_contracts import linked_document
+            assert 'first physical line' in text
+            assert 'later proof references remain unknown' in text
+            text = linked_document(path, 'docs/walkthroughs/first-workspace.md')
         assert 'automatic_ownership_policy' in text, path
         if path.name == 'usage-prompt.md':
             assert '首个原始文本行' in text and '后续行或块不自动关联' in text
@@ -149,3 +163,16 @@ def test_current_guidance_discloses_fail_closed_pdf_policy():
             normalized = plain(text)
             assert 'first physical line' in normalized, path
             assert 'not automatically join' in normalized, path
+
+
+@pytest.mark.parametrize('relative', [
+    '.agents/skills/setting-up-papergraph/SKILL.md',
+    'docs/walkthroughs/first-workspace.md',
+])
+def test_current_guidance_has_no_obsolete_publication_gate(relative):
+    text = plain((ROOT / relative).read_text(encoding='utf-8'))
+    assert not re.search(r'GitHub Release (?:creation )?remains pending', text, re.I)
+    assert 'ordinary installation remains blocked' not in text
+    assert 'This checkout prepares 1.2.2' not in text
+    assert not re.search(r'The prepared install commands target v1\.2\.2', text)
+    assert 'GitHub Release' in text and 'approved' in text

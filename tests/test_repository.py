@@ -264,228 +264,98 @@ def test_contributing_guide_documents_reproducible_development():
         assert forbidden_artifact in normalized_guide
 
 
-def test_readme_is_a_version_pinned_launch_page_with_verified_demo():
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    pinned_source = (
-        "git+https://github.com/lotchuazzz-crypto/"
-        "papergraph-mcp.git@v1.2.2"
-    )
+def test_readme_is_a_version_pinned_launch_page_with_linked_workflows():
+    from tests.doc_contracts import linked_document
 
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for badge in ("CI", "Python", "MIT", "Release"):
         assert f"![{badge}]" in readme
-    assert (
-        f"uvx --from {pinned_source} papergraph-mcp --version"
-        in readme
-    )
-    assert f"uvx --from {pinned_source} papergraph-mcp doctor" in readme
-    assert '"command": "uvx"' in readme
-    assert pinned_source in readme
-    assert "PaperGraph v1.2.2" in readme
-    assert (
-        "PaperGraph v1.2.2 preserves source evidence in its reading workflow"
-        in readme
-    )
-
-    for tool_name in (
-        "load_paper",
-        "load_arxiv_paper",
-        "list_theorems",
-        "get_theorem",
-        "get_dependencies",
-        "get_dependency_diagnostics",
-        "where_used",
+    pin = "papergraph-mcp==1.2.2"
+    for command in ("--version", "doctor"):
+        assert f"uvx --from {pin} papergraph-mcp {command}" in readme
+    config = json.loads(re.search(r"```json\n(.*?)```", readme, re.S)[1])
+    assert config["mcpServers"]["papergraph"] == {
+        "command": "uvx", "args": ["--from", pin, "papergraph-mcp"]}
+    for target in (
+        "docs/walkthroughs/first-workspace.md",
+        "docs/reference/v1-core-contract.md",
+        ".agents/skills/setting-up-papergraph/SKILL.md",
+        "docs/reference/v1.2.2-publication.md",
+        "docs/examples/reading-report-example.md",
+        "docs/examples/cross-paper-reading-plan-example.md",
+        "docs/examples/reference-search-example.json",
+        "docs/examples/reference-resolution-example.json",
+        "CONTRIBUTING.md", "LICENSE",
     ):
-        assert f"`{tool_name}`" in readme
-
-    for tool_name in (
-        "open_workspace",
-        "workspace_add_local_paper",
-        "workspace_add_arxiv_paper",
-        "workspace_list_papers",
-        "workspace_get_paper",
-        "workspace_search_theorems",
-        "workspace_get_dependencies",
-        "workspace_get_dependency_diagnostics",
-        "workspace_get_citations",
-        "workspace_add_pdf_paper",
-        "workspace_list_results",
-        "workspace_get_result",
-        "workspace_get_result_proof",
-        "workspace_get_proof_dependencies",
-        "workspace_get_external_result_mentions",
-        "workspace_get_evidence",
-        "workspace_export_reading_bundle",
-        "workspace_export_result_reading_context",
-        "workspace_get_source_slice",
-        "workspace_get_result_reading_path",
-        "workspace_create_reading_session",
-        "workspace_list_reading_sessions",
-        "workspace_get_reading_session",
-        "workspace_record_reading_checkpoint",
-        "workspace_add_reading_note",
-        "workspace_export_reading_session_summary",
-        "workspace_create_reading_queue",
-        "workspace_list_reading_queues",
-        "workspace_get_reading_queue",
-        "workspace_apply_reading_queue_to_session",
-        "workspace_plan_external_imports_for_result",
-        "workspace_plan_external_imports_for_queue",
-        "workspace_plan_external_imports_for_paper",
-        "workspace_search_external_reference",
-        "workspace_list_external_reference_searches",
-        "workspace_resolve_external_reference_candidate",
-        "workspace_resolve_external_reference",
-        "workspace_list_external_reference_resolutions",
-        "workspace_get_paper_map",
-        "workspace_export_paper_reading_report",
-        "workspace_export_cross_paper_reading_plan",
-        "workspace_plan_starter_project",
-        "workspace_bootstrap_reading_project",
-    ):
-        assert f"`{tool_name}`" in readme
-
-    assert "Paper Map" in readme
-    assert "[PaperGraph v1 Core Contract](docs/reference/v1-core-contract.md)" in readme
-    assert "[v1 Release Checklist](docs/reference/v1-release-checklist.md)" in readme
-    assert "[First PaperGraph Workspace](docs/walkthroughs/first-workspace.md)" in readme
-    assert "[Reading Report](docs/examples/reading-report-example.md)" in readme
-    assert (
-        "[Cross-Paper Reading Plan](docs/examples/cross-paper-reading-plan-example.md)"
-        in readme
-    )
-    assert "[Reference Search](docs/examples/reference-search-example.json)" in readme
-    assert "v1.1.3 adds Scholarly Reference Resolver" in readme
+        linked_document(ROOT / "README.md", target)
+    assert "Paper Map" in readme and "Evidence Triage" in readme
     assert "Crossref, OpenAlex, and arXiv" in readme
-    assert "deterministic candidate ranking" in readme
-    assert "metadata-only literature" in readme
-    assert "v1.1.2 adds Reference Import Closure" in readme
-    assert "user-confirmed arXiv and local PDF imports" in readme
-    assert "DOI, URL, and published metadata" in readme
-    assert "It does not bypass paywalls" in readme
-    assert "v1.1.1 adds Evidence Triage" in readme
-    assert "v1.1.0 adds Workspace Starter planning and bootstrap commands" in readme
-    assert "v1.0.0 released the stable PaperGraph core" in readme
-    assert readme.count("<details>") >= 5
-    assert "statement_explicit_latex_refs_only" in readme
-    assert "not evidence that the theorem has no mathematical dependencies" in readme
-    assert "TeX proof environments" in readme
-    assert "immediately preceding result" in readme
-    assert "raw_kind" in readme
-    assert "display_kind" in readme
-    assert "normalized_kind" in readme
-    assert "For raw user requests, prefer" in readme
-    assert "papergraph-mcp doctor" in readme
-    assert "validate-arxiv-request" in readme
-    assert "export-reading-bundle" in readme
-    assert "export-result-reading-context" in readme
-    assert "get-source-slice" in readme
-    assert "get-result-reading-path" in readme
-    assert "create-reading-session" in readme
-    assert "record-reading-checkpoint" in readme
-    assert "add-reading-note" in readme
-    assert "export-reading-session-summary" in readme
-    assert "create-reading-queue" in readme
-    assert "list-reading-queues" in readme
-    assert "get-reading-queue" in readme
-    assert "apply-reading-queue-to-session" in readme
-    assert "plan-external-imports-for-result" in readme
-    assert "plan-external-imports-for-queue" in readme
-    assert "plan-external-imports-for-paper" in readme
-    assert "search-external-reference" in readme
-    assert "list-external-reference-searches" in readme
-    assert "resolve-external-reference-candidate" in readme
-    assert "resolve-external-reference" in readme
-    assert "list-external-reference-resolutions" in readme
-    assert "get-paper-map" in readme
-    assert "export-paper-reading-report" in readme
-    assert "export-cross-paper-reading-plan" in readme
-    assert "plan-starter-project" in readme
-    assert "bootstrap-reading-project" in readme
-    assert "papergraph-starter-manifest.json" in readme
-    assert "--workspace" in readme
-    assert "papergraph-mcp --workspace" not in readme
-    assert (
-        "papergraph-mcp get-paper-map --workspace .\\papergraph.sqlite3 "
-        "--paper-id local:paper-a"
-    ) in readme
-    assert (
-        "papergraph-mcp export-reading-bundle --workspace .\\papergraph.sqlite3 "
-        "--paper-id local:paper-a"
-    ) in readme
-    assert (
-        "papergraph-mcp record-reading-checkpoint --workspace .\\papergraph.sqlite3 "
-        "--session-id SESSION --target-kind result_id "
-        "--target-id local:paper-a::thm:main --status reviewed"
-    ) in readme
-    assert "`get_environment_diagnostics`" in readme
-    assert "`validate_arxiv_request`" in readme
-    assert "`load_arxiv_request`" in readme
-    assert "git fetch --tags origin" in readme
-    assert "Use `load_arxiv_paper` only after" in readme
-    assert "detecting a conflict and then continuing is a failure" in readme
-
-    assert 'arxiv_id="math/0307200"' in readme
-    assert '"path": "main.tex"' in readme
-    assert '"cached": false' in readme
-    assert '"nodes": 7' in readme
+    assert "plan-starter-project" in readme and "bootstrap-reading-project" in readme
+    assert "load_arxiv_request" in readme and "conflicting IDs" in readme
+    assert "user selection" in readme
+    assert "Empty dependencies do not prove independence" in readme
+    assert "External references become reviewable plans" in readme
+    assert "no workflow bypasses paywalls" in readme
     diagram_path = "docs/assets/papergraph-request-flow.png"
     editable_path = "docs/assets/papergraph-request-flow.drawcms"
-    assert f"]({diagram_path})" in readme
-    assert f"]({editable_path})" in readme
+    assert f"]({diagram_path})" in readme and f"]({editable_path})" in readme
     assert (ROOT / diagram_path).read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
-    editable_document = json.loads((ROOT / editable_path).read_text(encoding="utf-8"))
-    assert editable_document["nodes"] and editable_document["edges"]
-    assert "100 MiB" in readme
-    assert "500 MiB" in readme
-    assert "10,000" in readme
-
-    lowered = readme.lower()
-    assert "scanned pdf" in lowered
-    assert "does not verify proofs" in lowered
-    assert 'discovered public https pdf candidates' in lowered
-    assert 'pins the validated connection address' in lowered
-    assert "main_file" in readme
-    assert "[Contributing](CONTRIBUTING.md)" in readme
-    assert "[MIT License](LICENSE)" in readme
+    diagram = json.loads((ROOT / editable_path).read_text(encoding="utf-8"))
+    assert diagram["nodes"] and diagram["edges"]
 
 
-def test_readme_presents_researcher_focused_overview_before_reference():
+def test_readme_keeps_the_concise_overview_ahead_of_document_navigation():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-
     assert "Read math papers with evidence, not guesses." in readme
-    assert "What PaperGraph Helps You Do" in readme
-    assert "Why Researchers Use It" in readme
-    assert "A Typical Reading Flow" in readme
-    assert "Complete Tool Reference" in readme
-    assert "<details>" in readme
-
-    overview = readme.index("What PaperGraph Helps You Do")
-    reference = readme.index("Complete Tool Reference")
-    assert overview < reference
+    headings = re.findall(r"^## (.*)$", readme, re.M)
+    assert headings == ["What You Can Do", "Quick Start", "Read Your First Paper",
+                        "Evidence Boundaries", "Documentation"]
+    # Keep the user's short entry point; tutorials carry full executable examples.
+    assert len(readme.split()) < 850
 
 
-def test_readme_documents_v040_cross_paper_graph_history():
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+def test_linked_core_contract_documents_explicit_cross_paper_evidence():
+    from tests.doc_contracts import linked_document
 
-    assert "v0.4.0" in readme
-    assert "SQLite" in readme
-    assert "workspace_add_arxiv_paper" in readme
-    assert "workspace_search_theorems" in readme
-    assert "workspace_get_citations" in readme
-    assert "explicit" in readme.lower()
-    assert "semantic" in readme.lower()
+    contract = linked_document(ROOT / "README.md", "docs/reference/v1-core-contract.md")
+    assert "explicit" in contract.lower()
+    assert "PaperGraph does not perform semantic theorem matching." in contract
+    walkthrough = linked_document(ROOT / "README.md", "docs/walkthroughs/first-workspace.md")
+    import papergraph.server as server
+    for tool in ("workspace_add_arxiv_paper", "workspace_search_theorems",
+                 "workspace_get_citations"):
+        assert tool in walkthrough and callable(getattr(server, tool))
+    assert "does not resolve to `local:paper-b`" in walkthrough
+    assert "`target_paper_id: null`" in walkthrough
 
 
-def test_readme_documents_pdf_evidence_workflow():
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+def test_linked_walkthrough_documents_pdf_evidence_workflow():
+    from tests.doc_contracts import linked_document
 
-    assert "workspace_add_pdf_paper" in readme
-    assert "workspace_get_proof_dependencies" in readme
-    assert "known" in readme
-    assert "inferred" in readme
-    assert "unresolved" in readme
-    assert "scanned PDFs" in readme or "scanned PDF" in readme
-    assert "does not verify proofs" in readme
+    guide = linked_document(ROOT / "README.md", "docs/walkthroughs/first-workspace.md")
+    for tool in ("workspace_add_pdf_paper", "workspace_get_proof_dependencies",
+                 "workspace_get_source_slice", "workspace_read_source_blocks"):
+        assert f"`{tool}`" in guide
+    for term in ("known", "inferred", "unresolved", "Scanned PDFs",
+                 "does not verify proofs", "automatic_ownership_policy",
+                 "first physical line", "not automatically join", "Late references remain"):
+        assert term in guide
+
+
+def test_client_matrix_preserves_historical_scope_and_routes_to_current_recipes():
+    from tests.doc_contracts import linked_document
+
+    path = ROOT / "docs/reference/client-compatibility.md"
+    text = linked_document(ROOT / "README.md", "docs/reference/client-compatibility.md")
+    assert "historical v1.1.5 evidence from 2026-09-23" in text
+    assert "not a v1.2.2 client" in text
+    assert "No new actual-client acceptance" in text
+    linked_document(path, "../../.agents/skills/setting-up-papergraph/SKILL.md")
+    linked_document(path, "../../.agents/skills/setting-up-papergraph/references/client-configuration.md")
+    rows = [line for line in text.splitlines() if line.startswith("| ")][2:]
+    assert len(rows) == 5
+    assert all("2026-09-23" in row for row in rows)
+    assert all("documented_not_run" in row for row in rows[2:])
 
 
 def test_onboarding_uses_latest_release_pin_and_mentions_id_url_conflicts():

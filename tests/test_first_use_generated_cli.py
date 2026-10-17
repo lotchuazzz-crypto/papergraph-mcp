@@ -33,8 +33,11 @@ def test_all_generated_followups_run_in_powershell(tmp_path):
     finally:
         ws.close()
     commands = set(starter['next_commands'])
-    readme = (Path(__file__).parents[1] / 'README.md').read_text(encoding='utf-8')
-    checkpoint = next(line for line in readme.splitlines() if line.startswith('papergraph-mcp record-reading-checkpoint '))
+    from tests.doc_contracts import linked_document
+    tutorial = linked_document(Path(__file__).parents[1] / 'README.md', 'docs/walkthroughs/first-workspace.md')
+    launcher = 'uvx --from papergraph-mcp==1.2.2 '
+    checkpoint = next(line.removeprefix(launcher) for line in tutorial.splitlines()
+                      if line.startswith(launcher + 'papergraph-mcp record-reading-checkpoint '))
     for markdown in markdowns:
         for block in re.findall(r'```powershell\n(.*?)```', markdown, re.S):
             commands.update(line for line in block.splitlines() if line.startswith('papergraph-mcp '))
@@ -46,7 +49,7 @@ def test_all_generated_followups_run_in_powershell(tmp_path):
                 assert '--paper-id' in args or '--result-id' in args
     # Replace only the quoted placeholder with the exact PowerShell literal.
     quoted_path = "'" + str(path).replace("'", "''") + "'"
-    commands.add(checkpoint.replace('.\\papergraph.sqlite3', quoted_path).replace('SESSION', session_id))
+    commands.add(checkpoint.replace('$env:PAPERGRAPH_WORKSPACE', quoted_path).replace('$session.session_id', session_id))
     env = dict(os.environ)
     env['PATH'] = str(Path(sys.executable).parent) + os.pathsep + env['PATH']
     outputs = []

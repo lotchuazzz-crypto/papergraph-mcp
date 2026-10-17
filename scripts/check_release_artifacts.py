@@ -14,7 +14,7 @@ import zipfile
 SOURCE_SHA = 'c513761e28b97f38b9efa7c1d3e54d722a64ba25'
 SOURCE_DIGEST = 'd5fa2f622b27af5200245d3ed285539070bfcc86ca1d9279d4680cc8058967e4'
 APPROVED_HASHES = {
-    'papergraph_mcp-1.2.3-py3-none-any.whl': 'b68ee3446e52832d14c18ed2d709422a36ddf3282cf4f4d594460560171a0c73',
+    'papergraph_mcp-1.2.3-py3-none-any.whl': '25ad4ec7632bbd0f166e1d9a0508885ce2fe0125b620801f1b41c4d53bd93474',
     'papergraph_mcp-1.2.3.tar.gz': '140c0aca282f87b431fcea984ed357024a7f368399195a214eb56f745cf2f153',
 }
 EXPECTED_IDENTITY = {

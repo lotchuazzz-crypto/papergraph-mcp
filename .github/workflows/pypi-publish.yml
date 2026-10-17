@@ -50,7 +50,7 @@ jobs:
           if not producer.isdecimal() or int(producer) <= 0 or producer != os.environ['GITHUB_RUN_ID']:
               raise SystemExit('Distributions must come from the same workflow run')
           approved = {
-              'papergraph_mcp-1.2.3-py3-none-any.whl': 'b68ee3446e52832d14c18ed2d709422a36ddf3282cf4f4d594460560171a0c73',
+              'papergraph_mcp-1.2.3-py3-none-any.whl': '25ad4ec7632bbd0f166e1d9a0508885ce2fe0125b620801f1b41c4d53bd93474',
               'papergraph_mcp-1.2.3.tar.gz': '140c0aca282f87b431fcea984ed357024a7f368399195a214eb56f745cf2f153',
           }
           files = list(Path('dist').iterdir())

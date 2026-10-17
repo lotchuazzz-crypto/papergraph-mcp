@@ -5,13 +5,13 @@ def test_environment_diagnostics_reports_release_version_and_source():
     result = environment_diagnostics()
 
     assert result["package_name"] == "papergraph-mcp"
-    assert result["version"] == "1.2.2"
-    assert result["release_tag"] == 'v1.2.2'
+    assert result["version"] == "1.2.3"
+    assert result["release_tag"] == 'v1.2.3'
     assert result['build_identity']['channel'] == 'release_version'
     assert result['recommended_source_role'] == 'running_release'
     assert (
         result["recommended_source"]
-        == "papergraph-mcp==1.2.2"
+        == "papergraph-mcp==1.2.3"
     )
     assert result["dependency_extraction_basis"] == "statement_explicit_latex_refs_only"
     assert isinstance(result["warnings"], list)
@@ -37,7 +37,7 @@ def test_environment_diagnostics_tolerates_missing_git(monkeypatch):
 
     result = environment_diagnostics()
 
-    assert result["version"] == "1.2.2"
+    assert result["version"] == "1.2.3"
     assert result["git"] is None
     assert not any("Git context unavailable" in warning for warning in result["warnings"])
     assert result["git_required_for_default_install"] is False

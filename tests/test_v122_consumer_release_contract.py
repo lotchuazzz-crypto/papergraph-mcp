@@ -31,7 +31,7 @@ def contradictory_claims(text, *, github_release_published=None):
     return bool(unavailable_pypi or (released and not github_release_published))
 
 
-def test_runtime_gate_matches_actual_public_acceptance_and_package_version():
+def test_verified_consumer_pin_remains_122_while_123_is_prepared():
     tree = ast.parse((ROOT / 'scripts/check_onboarding.py').read_text(encoding='utf-8'))
     constants = {node.targets[0].id: ast.literal_eval(node.value)
                  for node in tree.body if isinstance(node, ast.Assign)
@@ -39,7 +39,8 @@ def test_runtime_gate_matches_actual_public_acceptance_and_package_version():
                  and node.targets[0].id in {'PAPERGRAPH_VERSION', 'PYPI_PUBLICATION_VERIFIED'}}
     assert constants == {'PAPERGRAPH_VERSION': '1.2.2', 'PYPI_PUBLICATION_VERIFIED': True}
     metadata = (ROOT / 'pyproject.toml').read_text(encoding='utf-8')
-    assert f'version = "{constants["PAPERGRAPH_VERSION"]}"' in metadata
+    assert 'version = "1.2.3"' in metadata  # New source is not index acceptance.
+    assert constants["PAPERGRAPH_VERSION"] == "1.2.2"
     assert EVIDENCE['pypi']['published'] and EVIDENCE['pypi']['public_bytes_verified']
     acceptance = EVIDENCE['public_index_acceptance']
     assert acceptance['conclusion'] == 'success'

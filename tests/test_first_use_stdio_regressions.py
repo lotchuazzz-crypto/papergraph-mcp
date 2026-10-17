@@ -26,7 +26,7 @@ def test_first_use_real_stdio_schema_plan_citation_and_restart(tmp_path):
         async with stdio_client(params) as (reader, writer):
             async with ClientSession(reader, writer) as session:
                 init = await session.initialize()
-                assert init.server_info.version == '1.2.2'
+                assert init.server_info.version == '1.2.3'
                 schemas = {t.name: t.input_schema for t in (await session.list_tools()).tools}
                 limits = schemas['workspace_list_results']['properties']
                 assert limits['limit']['minimum'] == 1 and limits['limit']['maximum'] == 100

@@ -73,7 +73,7 @@ def test_preparation_workflow_cannot_publish_or_request_oidc():
     assert 'id-token' not in text
     assert 'secrets.' not in text
     assert not re.search(r'\b(?:uv\s+publish|twine\s+upload)\b', text)
-    assert '40d2daf8fd0d1c8b23c8d9ac03d8bf66cd2f5fa0' in text
+    assert 'c513761e28b97f38b9efa7c1d3e54d722a64ba25' in text
     ci = yaml.load((ROOT / '.github/workflows/ci.yml').read_text(encoding='utf-8'), Loader=yaml.BaseLoader)
     assert ci['jobs']['pypi-preparation']['uses'] == './.github/workflows/pypi-preparation.yml'
 

@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def smoke():
-    spec = importlib.util.spec_from_file_location('index_smoke', ROOT / 'scripts/smoke_no_git_distribution.py')
+    spec = importlib.util.spec_from_file_location('index_smoke', ROOT / 'scripts/smoke_v123_no_git_distribution.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -23,7 +23,7 @@ def smoke():
 def test_index_command_is_fixed_to_public_version_and_not_a_local_artifact():
     command = smoke().consumer_command('/tools/uvx', public_index=True)
     assert command == ['/tools/uvx', '--no-config', '--no-env-file', '--default-index',
-                       'https://pypi.org/simple', '--from', 'papergraph-mcp==1.2.2', 'papergraph-mcp']
+                       'https://pypi.org/simple', '--from', 'papergraph-mcp==1.2.3', 'papergraph-mcp']
 
 
 def test_artifact_command_preserves_the_existing_consumer():
@@ -144,5 +144,5 @@ def test_index_consumer_has_fresh_container_and_index_install_not_a_local_mount(
     assert text.index('--check-environment') < text.index('pip install')
     assert 'test ! -e "$UV_CACHE_DIR"' in text
     assert '--default-index https://pypi.org/simple' in text
-    assert '--with papergraph-mcp==1.2.2' in text
+    assert '--with papergraph-mcp==1.2.3' in text
     assert '--public-index' in text and '--artifact' not in text

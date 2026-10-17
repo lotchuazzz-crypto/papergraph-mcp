@@ -1,13 +1,18 @@
 # PyPI publication and installation
 
-## v1.2.2 preparation — unpublished
+## v1.2.3 preparation — unpublished
 
-The current checkout prepares 1.2.2 for independent acceptance, with
-`publication_verified=false`. Follow the [1.2.2 release gates](v1.2.2-release-notes.md)
-and [current checklist](v1-release-checklist.md). Both the PyPI and optional Git
-recipes require their version-specific publication/tag checks. Prior acceptance
-does not enable this version. Protected publishing and exact source/artifact
-binding remain mandatory; no publication occurs during development.
+The new LaTeX repair is prepared as 1.2.3. Its [artifact record](v1.2.3-artifact-verification.md)
+fixes clean source R, canonical Linux wheel/sdist hashes and publisher guards.
+Normal consumer guidance still pins published, verified 1.2.2; see its
+[completed acceptance](v1.2.2-publication.md). That acceptance does not establish
+1.2.3 publication. Follow the [1.2.3 notes](v1.2.3-release-notes.md) and preserve
+the main-only manual workflow, same-run artifact verification and human pypi
+environment approval. After upload, verify actual public bytes and fresh index
+installation before updating the recommended consumer version.
+
+Everything below records earlier versions and does not authorize rebuilding or
+replacing their published files.
 
 ## v1.2.1 published and verified
 

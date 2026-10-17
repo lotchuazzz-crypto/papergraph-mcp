@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   prepare:
-    name: Build v1.2.2 and verify without Git
+    name: Build v1.2.3 and verify without Git
     runs-on: ubuntu-latest
     outputs:
       artifact_id: ${{ steps.save.outputs.artifact-id }}
@@ -40,12 +40,12 @@ jobs:
       - name: Check out immutable release source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: 40d2daf8fd0d1c8b23c8d9ac03d8bf66cd2f5fa0
+          ref: c513761e28b97f38b9efa7c1d3e54d722a64ba25
           path: release-source
           persist-credentials: false
       - name: Verify exact release commit
         run: |
-          test "$(git -C release-source rev-parse HEAD)" = "40d2daf8fd0d1c8b23c8d9ac03d8bf66cd2f5fa0"
+          test "$(git -C release-source rev-parse HEAD)" = "c513761e28b97f38b9efa7c1d3e54d722a64ba25"
           test -z "$(git -C release-source status --porcelain --untracked-files=no)"
       - name: Install build tool
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
@@ -66,7 +66,7 @@ jobs:
         if: ${{ inputs.save_artifacts }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: papergraph-v1.2.2-${{ github.run_id }}-${{ github.run_attempt }}
+          name: papergraph-v1.2.3-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/papergraph-pypi-candidates/*
           if-no-files-found: error
           retention-days: 7

@@ -53,7 +53,7 @@ def test_verified_consumer_pin_remains_122_while_123_is_prepared():
 
 
 def test_public_evidence_matches_unchanged_approved_release_bytes():
-    spec = importlib.util.spec_from_file_location('release_verifier', ROOT / 'scripts/check_release_artifacts.py')
+    spec = importlib.util.spec_from_file_location('release_verifier', ROOT / 'scripts/check_v122_release_artifacts.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     assert EVIDENCE['pypi']['files'] == module.APPROVED_HASHES

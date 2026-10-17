@@ -2,23 +2,23 @@
 
 ## Version Pins
 
-- `pyproject.toml` and `uv.lock` report prepared version `1.2.2`.
-- Runtime diagnostics report `version: 1.2.2` and `release_tag: v1.2.2`; this does not verify tag availability or publication.
-- Install recipes target fixed `1.2.2`, with `publication_verified=false` until its own official-index acceptance. [Prior 1.2.1 acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223) applies only to that immutable version.
+- `pyproject.toml` and `uv.lock` report prepared version `1.2.3`.
+- Runtime diagnostics report `version: 1.2.3` and `release_tag: v1.2.3`; this does not verify tag availability or publication.
+- The new package is 1.2.3; ordinary install recipes/checker remain on verified 1.2.2 until 1.2.3 official-index acceptance. [Prior 1.2.1 acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223) applies only to that immutable version.
 - Historical specs and release history may keep old versions.
 
 ## Installation Validation
 
-PyPI 1.2.2 is prepared, not published; ordinary launch stays blocked by the
-publication guard. Test its reviewed wheel/sdist in isolated environments.
-After official-index acceptance, prefer `uvx --from papergraph-mcp==1.2.2`.
+PyPI 1.2.3 is prepared, not published. Ordinary launch still selects verified
+1.2.2. Test the 1.2.3 wheel/sdist explicitly in isolated environments.
+After official-index acceptance, prefer `uvx --from papergraph-mcp==1.2.3`.
 The optional tag commands below require the exact source recorded in the
-[1.2.2 release notes](v1.2.2-release-notes.md). Do not claim an unpublished tag
+[1.2.3 release notes](v1.2.3-release-notes.md). Do not claim an unpublished tag
 was installed or rebuild/re-upload prior frozen distributions.
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.2 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.2 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.3 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.3 papergraph-mcp doctor
 ```
 
 Keep workspace databases outside the Git repository.
@@ -46,7 +46,7 @@ uv run papergraph-mcp <command> --help
 
 ## GitHub Release
 
-- v1.2.2 awaits independent acceptance. Bind exact source/artifact hashes in a
+- v1.2.3 awaits independent acceptance. Bind exact source/artifact hashes in a
   separate configuration commit, then use the protected publishing workflow.
   Do not create its tag, dispatch publishing or mark publication verified during
   development. The following completed records describe historical v1.2.1.

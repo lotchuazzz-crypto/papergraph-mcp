@@ -13,37 +13,38 @@ I use an MCP-capable agent/client. Clone https://github.com/lotchuazzz-crypto/pa
 After configuration, ask the agent to call `get_environment_diagnostics` or run:
 
 ```powershell
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp doctor
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp doctor
 ```
 
 ## CLI-Only Path
 
 If you do not use an MCP-capable client yet, run PaperGraph from the CLI:
 
-[PyPI 1.2.2 is published](../reference/v1.2.2-publication.md), with verified
-public bytes and Git-free first-use acceptance. GitHub Release assets match
-the same approved bytes. The default route needs uv/uvx and index access,
+[PyPI 1.2.3 is published](../reference/v1.2.3-publication.md), with verified
+public bytes and local genuinely Git-free first-use acceptance. The dedicated
+GitHub public-index CI has not run; the GitHub Release is not published. The
+default route uses the approved PyPI bytes and needs uv/uvx and index access,
 without Git or a checkout:
 
 ```powershell
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp --version
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp doctor
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp --version
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp doctor
 ```
 
 Every CLI example below repeats the full version-pinned launcher: `uvx` does
 not install `papergraph-mcp` onto your shell PATH. The first invocation may
 download the package and populate the uv cache. Generated artifacts and
 [example exports](../examples/reading-report-example.md) use the shorter
-`papergraph-mcp` command; prepend `uvx --from papergraph-mcp==1.2.2` to run
+`papergraph-mcp` command; prepend `uvx --from papergraph-mcp==1.2.3` to run
 those commands with this route.
 
 Optional Git source requires Git and a live check of the exact release tag
-against source R in the [artifact record](../reference/v1.2.2-artifact-verification.md),
+against source R in the [artifact record](../reference/v1.2.3-artifact-verification.md),
 following the [setup skill](../../.agents/skills/setting-up-papergraph/SKILL.md):
 
 ```powershell
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.2 papergraph-mcp --version
-uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.2 papergraph-mcp doctor
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.3 papergraph-mcp --version
+uvx --from git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.3 papergraph-mcp doctor
 ```
 
 ## Workspace Hygiene
@@ -81,30 +82,30 @@ $artifacts = Join-Path $demo 'starter'
 $a = Join-Path $PaperGraphCheckout 'tests/fixtures/workspace/paper_a/main.tex'
 $b = Join-Path $PaperGraphCheckout 'tests/fixtures/workspace/paper_b/main.tex'
 $c = Join-Path $PaperGraphCheckout 'tests/fixtures/workspace/paper_c/main.tex'
-$plan = uvx --from papergraph-mcp==1.2.2 papergraph-mcp plan-starter-project --workspace $env:PAPERGRAPH_WORKSPACE --artifact-dir $artifacts --tex "${a}=local:paper-a" --tex "${b}=local:paper-b" --tex "${c}=local:paper-c" --no-queue --no-session | ConvertFrom-Json
+$plan = uvx --from papergraph-mcp==1.2.3 papergraph-mcp plan-starter-project --workspace $env:PAPERGRAPH_WORKSPACE --artifact-dir $artifacts --tex "${a}=local:paper-a" --tex "${b}=local:paper-b" --tex "${c}=local:paper-c" --no-queue --no-session | ConvertFrom-Json
 $plan
 ```
 
 Inspect the plan before continuing. With these unchanged fixtures it is ready:
 
 ```powershell
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp bootstrap-reading-project --workspace $env:PAPERGRAPH_WORKSPACE --artifact-dir $artifacts --tex "${a}=local:paper-a" --tex "${b}=local:paper-b" --tex "${c}=local:paper-c" --no-queue --no-session
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp get-paper-map --workspace $env:PAPERGRAPH_WORKSPACE --paper-id local:paper-a
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp export-reading-bundle --workspace $env:PAPERGRAPH_WORKSPACE --paper-id local:paper-a
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp export-result-reading-context --workspace $env:PAPERGRAPH_WORKSPACE --result-id local:paper-a::thm:main
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp get-source-slice --workspace $env:PAPERGRAPH_WORKSPACE --result-id local:paper-a::thm:main
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp get-result-reading-path --workspace $env:PAPERGRAPH_WORKSPACE --result-id local:paper-a::thm:main
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp get-dependency-reading $env:PAPERGRAPH_WORKSPACE local:paper-a --target-result-id local:paper-a::thm:main --detail compact
-$session = uvx --from papergraph-mcp==1.2.2 papergraph-mcp create-reading-session --workspace $env:PAPERGRAPH_WORKSPACE --paper-id local:paper-a | ConvertFrom-Json
-$queue = uvx --from papergraph-mcp==1.2.2 papergraph-mcp create-reading-queue --workspace $env:PAPERGRAPH_WORKSPACE --result-id local:paper-a::thm:main | ConvertFrom-Json
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp get-reading-queue --workspace $env:PAPERGRAPH_WORKSPACE --queue-id $queue.queue_id
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp apply-reading-queue-to-session --workspace $env:PAPERGRAPH_WORKSPACE --queue-id $queue.queue_id --session-id $session.session_id
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp record-reading-checkpoint --workspace $env:PAPERGRAPH_WORKSPACE --session-id $session.session_id --target-kind result_id --target-id local:paper-a::thm:main --status reviewed
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp add-reading-note --workspace $env:PAPERGRAPH_WORKSPACE --session-id $session.session_id --text 'Check the cited fixed point theorem.'
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp export-reading-session-summary --workspace $env:PAPERGRAPH_WORKSPACE --session-id $session.session_id
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp plan-external-imports-for-paper --workspace $env:PAPERGRAPH_WORKSPACE --paper-id local:paper-a
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp export-paper-reading-report --workspace $env:PAPERGRAPH_WORKSPACE --paper-id local:paper-a --output (Join-Path $demo 'reading-report.md')
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp export-cross-paper-reading-plan --workspace $env:PAPERGRAPH_WORKSPACE --paper-id local:paper-a --paper-id local:paper-b --paper-id local:paper-c --output (Join-Path $demo 'cross-paper-plan.md')
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp bootstrap-reading-project --workspace $env:PAPERGRAPH_WORKSPACE --artifact-dir $artifacts --tex "${a}=local:paper-a" --tex "${b}=local:paper-b" --tex "${c}=local:paper-c" --no-queue --no-session
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp get-paper-map --workspace $env:PAPERGRAPH_WORKSPACE --paper-id local:paper-a
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp export-reading-bundle --workspace $env:PAPERGRAPH_WORKSPACE --paper-id local:paper-a
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp export-result-reading-context --workspace $env:PAPERGRAPH_WORKSPACE --result-id local:paper-a::thm:main
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp get-source-slice --workspace $env:PAPERGRAPH_WORKSPACE --result-id local:paper-a::thm:main
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp get-result-reading-path --workspace $env:PAPERGRAPH_WORKSPACE --result-id local:paper-a::thm:main
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp get-dependency-reading $env:PAPERGRAPH_WORKSPACE local:paper-a --target-result-id local:paper-a::thm:main --detail compact
+$session = uvx --from papergraph-mcp==1.2.3 papergraph-mcp create-reading-session --workspace $env:PAPERGRAPH_WORKSPACE --paper-id local:paper-a | ConvertFrom-Json
+$queue = uvx --from papergraph-mcp==1.2.3 papergraph-mcp create-reading-queue --workspace $env:PAPERGRAPH_WORKSPACE --result-id local:paper-a::thm:main | ConvertFrom-Json
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp get-reading-queue --workspace $env:PAPERGRAPH_WORKSPACE --queue-id $queue.queue_id
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp apply-reading-queue-to-session --workspace $env:PAPERGRAPH_WORKSPACE --queue-id $queue.queue_id --session-id $session.session_id
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp record-reading-checkpoint --workspace $env:PAPERGRAPH_WORKSPACE --session-id $session.session_id --target-kind result_id --target-id local:paper-a::thm:main --status reviewed
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp add-reading-note --workspace $env:PAPERGRAPH_WORKSPACE --session-id $session.session_id --text 'Check the cited fixed point theorem.'
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp export-reading-session-summary --workspace $env:PAPERGRAPH_WORKSPACE --session-id $session.session_id
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp plan-external-imports-for-paper --workspace $env:PAPERGRAPH_WORKSPACE --paper-id local:paper-a
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp export-paper-reading-report --workspace $env:PAPERGRAPH_WORKSPACE --paper-id local:paper-a --output (Join-Path $demo 'reading-report.md')
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp export-cross-paper-reading-plan --workspace $env:PAPERGRAPH_WORKSPACE --paper-id local:paper-a --paper-id local:paper-b --paper-id local:paper-c --output (Join-Path $demo 'cross-paper-plan.md')
 ```
 
 Open `START_HERE.md` under `$artifacts` and read Evidence Triage first. With MCP,
@@ -137,7 +138,7 @@ the illustrative ID). This standalone load does not add a paper to the durable
 workspace; use starter inputs `--arxiv ID` or `workspace_add_arxiv_paper` for that:
 
 ```powershell
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp load-arxiv-request "2401.12345"
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp load-arxiv-request "2401.12345"
 ```
 
 ## Workspace Starter
@@ -157,7 +158,7 @@ workspace_plan_starter_project(
 or:
 
 ```powershell
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp plan-starter-project `
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp plan-starter-project `
   --workspace $env:PAPERGRAPH_WORKSPACE `
   --artifact-dir .\papergraph-starter `
   --pdf .\paper-a.pdf=local:paper-a `
@@ -180,7 +181,7 @@ workspace_bootstrap_reading_project(
 or:
 
 ```powershell
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp bootstrap-reading-project `
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp bootstrap-reading-project `
   --workspace $env:PAPERGRAPH_WORKSPACE `
   --artifact-dir .\papergraph-starter `
   --pdf .\paper-a.pdf=local:paper-a `
@@ -201,7 +202,7 @@ workspace_get_paper_map(paper_id="arxiv:2401.12345")
 or:
 
 ```powershell
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp get-paper-map --workspace $env:PAPERGRAPH_WORKSPACE --paper-id arxiv:2401.12345
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp get-paper-map --workspace $env:PAPERGRAPH_WORKSPACE --paper-id arxiv:2401.12345
 ```
 
 Read `evidence_status`, warnings, main-result candidates, reading route, and external risks before choosing a target theorem. If a later Reading Report includes Evidence Triage, use it as the higher-level summary of sparse evidence, candidate starts, blockers, and next actions.
@@ -217,7 +218,7 @@ workspace_export_paper_reading_report(paper_id="arxiv:2401.12345")
 or:
 
 ```powershell
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp export-paper-reading-report --workspace $env:PAPERGRAPH_WORKSPACE --paper-id arxiv:2401.12345 --output reading-report.md
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp export-paper-reading-report --workspace $env:PAPERGRAPH_WORKSPACE --paper-id arxiv:2401.12345 --output reading-report.md
 ```
 
 Open the report's `Evidence Triage` section first. It tells you whether extracted dependencies are sparse, whether proofs are missing or fragmentary, whether external references block interpretation, and what manual checks should happen next. A candidate starting point is only a supported extracted route candidate, not a claim that the paper's main theorem has been identified.
@@ -242,12 +243,12 @@ workspace_search_external_reference(
 or:
 
 ```powershell
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp search-external-reference `
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp search-external-reference `
   --workspace $env:PAPERGRAPH_WORKSPACE `
   --paper-id local:paper-a `
   --blocked-id external-import:blocked:...
 
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp list-external-reference-searches `
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp list-external-reference-searches `
   --workspace $env:PAPERGRAPH_WORKSPACE `
   --paper-id local:paper-a
 ```
@@ -268,7 +269,7 @@ workspace_resolve_external_reference_candidate(
 For CLI:
 
 ```powershell
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp resolve-external-reference-candidate `
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp resolve-external-reference-candidate `
   --workspace $env:PAPERGRAPH_WORKSPACE `
   --paper-id local:paper-a `
   --blocked-id external-import:blocked:... `
@@ -289,14 +290,14 @@ workspace_resolve_external_reference(
 For CLI:
 
 ```powershell
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp resolve-external-reference `
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp resolve-external-reference `
   --workspace $env:PAPERGRAPH_WORKSPACE `
   --paper-id local:paper-a `
   --blocked-id external-import:blocked:... `
   --doi 10.1000/example `
   --title "Published target"
 
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp list-external-reference-resolutions `
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp list-external-reference-resolutions `
   --workspace $env:PAPERGRAPH_WORKSPACE `
   --paper-id local:paper-a
 ```
@@ -319,7 +320,7 @@ workspace_export_cross_paper_reading_plan(
 or:
 
 ```powershell
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp export-cross-paper-reading-plan `
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp export-cross-paper-reading-plan `
   --workspace $env:PAPERGRAPH_WORKSPACE `
   --paper-id arxiv:2401.12345 `
   --paper-id arxiv:2401.12346 `
@@ -346,7 +347,7 @@ workspace_create_reading_queue(result_id=<target result id>)
 workspace_create_reading_session(paper_id=<paper id>)
 ```
 
-PaperGraph does not verify proofs, infer hidden prerequisites, perform semantic theorem matching, bypass paywalls, or perform unlimited crawling. The standalone scholarly resolver only imports or records a target when a candidate is explicitly applied. v1.1.5 additionally offers [bounded reference expansion](bounded-reference-expansion.md): an explicitly approved finite policy permits unique strong imports, with ambiguous branches waiting for review. The commands target published v1.2.2; immutable source R, tag and published package files retain their historical build-time guidance. Use `uv run papergraph-mcp` only when deliberately testing a checkout in its locked development environment.
+PaperGraph does not verify proofs, infer hidden prerequisites, perform semantic theorem matching, bypass paywalls, or perform unlimited crawling. The standalone scholarly resolver only imports or records a target when a candidate is explicitly applied. v1.1.5 additionally offers [bounded reference expansion](bounded-reference-expansion.md): an explicitly approved finite policy permits unique strong imports, with ambiguous branches waiting for review. The commands target published v1.2.3; immutable source R, tag and published package files retain their historical build-time guidance. Use `uv run papergraph-mcp` only when deliberately testing a checkout in its locked development environment.
 
 
 ## Inspecting Evidence and Limits
@@ -357,7 +358,7 @@ For a born-digital PDF, import with `workspace_add_pdf_paper` or the starter's
 interpreting known, inferred, or unresolved references. Scanned PDFs and OCR-heavy
 files may yield sparse evidence. Complex LaTeX projects may need `main_file`.
 The [core contract](../reference/v1-core-contract.md) defines stable tools and
-output statuses; the [release notes](../reference/v1.2.2-release-notes.md) describe
+output statuses; the [release notes](../reference/v1.2.3-release-notes.md) describe
 version-specific behavior.
 
 PDF `text_coverage.status: unverified`, `statement_complete: false`, and

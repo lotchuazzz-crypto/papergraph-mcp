@@ -81,9 +81,9 @@ def test_walkthrough_cli_examples_keep_the_pinned_launcher():
     assert len(commands) >= 25
     for line in commands:
         assert re.match(r'^(?:\$\w+ = )?uvx --from ', line), line
-        assert ('--from papergraph-mcp==1.2.2 papergraph-mcp ' in line
+        assert ('--from papergraph-mcp==1.2.3 papergraph-mcp ' in line
                 or '--from git+https://github.com/lotchuazzz-crypto/'
-                   'papergraph-mcp.git@v1.2.2 papergraph-mcp ' in line), line
+                   'papergraph-mcp.git@v1.2.3 papergraph-mcp ' in line), line
 
 
 def test_linked_offline_tutorial_runs_plan_bootstrap_and_reading_state(tmp_path):
@@ -101,7 +101,7 @@ def test_linked_offline_tutorial_runs_plan_bootstrap_and_reading_state(tmp_path)
     plan_block = re.sub(r'^\$PaperGraphCheckout = .*$',
                         lambda _: '$PaperGraphCheckout = ' + literal(ROOT), plan_block, flags=re.M)
     plan_block = re.sub(r'^\$demo = .*$', lambda _: '$demo = ' + literal(demo), plan_block, flags=re.M)
-    prefix = 'uvx --from papergraph-mcp==1.2.2 papergraph-mcp'
+    prefix = 'uvx --from papergraph-mcp==1.2.3 papergraph-mcp'
 
     def run(block):
         # Deterministic source-contract test: replace only the package launcher.

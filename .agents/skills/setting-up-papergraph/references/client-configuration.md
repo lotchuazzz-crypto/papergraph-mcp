@@ -5,10 +5,10 @@ Use only the matching recipe below. In every recipe, detection and configuration
 The default pinned source is:
 
 ```text
-papergraph-mcp==1.2.2
+papergraph-mcp==1.2.3
 ```
 
-PyPI 1.2.2 is published and its [actual public bytes and Git-free index consumer](../../../../docs/reference/v1.2.2-publication.md)
+PyPI 1.2.3 is published and its [actual public bytes and Git-free index consumer](../../../../docs/reference/v1.2.3-publication.md)
 have passed acceptance. Current main records `PyPI publication_verified=true`.
 These pinned PyPI recipes are available. A version string or local wheel alone
 does not establish that identity; immutable R/tag/package files retain their
@@ -16,9 +16,10 @@ historical prepared-state guidance. Prior
 [v1.2.1 index acceptance](https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/runs/38837645223)
 applies only to 1.2.1, not this version.
 
-The public Git tag exists; GitHub Release public assets are verified against the
-same approved PyPI bytes. Obtain expected package source R from the
-[reviewed artifact record](../../../../docs/reference/v1.2.2-artifact-verification.md),
+The public Git tag exists. Local genuinely Git-free acceptance passed; the
+dedicated GitHub public-index CI has not run and the GitHub Release is not published.
+Obtain expected package source R from the
+[reviewed artifact record](../../../../docs/reference/v1.2.3-artifact-verification.md),
 then explicitly check `--verify-git-release --expected-source-commit SHA` with
 `--install-source git`. Missing tags, unavailable networks and mismatched targets
 remain unverified; do not run the tag recipe before successful verification.
@@ -27,7 +28,7 @@ the frozen source, version tag and published files remain unchanged.
 
 The PyPI recipes require uv/uvx and index access,
 without Git or a checkout. Optional Git-source installation uses
-`git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.2` in `--from` and additionally requires Git;
+`git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.3` in `--from` and additionally requires Git;
 validate version and doctor with the same selected source. Switching an existing
 client's source still requires configuration approval and a backup. Missing Git
 context in doctor is a nonfatal repository diagnostic, separate
@@ -78,11 +79,11 @@ raw review and remain unknown in the automatic dependency graph.
 - **Proposed mutation:** show this exact native command:
 
   ```text
-  codex mcp add papergraph -- uvx --from papergraph-mcp==1.2.2 papergraph-mcp
+  codex mcp add papergraph -- uvx --from papergraph-mcp==1.2.3 papergraph-mcp
   ```
 
 - **Approval:** ask before creating the backup or running the command because both change user-level files outside the repository. If an existing `papergraph` entry differs, show the difference and ask before replacing only that entry. After approval, create the backup first and then run the command.
-- **Validation:** run `codex mcp list`, then validate `uvx --from papergraph-mcp==1.2.2 papergraph-mcp --version` and `uvx --from papergraph-mcp==1.2.2 papergraph-mcp doctor`.
+- **Validation:** run `codex mcp list`, then validate `uvx --from papergraph-mcp==1.2.3 papergraph-mcp --version` and `uvx --from papergraph-mcp==1.2.3 papergraph-mcp doctor`.
 - **Restart:** ask before restarting a controllable Codex client; otherwise tell the user to restart Codex or reload the IDE window.
 - **Official source:** https://learn.chatgpt.com/docs/extend/mcp
 
@@ -92,11 +93,11 @@ raw review and remain unknown in the automatic dependency graph.
 - **Proposed mutation:** show this exact user-scoped native command:
 
   ```text
-  claude mcp add --transport stdio --scope user papergraph -- uvx --from papergraph-mcp==1.2.2 papergraph-mcp
+  claude mcp add --transport stdio --scope user papergraph -- uvx --from papergraph-mcp==1.2.3 papergraph-mcp
   ```
 
 - **Approval:** ask before creating the backup or running the command because both mutate user-scoped files. Show any differing existing entry before asking to replace only it. After approval, create the backup first and then run the command.
-- **Validation:** run `claude mcp get papergraph`, then validate `uvx --from papergraph-mcp==1.2.2 papergraph-mcp --version` and `uvx --from papergraph-mcp==1.2.2 papergraph-mcp doctor`.
+- **Validation:** run `claude mcp get papergraph`, then validate `uvx --from papergraph-mcp==1.2.3 papergraph-mcp --version` and `uvx --from papergraph-mcp==1.2.3 papergraph-mcp doctor`.
 - **Restart:** ask before restarting Claude Code; after restart, direct the user to `/mcp` to inspect the server connection.
 - **Official source:** https://code.claude.com/docs/en/mcp
 
@@ -113,7 +114,7 @@ raw review and remain unknown in the automatic dependency graph.
         "command": "uvx",
         "args": [
           "--from",
-          "papergraph-mcp==1.2.2",
+          "papergraph-mcp==1.2.3",
           "papergraph-mcp"
         ]
       }
@@ -122,7 +123,7 @@ raw review and remain unknown in the automatic dependency graph.
   ```
 
 - **Approval:** show the entry and ask before opening or changing user/workspace configuration. Prefer the MCP configuration UI or command. If editing a file, parse it, preserve other servers, and create a timestamped adjacent backup.
-- **Validation:** parse the resulting configuration, confirm only the intended entry changed, and validate `uvx --from papergraph-mcp==1.2.2 papergraph-mcp --version` and `uvx --from papergraph-mcp==1.2.2 papergraph-mcp doctor`.
+- **Validation:** parse the resulting configuration, confirm only the intended entry changed, and validate `uvx --from papergraph-mcp==1.2.3 papergraph-mcp --version` and `uvx --from papergraph-mcp==1.2.3 papergraph-mcp doctor`.
 - **Restart:** ask before restarting or reloading VS Code; otherwise give one direct reload-window instruction.
 - **Official source:** https://code.visualstudio.com/docs/agent-customization/mcp-servers
 
@@ -138,7 +139,7 @@ raw review and remain unknown in the automatic dependency graph.
         "command": "uvx",
         "args": [
           "--from",
-          "papergraph-mcp==1.2.2",
+          "papergraph-mcp==1.2.3",
           "papergraph-mcp"
         ]
       }
@@ -147,6 +148,6 @@ raw review and remain unknown in the automatic dependency graph.
   ```
 
 - **Approval:** ask before editing any discovered client file. Parse it, preserve unrelated entries, and create a timestamped adjacent backup; if safe editing is unavailable, leave the snippet for the user instead.
-- **Validation:** parse the result, compare the `papergraph` command and arguments, and validate `uvx --from papergraph-mcp==1.2.2 papergraph-mcp --version` and `uvx --from papergraph-mcp==1.2.2 papergraph-mcp doctor`.
+- **Validation:** parse the result, compare the `papergraph` command and arguments, and validate `uvx --from papergraph-mcp==1.2.3 papergraph-mcp --version` and `uvx --from papergraph-mcp==1.2.3 papergraph-mcp doctor`.
 - **Restart:** ask before any restart; if the client cannot be controlled, tell the user to restart it manually and consult its server-status view after reopening.
 - **Official source:** use the selected client's own MCP documentation for placement; do not substitute an unverified path.

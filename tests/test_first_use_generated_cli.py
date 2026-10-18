@@ -35,7 +35,7 @@ def test_all_generated_followups_run_in_powershell(tmp_path):
     commands = set(starter['next_commands'])
     from tests.doc_contracts import linked_document
     tutorial = linked_document(Path(__file__).parents[1] / 'README.md', 'docs/walkthroughs/first-workspace.md')
-    launcher = 'uvx --from papergraph-mcp==1.2.2 '
+    launcher = 'uvx --from papergraph-mcp==1.2.3 '
     checkpoint = next(line.removeprefix(launcher) for line in tutorial.splitlines()
                       if line.startswith(launcher + 'papergraph-mcp record-reading-checkpoint '))
     for markdown in markdowns:

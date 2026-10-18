@@ -51,11 +51,11 @@ def test_verified_index_launch_uses_the_versioned_package_not_git(monkeypatch):
 
     def runner(command, **kwargs):
         calls.append(command)
-        return subprocess.CompletedProcess(command, 0, 'papergraph-mcp 1.2.2\n', '')
+        return subprocess.CompletedProcess(command, 0, 'papergraph-mcp 1.2.3\n', '')
 
     result = module.validate_launch(runner=runner, install_source='pypi')
     assert result['ok'] is True
-    assert calls == [['uvx', '--from', 'papergraph-mcp==1.2.2', 'papergraph-mcp', '--version']]
+    assert calls == [['uvx', '--from', 'papergraph-mcp==1.2.3', 'papergraph-mcp', '--version']]
 
 
 def test_preparation_workflow_cannot_publish_or_request_oidc():
@@ -112,9 +112,9 @@ def test_explicit_verified_git_launch_preserves_tag_source():
     calls = []
     def runner(command, **kwargs):
         calls.append(command)
-        return subprocess.CompletedProcess(command, 0, 'papergraph-mcp 1.2.2\n', '')
+        return subprocess.CompletedProcess(command, 0, 'papergraph-mcp 1.2.3\n', '')
     verification = module.inspect_git_release('a' * 40, runner=lambda command, **kwargs:
-        subprocess.CompletedProcess(command, 0, f'{"a" * 40}\trefs/tags/v1.2.2\n', ''))
+        subprocess.CompletedProcess(command, 0, f'{"a" * 40}\trefs/tags/v1.2.3\n', ''))
     assert module.validate_launch(runner=runner, install_source='git', git_release_verification=verification)['ok'] is True
     assert calls == [['uvx', '--from', module.PAPERGRAPH_SOURCE, 'papergraph-mcp', '--version']]
 

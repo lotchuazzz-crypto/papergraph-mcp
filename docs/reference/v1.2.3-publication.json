@@ -1,0 +1,129 @@
+{
+  "version": "1.2.3",
+  "checked_at": "2026-10-18T07:08:11.850383+00:00",
+  "source_commit": "c513761e28b97f38b9efa7c1d3e54d722a64ba25",
+  "source_tree_sha256": "d5fa2f622b27af5200245d3ed285539070bfcc86ca1d9279d4680cc8058967e4",
+  "publication_run_id": 39099516517,
+  "publication_workflow_commit": "ccbd7a086397e3f7399e2e0e03c1fc4c11aff9de",
+  "publication_artifact_id": 12126325896,
+  "publication_archive_sha256": "aa37ac7301ba11b421aa42d8a5d61d584c31628c607a28ebedb37947ff396243",
+  "pypi": {
+    "published": true,
+    "public_bytes_verified": true,
+    "simple_verified": true,
+    "json_url": "https://pypi.org/pypi/papergraph-mcp/1.2.3/json",
+    "files": {
+      "papergraph_mcp-1.2.3-py3-none-any.whl": "25ad4ec7632bbd0f166e1d9a0508885ce2fe0125b620801f1b41c4d53bd93474",
+      "papergraph_mcp-1.2.3.tar.gz": "140c0aca282f87b431fcea984ed357024a7f368399195a214eb56f745cf2f153"
+    },
+    "file_metadata": {
+      "papergraph_mcp-1.2.3-py3-none-any.whl": {
+        "bytes": 172952,
+        "uploaded_at": "2026-10-18T05:10:38.092684Z"
+      },
+      "papergraph_mcp-1.2.3.tar.gz": {
+        "bytes": 1181098,
+        "uploaded_at": "2026-10-18T05:10:39.461106Z"
+      }
+    }
+  },
+  "public_index_acceptance": {
+    "conclusion": "success",
+    "execution_location": "local",
+    "github_actions": false,
+    "install_source": "public_index",
+    "installed_local_artifact": false,
+    "fresh_cache": true,
+    "platform": "linux",
+    "python": "3.12.15",
+    "uv": "0.13.1",
+    "isolation": "rootless_bubblewrap_minimal_filesystem",
+    "git_executable": "absent",
+    "git_package": "not_installed",
+    "host_root_mounted": false,
+    "source_checkout_mounted": false,
+    "checker_modified": false,
+    "checker_sha256": "5595fb3ab1a49b9dd62d7cccc338386ff91c0264bad091e98f4b67fe39f2a133",
+    "cli_mcp_generated_pdf_reading": "passed"
+  },
+  "github_public_index_ci": {
+    "status": "not_run",
+    "run_id": null,
+    "checked_at": "2026-10-18T07:05:45Z",
+    "workflow_url": "https://github.com/lotchuazzz-crypto/papergraph-mcp/actions/workflows/pypi-index-verification.yml"
+  },
+  "consumers": {
+    "windows_index": {
+      "platform": "Windows-11-10.0.26200-SP0",
+      "python": "3.13.13",
+      "semantic_cases": 11,
+      "cli_stdio": "passed",
+      "structure_results": 4,
+      "structure_proofs": 4,
+      "stdio_tools": 68,
+      "stdio_calls": 11,
+      "local_artifact_used": false,
+      "direct_url_absent": true
+    },
+    "linux_index": {
+      "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+      "python": "3.12.15",
+      "semantic_cases": 11,
+      "cli_stdio": "passed",
+      "structure_results": 4,
+      "structure_proofs": 4,
+      "stdio_tools": 68,
+      "stdio_calls": 11,
+      "local_artifact_used": false,
+      "direct_url_absent": true
+    },
+    "linux_public_wheel": {
+      "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+      "python": "3.12.15",
+      "semantic_cases": 11,
+      "cli_stdio": "passed",
+      "structure_results": 4,
+      "structure_proofs": 4,
+      "stdio_tools": 68,
+      "stdio_calls": 11,
+      "local_artifact_used": true,
+      "direct_url_absent": false
+    },
+    "linux_public_sdist": {
+      "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+      "python": "3.12.15",
+      "semantic_cases": 11,
+      "cli_stdio": "passed",
+      "structure_results": 4,
+      "structure_proofs": 4,
+      "stdio_tools": 68,
+      "stdio_calls": 11,
+      "local_artifact_used": true,
+      "direct_url_absent": false
+    }
+  },
+  "archive_source_audit": {
+    "wheel_python_files": 50,
+    "sdist_tracked_files": 314,
+    "status": "passed"
+  },
+  "git_tag": {
+    "name": "v1.2.3",
+    "target": "c513761e28b97f38b9efa7c1d3e54d722a64ba25",
+    "live_verification_still_required_for_setup": true
+  },
+  "github_release": {
+    "published": false,
+    "status": "not_created",
+    "http_status": 404,
+    "checked_at": "2026-10-18T07:05:45Z",
+    "assets": {}
+  },
+  "retained_local_evidence": {
+    "report_sha256": "528ee2118f0826050e4b5154536df599f52daea4ebbb19151380507aa50658cd",
+    "summary_sha256": "5ca8b389f96f315c557da18538735720b92e35df0ea0149f5c886d10b253030d",
+    "raw_commands_logs_and_receipts_retained": true,
+    "private_inputs": false
+  },
+  "immutable_release_files_rewritten": false
+}

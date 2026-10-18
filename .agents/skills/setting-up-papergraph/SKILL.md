@@ -32,7 +32,7 @@ Before loading arXiv papers:
 For local LaTeX, supply the main `.tex` file, such as
 `tests/fixtures/workspace/paper_a/main.tex`, rather than its directory. MCP starter
 inputs use `kind: local_tex` and `path` pointing to that file. Inspect the running
-server's tools/schema before choosing a workflow. In v1.2.2,
+server's tools/schema before choosing a workflow. In v1.2.3,
 starter planning performs read-only file preflight and does not open a database
 or create directories; `ready` means input preflight passed, not successful parsing
 or import. Bootstrap writes the workspace and artifacts and actually imports the
@@ -70,7 +70,7 @@ automatic loading of a requested root, use `workspace_add_doi_paper`: it imports
 only when one exact-identity public PDF candidate is eligible. For multiple
 candidates ask the user to select, then use `workspace_import_doi_candidate` with
 `confirmed=true`. Report actual import state and provenance. Never treat this as
-permission for recursive external-reference downloads. These tools are available in v1.2.2; historical versions may not provide them.
+permission for recursive external-reference downloads. These tools are available in v1.2.3; historical versions may not provide them.
 
 If available, `workspace_get_dependency_reading` lists source-backed main-result
 candidates without silently choosing one. Pass a user-selected target to separate
@@ -100,11 +100,12 @@ python scripts/check_onboarding.py
 Use its facts for `git`, `uv`, and `uvx`; also detect the active MCP client without mutation. Infer the client only from reliable host or executable evidence. If it remains ambiguous, ask one concise question: “Which MCP client should I configure?”
 
 The default pinned PyPI launch requires `uv` and `uvx`, index access, and no Git
-or checkout. PyPI v1.2.2 has passed [public-byte and Git-free official-index acceptance](../../../docs/reference/v1.2.2-publication.md).
+or checkout. PyPI v1.2.3 has passed [public-byte and Git-free official-index acceptance](../../../docs/reference/v1.2.3-publication.md).
 Current main records `PyPI publication_verified=true`; immutable R/tag/package
-files retain their historical prepared-state snapshot. GitHub Release public
-assets are verified against the same approved PyPI bytes; see the publication
-record for source R and distribution hashes. The checker defaults to `pypi`;
+files retain their historical prepared-state snapshot. The local genuinely Git-free
+acceptance passed; the dedicated GitHub public-index CI has not run and the
+GitHub Release is not published. See the publication record for source R and
+distribution hashes. The checker defaults to `pypi`;
 `--install-source pypi`
 is also explicit. Do not install Git solely for a PyPI consumer. Missing
 repository/Git context is separate from index readiness. Doctor recommends the
@@ -135,12 +136,12 @@ There are three separate approval boundaries:
 2. **configuration approval:** show the exact client change and ask before a native command or any edit outside this repository. For file-based configuration, parse first, preserve unrelated servers, and create a timestamped adjacent backup. If parsing fails, stop and show the error. If safe mutation is unavailable, provide the minimal snippet and exact placement guidance instead.
 3. **restart approval:** after configuration and launch validation, ask before controlling or restarting the client. If control is unavailable or permission is declined, provide one direct manual restart instruction.
 
-The recipes below pin the published 1.2.2 package. Before installation, run the
+The recipes below pin the published 1.2.3 package. Before installation, run the
 read-only checker and consult the version-specific official-index acceptance
 record above. If `publication_verified` is false, report that ordinary PyPI launch is blocked;
 do not run the new recipe or silently substitute a mutable Git branch.
-Verify the exact `v1.2.2` tag before using the optional Git-source recipe.
-The Git recipe uses `git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.2`
+Verify the exact `v1.2.3` tag before using the optional Git-source recipe.
+The Git recipe uses `git+https://github.com/lotchuazzz-crypto/papergraph-mcp.git@v1.2.3`
 as `--from`; do not substitute this for the default PyPI route.
 
 An explicitly requested development test is separate: use the requested checkout's
@@ -183,22 +184,22 @@ Never request credentials, upload papers, guess the identity of ambiguous refere
 
 ### What changed
 
-Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `1.2.2`; file presence alone is insufficient:
+Only after actions occur, list the executable version checks, the PaperGraph entry added or confirmed, the validation result, and any backup path. Configuration success requires the pinned command below to exit successfully with version `1.2.3`; file presence alone is insufficient:
 
 ```text
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp --version
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp --version
 ```
 
 Also validate the pinned diagnostics command:
 
 ```text
-uvx --from papergraph-mcp==1.2.2 papergraph-mcp doctor
+uvx --from papergraph-mcp==1.2.3 papergraph-mcp doctor
 ```
 
 The expected output is:
 
 ```text
-papergraph-mcp 1.2.2
+papergraph-mcp 1.2.3
 ```
 
 Before restart, say “launch command validated”; never say “client has loaded the PaperGraph tools.” Tool loading can be confirmed only after the restarted client discovers the server.

@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SETUP = ROOT / '.agents/skills/setting-up-papergraph'
 GUIDANCE = [ROOT / 'README.md', ROOT / 'docs/walkthroughs/first-workspace.md',
             *sorted(SETUP.rglob('*.md'))]
-EVIDENCE = json.loads((ROOT / 'docs/reference/v1.2.2-publication.json').read_text(encoding='utf-8'))
+EVIDENCE = json.loads((ROOT / 'docs/reference/v1.2.3-publication.json').read_text(encoding='utf-8'))
 
 
 def plain(text):
@@ -23,24 +23,24 @@ def plain(text):
 def contradictory_claims(text, *, github_release_published=None):
     text = plain(text)
     # Channel-specific: the public tag does not establish a GitHub Release.
-    unavailable_pypi = re.search(r'PyPI\s+v?1\.2\.2\s+is\s+not\s+published', text, re.I)
-    released = re.search(r'GitHub\s+v?1\.2\.2\s+Release\s+'
+    unavailable_pypi = re.search(r'PyPI\s+v?1\.2\.3\s+is\s+not\s+published', text, re.I)
+    released = re.search(r'GitHub\s+v?1\.2\.3\s+Release\s+'
                          r'(?:is|was|has been)\s+(?:published|released|verified)', text, re.I)
     if github_release_published is None:
         github_release_published = EVIDENCE['github_release']['published']
     return bool(unavailable_pypi or (released and not github_release_published))
 
 
-def test_verified_consumer_pin_remains_122_while_123_is_prepared():
+def test_verified_consumer_pin_123_requires_actual_public_acceptance():
     tree = ast.parse((ROOT / 'scripts/check_onboarding.py').read_text(encoding='utf-8'))
     constants = {node.targets[0].id: ast.literal_eval(node.value)
                  for node in tree.body if isinstance(node, ast.Assign)
                  and isinstance(node.targets[0], ast.Name)
                  and node.targets[0].id in {'PAPERGRAPH_VERSION', 'PYPI_PUBLICATION_VERIFIED'}}
-    assert constants == {'PAPERGRAPH_VERSION': '1.2.2', 'PYPI_PUBLICATION_VERIFIED': True}
+    assert constants == {'PAPERGRAPH_VERSION': '1.2.3', 'PYPI_PUBLICATION_VERIFIED': True}
     metadata = (ROOT / 'pyproject.toml').read_text(encoding='utf-8')
-    assert 'version = "1.2.3"' in metadata  # New source is not index acceptance.
-    assert constants["PAPERGRAPH_VERSION"] == "1.2.2"
+    assert 'version = "1.2.3"' in metadata  # Version equality alone is not acceptance.
+    assert constants["PAPERGRAPH_VERSION"] == "1.2.3"
     assert EVIDENCE['pypi']['published'] and EVIDENCE['pypi']['public_bytes_verified']
     acceptance = EVIDENCE['public_index_acceptance']
     assert acceptance['conclusion'] == 'success'
@@ -53,7 +53,7 @@ def test_verified_consumer_pin_remains_122_while_123_is_prepared():
 
 
 def test_public_evidence_matches_unchanged_approved_release_bytes():
-    spec = importlib.util.spec_from_file_location('release_verifier', ROOT / 'scripts/check_v122_release_artifacts.py')
+    spec = importlib.util.spec_from_file_location('release_verifier', ROOT / 'scripts/check_release_artifacts.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     assert EVIDENCE['pypi']['files'] == module.APPROVED_HASHES
@@ -62,10 +62,14 @@ def test_public_evidence_matches_unchanged_approved_release_bytes():
     assert EVIDENCE['git_tag']['target'] == EVIDENCE['source_commit']
     assert EVIDENCE['git_tag']['live_verification_still_required_for_setup']
     release = EVIDENCE['github_release']
-    assert release['published'] and release['asset_bytes_verified']
-    assert release['asset_bytes_equal_official_pypi_downloads']
-    assert release['embedded_source_manifests_verified']
-    assert {name: asset['sha256'] for name, asset in release['assets'].items()} == module.APPROVED_HASHES
+    assert release['published'] is False and release['status'] == 'not_created'
+    assert release['http_status'] == 404 and release['assets'] == {}
+    assert EVIDENCE['github_public_index_ci']['status'] == 'not_run'
+    assert EVIDENCE['github_public_index_ci']['run_id'] is None
+    local = EVIDENCE['public_index_acceptance']
+    assert local['execution_location'] == 'local' and local['github_actions'] is False
+    assert local['checker_modified'] is False
+    assert not local['host_root_mounted'] and not local['source_checkout_mounted']
 
 
 @pytest.mark.parametrize('path', GUIDANCE, ids=lambda path: path.name)
@@ -76,12 +80,12 @@ def test_all_active_guidance_records_current_pypi_acceptance(path):
         assert 'PyPI publication_verified=true' in text, path
     else:
         from tests.doc_contracts import linked_document
-        target = ('docs/reference/v1.2.2-publication.md' if path.name == 'README.md'
-                  else '../reference/v1.2.2-publication.md')
+        target = ('docs/reference/v1.2.3-publication.md' if path.name == 'README.md'
+                  else '../reference/v1.2.3-publication.md')
         publication = linked_document(path, target)
         assert 'PyPI publication_verified=true' in publication
-        assert 'PyPI 1.2.2 is published' in plain(text)
-    assert 'v1.2.2-publication.md' in text, path
+        assert 'PyPI 1.2.3 is published' in plain(text)
+    assert 'v1.2.3-publication.md' in text, path
     # A consumer recipe must obtain source R from the reviewed artifact record,
     # never a copied prior-version SHA (nor an impossible self-referential SHA).
     if path.is_relative_to(SETUP):
@@ -94,13 +98,14 @@ def test_all_active_guidance_records_current_pypi_acceptance(path):
 def test_client_recipe_distinguishes_verified_pypi_and_explicit_live_git_check():
     text = (SETUP / 'references/client-configuration.md').read_text(encoding='utf-8')
     introduction = text.split('## Install', 1)[0]
-    assert 'PyPI 1.2.2 is published' in introduction
+    assert 'PyPI 1.2.3 is published' in introduction
     assert 'PyPI publication_verified=true' in introduction
     assert '--verify-git-release --expected-source-commit SHA' in introduction
-    assert 'v1.2.2-artifact-verification.md' in introduction
+    assert 'v1.2.3-artifact-verification.md' in introduction
     assert 'do not run' in introduction
     assert '1.2.1' in introduction
-    assert 'GitHub Release public assets are verified' in introduction
+    assert 'GitHub Release is not published' in introduction
+    assert 'GitHub public-index CI has not run' in introduction
     assert 'requires approval at the point of mutation' in introduction
 
 
@@ -116,7 +121,7 @@ def test_setup_and_readme_local_reference_closure_remains_complete():
         assert path.is_relative_to(ROOT)
         text = path.read_text(encoding='utf-8')
         # Linked historical snapshots retain their original preparation state.
-        if path in GUIDANCE or path.name == 'v1.2.2-publication.md':
+        if path in GUIDANCE or path.name == 'v1.2.3-publication.md':
             assert not contradictory_claims(text), path
         # Example exports retain links relative to their eventual artifact
         # directory (e.g. START_HERE.md), not navigation in this checkout.
@@ -132,21 +137,22 @@ def test_setup_and_readme_local_reference_closure_remains_complete():
             if referenced.suffix == '.md':
                 pending.append(referenced)
     assert (SETUP / 'references/client-configuration.md').resolve() in seen
-    assert (ROOT / 'docs/reference/v1.2.2-artifact-verification.md').resolve() in seen
-    assert (ROOT / 'docs/reference/v1.2.2-publication.md').resolve() in seen
+    assert (ROOT / 'docs/reference/v1.2.3-artifact-verification.md').resolve() in seen
+    assert (ROOT / 'docs/reference/v1.2.3-publication.md').resolve() in seen
 
 
 @pytest.mark.parametrize('claim', [
-    'PyPI 1.2.2 is not published',
-    'The [GitHub v1.2.2 Release](https://example.invalid) was published yesterday.',
+    'PyPI 1.2.3 is not published',
+    'The [GitHub v1.2.3 Release](https://example.invalid) was published yesterday.',
 ])
 def test_contradiction_guard_detects_rejected_current_version_claims(claim):
     assert contradictory_claims(claim, github_release_published=False)
 
 
-def test_current_pypi_historical_acceptance_and_verified_github_are_distinct():
-    assert not contradictory_claims('PyPI 1.2.1 is published. PyPI 1.2.2 is published.')
+def test_current_pypi_historical_acceptance_and_unpublished_github_are_distinct():
+    assert not contradictory_claims('PyPI 1.2.2 is published. PyPI 1.2.3 is published.')
     assert not contradictory_claims('GitHub v1.2.2 Release is published.')
+    assert contradictory_claims('GitHub v1.2.3 Release is published.')
 
 
 def test_current_guidance_discloses_fail_closed_pdf_policy():
@@ -174,6 +180,18 @@ def test_current_guidance_has_no_obsolete_publication_gate(relative):
     text = plain((ROOT / relative).read_text(encoding='utf-8'))
     assert not re.search(r'GitHub Release (?:creation )?remains pending', text, re.I)
     assert 'ordinary installation remains blocked' not in text
-    assert 'This checkout prepares 1.2.2' not in text
-    assert not re.search(r'The prepared install commands target v1\.2\.2', text)
-    assert 'GitHub Release' in text and 'approved' in text
+    assert 'This checkout prepares 1.2.3' not in text
+    assert not re.search(r'The prepared install commands target v1\.2\.3', text)
+    assert 'GitHub Release is not published' in text
+    assert 'GitHub public-index CI has not run' in text
+
+
+def test_actual_consumer_paths_and_semantic_evidence_are_recorded():
+    consumers = EVIDENCE['consumers']
+    assert set(consumers) == {'windows_index', 'linux_index', 'linux_public_wheel', 'linux_public_sdist'}
+    for name, consumer in consumers.items():
+        assert consumer['cli_stdio'] == 'passed' and consumer['semantic_cases'] == 11
+        assert consumer['local_artifact_used'] == (name in {'linux_public_wheel', 'linux_public_sdist'})
+        assert consumer['direct_url_absent'] == name.endswith('_index')
+    assert EVIDENCE['archive_source_audit'] == {'wheel_python_files': 50, 'sdist_tracked_files': 314, 'status': 'passed'}
+    assert EVIDENCE['retained_local_evidence']['private_inputs'] is False

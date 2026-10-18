@@ -13,7 +13,7 @@ def load_checker():
 
 def test_verified_release_is_ready_without_git_and_launches_the_pinned_index_package():
     checker = load_checker()
-    assert checker.PAPERGRAPH_VERSION == '1.2.2'
+    assert checker.PAPERGRAPH_VERSION == '1.2.3'
     assert checker.PYPI_PUBLICATION_VERIFIED is True
     result = checker.inspect_prerequisites(locator={'uv': '/tools/uv', 'uvx': '/tools/uvx'}.get)
     assert result['commands']['git'] is None
@@ -24,10 +24,10 @@ def test_verified_release_is_ready_without_git_and_launches_the_pinned_index_pac
     def runner(command, **kwargs):
         from subprocess import CompletedProcess
         calls.append(command)
-        return CompletedProcess(command, 0, 'papergraph-mcp 1.2.2\n', '')
+        return CompletedProcess(command, 0, 'papergraph-mcp 1.2.3\n', '')
 
     assert checker.validate_launch(runner=runner)['ok'] is True
-    assert calls == [['uvx', '--from', 'papergraph-mcp==1.2.2', 'papergraph-mcp', '--version']]
+    assert calls == [['uvx', '--from', 'papergraph-mcp==1.2.3', 'papergraph-mcp', '--version']]
 
 
 def test_unverified_patch_does_not_launch_or_claim_public_index_readiness():
@@ -40,5 +40,5 @@ def test_unverified_patch_does_not_launch_or_claim_public_index_readiness():
     calls = []
     result = checker.validate_launch(runner=lambda *a, **kw: calls.append(a))
     assert result['reason'] == 'pypi_publication_not_verified'
-    assert result['source'] == 'papergraph-mcp==1.2.2'
+    assert result['source'] == 'papergraph-mcp==1.2.3'
     assert calls == []

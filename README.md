@@ -22,16 +22,16 @@ Turn arXiv papers, local LaTeX projects, and born-digital PDFs into a local theo
 
 ## Quick Start
 
-This checkout prepares 1.2.3. Run the following planned commands only after its [release gates](docs/reference/v1.2.3-release-notes.md) record official-index acceptance. Install [uv](https://docs.astral.sh/uv/getting-started/installation/); no Git or checkout is required:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/); no Git or checkout is required:
 
 ```sh
 uvx --from papergraph-mcp==1.2.3 papergraph-mcp --version
 uvx --from papergraph-mcp==1.2.3 papergraph-mcp doctor
 ```
 
-[PyPI 1.2.2](https://pypi.org/project/papergraph-mcp/1.2.2/) is published and has passed [public-package and Git-free Linux acceptance](docs/reference/v1.2.2-publication.md). Until 1.2.3 acceptance, use that verified version through the [setup skill](.agents/skills/setting-up-papergraph/SKILL.md). Diagnostics do not independently verify publication.
+PyPI 1.2.3 is published and has passed [actual public-package and local Git-free acceptance](docs/reference/v1.2.3-publication.md). The dedicated GitHub public-index CI has not run; the GitHub Release is not published. Diagnostics alone do not verify publication.
 
-After that acceptance, an MCP client can use this JSON-style stdio configuration:
+An MCP client can use this JSON-style stdio configuration:
 
 ```json
 {
@@ -46,7 +46,7 @@ After that acceptance, an MCP client can use this JSON-style stdio configuration
 
 Restart the client after configuration. A bare server launch waits quietly for a stdio MCP connection; CLI commands also work without an MCP client.
 
-For agent-assisted setup, use the repository's [setup skill](.agents/skills/setting-up-papergraph/SKILL.md) from the freshly fetched remote default revision. Preserve existing branches and local changes; ask before installing software, changing client configuration, or restarting. The optional Git-source route requires Git and live verification of the selected version tag against its reviewed package source; the setup skill currently selects verified 1.2.2.
+For agent-assisted setup, use the repository's [setup skill](.agents/skills/setting-up-papergraph/SKILL.md) from the freshly fetched remote default revision. Preserve existing branches and local changes; ask before installing software, changing client configuration, or restarting. The optional Git-source route requires Git and live verification of the selected version tag against its reviewed package source.
 
 ## Read Your First Paper
 
@@ -78,7 +78,7 @@ Arguments are command-specific: check each command's `--help`. Compact dependenc
 
 ## Documentation
 
-- [v1.2.3 preparation notes](docs/reference/v1.2.3-release-notes.md) (not yet public-index verified)
+- [v1.2.3 release notes](docs/reference/v1.2.3-release-notes.md) · [Publication evidence](docs/reference/v1.2.3-publication.md) · [Artifact verification](docs/reference/v1.2.3-artifact-verification.md)
 - [Local LaTeX extraction and independent acceptance](docs/reference/latex-extraction.md)
 - [Core contract](docs/reference/v1-core-contract.md) · [Historical v1.1.5 client evidence](docs/reference/client-compatibility.md)
 - Examples: [Reading Report](docs/examples/reading-report-example.md) · [Cross-Paper Reading Plan](docs/examples/cross-paper-reading-plan-example.md) · [Reference Search](docs/examples/reference-search-example.json) · [Reference Resolution](docs/examples/reference-resolution-example.json)

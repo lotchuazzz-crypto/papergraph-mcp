@@ -11,10 +11,10 @@ from pathlib import Path
 from typing import Any
 
 
-PAPERGRAPH_VERSION = "1.2.2"
+PAPERGRAPH_VERSION = "1.2.3"
 PAPERGRAPH_SOURCE = (
     "git+https://github.com/lotchuazzz-crypto/"
-    "papergraph-mcp.git@v1.2.2"
+    "papergraph-mcp.git@v1.2.3"
 )
 LAUNCH_COMMAND = [
     "uvx",
@@ -24,8 +24,8 @@ LAUNCH_COMMAND = [
     "--version",
 ]
 PYPI_SOURCE = f"papergraph-mcp=={PAPERGRAPH_VERSION}"
-# v1.2.2 public bytes and fresh Git-free public-index acceptance are recorded in
-# docs/reference/v1.2.2-publication.md. Frozen R/tag/package files remain unchanged.
+# v1.2.3 actual public bytes and local Git-free public-index acceptance are recorded in
+# docs/reference/v1.2.3-publication.md. Frozen R/tag/package files remain unchanged.
 PYPI_PUBLICATION_VERIFIED = True
 
 

@@ -6,7 +6,7 @@ from tests.test_onboarding import load_checker
 
 
 EXPECTED = 'a' * 40
-TAG = 'refs/tags/v1.2.2'
+TAG = 'refs/tags/v1.2.3'
 
 
 def test_git_prerequisites_do_not_claim_unchecked_publication(monkeypatch):

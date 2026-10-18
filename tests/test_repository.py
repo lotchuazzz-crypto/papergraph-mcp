@@ -366,8 +366,8 @@ def test_onboarding_uses_latest_release_pin_and_mentions_id_url_conflicts():
         ROOT / ".agents/skills/setting-up-papergraph/references/usage-prompt.md"
     ).read_text(encoding="utf-8")
 
-    assert "papergraph-mcp.git@v1.2.2" in skill
-    assert "papergraph-mcp 1.2.2" in skill
+    assert "papergraph-mcp.git@v1.2.3" in skill
+    assert "papergraph-mcp 1.2.3" in skill
     assert "validate_arxiv_request" in skill
     assert "load_arxiv_request" in skill
     assert "If a user provides both an arXiv ID and an arXiv URL" in skill
